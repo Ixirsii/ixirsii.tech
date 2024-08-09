@@ -1,3 +1,69 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+main {
+  @apply pt-4;
+}
+
+.blog {
+  @apply mb-8;
+  @apply w-3/4;
+}
+
+.blog a {
+  @apply text-teal-800;
+}
+
+.blog h1,
+.blog h2,
+.blog h3,
+.blog h4,
+.blog h5,
+.blog h6 {
+  @apply font-extrabold;
+  @apply mb-2;
+  @apply text-teal-800;
+}
+
+.blog h1 {
+  @apply text-center;
+  @apply text-6xl;
+}
+
+.blog h2 {
+  @apply text-4xl;
+}
+
+.blog h3 {
+  @apply text-2xl;
+}
+
+.blog h4 {
+  @apply text-xl;
+}
+
+.blog h5 {
+  @apply text-lg;
+  @apply underline;
+}
+
+.blog h6 {
+  @apply text-lg;
+}
+
+.blog hr {
+  @apply border-teal-800;
+  @apply my-4;
+  @apply w-full;
+}
+
+.blog p {
+  @apply my-4;
+}
+
+.blog ul {
+  @apply list-disc;
+  @apply my-4;
+  @apply ps-10;
+}
