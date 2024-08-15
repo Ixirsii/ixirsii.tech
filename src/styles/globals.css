@@ -6,50 +6,68 @@ main {
   @apply pt-4;
 }
 
-.blog {
-  @apply mb-8;
-  @apply w-3/4;
-}
-
-.blog a {
-  @apply text-teal-800;
-}
-
-.blog h1,
-.blog h2,
-.blog h3,
-.blog h4,
-.blog h5,
-.blog h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   @apply font-extrabold;
   @apply mb-2;
   @apply text-teal-800;
 }
 
-.blog h1 {
+h1 {
   @apply text-center;
   @apply text-6xl;
 }
 
-.blog h2 {
+h2 {
   @apply text-4xl;
 }
 
-.blog h3 {
+h3 {
   @apply text-2xl;
 }
 
-.blog h4 {
+h4 {
   @apply text-xl;
 }
 
-.blog h5 {
+h5 {
   @apply text-lg;
   @apply underline;
 }
 
-.blog h6 {
+h6 {
   @apply text-lg;
+}
+
+hr {
+  @apply border-teal-800;
+  @apply my-4;
+}
+
+li ul {
+  @apply my-0;
+}
+
+p {
+  @apply my-4;
+}
+
+ul {
+  @apply list-disc;
+  @apply my-4;
+  @apply ps-10;
+}
+
+.blog {
+  @apply mb-8;
+}
+
+.blog a {
+  @apply text-teal-800;
 }
 
 .blog hr {
@@ -58,12 +76,18 @@ main {
   @apply w-full;
 }
 
-.blog p {
-  @apply my-4;
+.links {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-2;
 }
 
-.blog ul {
-  @apply list-disc;
-  @apply my-4;
-  @apply ps-10;
+.links a {
+  @apply inline-block;
+  @apply mx-4;
+}
+
+.links img {
+  @apply inline-block;
+  @apply mx-2;
 }

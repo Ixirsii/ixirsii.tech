@@ -37,6 +37,9 @@ export const links = createTable("link", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 256 }).notNull(),
   url: text("url").notNull(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
 });
 
 export const posts = createTable(
@@ -53,7 +56,9 @@ export const posts = createTable(
     isPublished: boolean("is_published").default(false).notNull(),
     slug: varchar("slug", { length: 256 }).notNull(),
     title: text("title").notNull(),
-    updatedAt: timestamp("updatedAt", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
   },
   (table) => ({
     slugIndex: index("slug_idx").on(table.slug),
