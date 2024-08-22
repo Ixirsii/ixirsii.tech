@@ -50,6 +50,9 @@ importers:
       server-only:
         specifier: ^0.0.1
         version: 0.0.1
+      shiitake:
+        specifier: ^3.0.2
+        version: 3.0.2(react@18.3.1)
       superjson:
         specifier: ^2.2.1
         version: 2.2.1
@@ -2236,6 +2239,11 @@ packages:
   shebang-regex@3.0.0:
     resolution: {integrity: sha512-7++dFhtcx3353uBaq8DDR4NuxBetBzC7ZQOhmTQInHEd6bSrXdiEyzCvG07Z44UYdLShWUyXt5M/yhz8ekcb1A==}
     engines: {node: '>=8'}
+
+  shiitake@3.0.2:
+    resolution: {integrity: sha512-vEeFbMk37VHy6hl/GgOoVMZVdsObyFqxggV2wWJxVm8mZDz2Jcev66d5rmRskzBkBiHEc/VwYBJQLLB9efRwwg==}
+    peerDependencies:
+      react: ^16.8.0
 
   side-channel@1.0.6:
     resolution: {integrity: sha512-fDW/EZ6Q9RiO8eFG8Hj+7u/oW+XrPTIChwCOM2+th2A6OblDtYYIpve9m+KvI9Z4C9qSEXlaGR6bTEYHReuglA==}
@@ -4831,6 +4839,11 @@ snapshots:
       shebang-regex: 3.0.0
 
   shebang-regex@3.0.0: {}
+
+  shiitake@3.0.2(react@18.3.1):
+    dependencies:
+      prop-types: 15.8.1
+      react: 18.3.1
 
   side-channel@1.0.6:
     dependencies:
