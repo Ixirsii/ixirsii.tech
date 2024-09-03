@@ -1,44 +1,28 @@
-import Link from "next/link";
+import Post from "~/app/blog/_components/post";
 import { listBlogPosts } from "~/server/queries";
 
-function Post({
-  createdAt,
-  slug,
-  title,
-  updatedAt,
-}: {
-  createdAt: Date,
-  slug: string,
-  title: string,
-  updatedAt: Date,
-}) {
-  return (
-    <Link
-      className="flex flex-col rounded-xl bg-teal-800/10 p-4 hover:bg-teal-800/20"
-      href={slug}
-    >
-      <h3>{title}</h3>
-      <div>{`Created at: ${createdAt.toLocaleString()}`}</div>
-      <div>{`Updated at: ${updatedAt.toLocaleString()}`}</div>
-    </Link>
-  );
-}
+export const dynamic = "force-dynamic";
 
 export default async function Blog() {
   const posts = await listBlogPosts();
+  const duplicatedPosts = [...posts, ...posts, ...posts];
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      {posts.map((post) => (
-        <Post
-          key={post.id}
-          createdAt={post.createdAt}
-          slug={post.slug}
-          title={post.title}
-          updatedAt={post.updatedAt}
-        />
-      ))}
-    </div>
+    <>
+      <div className="grid grid-cols-2 gap-4">
+        {duplicatedPosts.map((post) => (
+          <Post
+            key={post.id}
+            createdAt={post.createdAt}
+            body={post.body}
+            slug={post.slug}
+            tags={post.postTags.map(postTag => postTag.tag)}
+            title={post.title}
+            updatedAt={post.updatedAt}
+          />
+        ))}
+      </div>
+    </>
   );
 }
 

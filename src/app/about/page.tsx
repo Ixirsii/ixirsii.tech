@@ -65,7 +65,7 @@ export default function About() {
         <div className="flex-1">
           <h2 className="ml-4">Links</h2>
 
-          <div className="links">
+          <div className="links w-fit">
             <Link href="https://anilist.co/user/Ixirsii" target="_blank">
               <Image
                 src="/images/AniList Logo.svg"
@@ -73,7 +73,7 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              Anilist 
+              <span>Anilist</span>
             </Link>
             <Link href="https://bitbucket.org/Ixirsii/" target="_blank">
               <Image

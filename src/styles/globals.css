@@ -91,3 +91,52 @@ ul {
   @apply inline-block;
   @apply mx-2;
 }
+
+.modal-backdrop {
+  @apply absolute;
+  @apply bg-white/70;
+  @apply bottom-0;
+  @apply flex;
+  @apply items-center;
+  @apply justify-center;
+  @apply left-0;
+  @apply right-0;
+  @apply top-0;
+  @apply z-10;
+}
+
+.modal {
+  @apply bg-white;
+  @apply border-none;
+  @apply h-4/5;
+  @apply p-5;
+  @apply relative;
+  @apply rounded-xl;
+  @apply w-4/5;
+}
+
+.close-button {
+  @apply absolute;
+  @apply bg-transparent;
+  @apply border-none;
+  @apply cursor-pointer;
+  @apply flex;
+  @apply font-medium;
+  @apply h-12;
+  @apply items-center;
+  @apply justify-center;
+  @apply right-2.5;
+  @apply rounded-2xl;
+  @apply text-2xl;
+  @apply top-2.5;
+  @apply w-12;
+}
+
+.close-button:hover {
+  @apply bg-slate-50;
+}
+
+.close-button:after {
+  content: "x";
+  @apply text-black;
+}

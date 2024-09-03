@@ -1,7 +1,7 @@
 // Example model schema from the Drizzle docs
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
-import { sql } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -20,6 +20,8 @@ import {
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
 export const createTable = pgTableCreator((name) => `ixirsii.tech_${name}`);
+
+/* ********************************* Tables ********************************* */
 
 export const tags = createTable("tag", {
   id: serial("id").primaryKey(),
@@ -74,3 +76,40 @@ export const postTags = createTable("post_tag", {
     .notNull()
     .references(() => tags.id),
 });
+
+/* ******************************** Relations ******************************* */
+
+export const usersRelations = relations(users, ({ many }) => ({
+  links: many(links),
+  posts: many(posts),
+}));
+
+export const linksRelations = relations(links, ({ one }) => ({
+  user: one(users, {
+    fields: [links.userId],
+    references: [users.id],
+  }),
+}));
+
+export const postsRelations = relations(posts, ({ many, one }) => ({
+  author: one(users, {
+    fields: [posts.authorId],
+    references: [users.id],
+  }),
+  postTags: many(postTags),
+}));
+
+export const tagsRelations = relations(tags, ({ many }) => ({
+  postTags: many(postTags),
+}));
+
+export const postTagsRelations = relations(postTags, ({ one }) => ({
+  post: one(posts, {
+    fields: [postTags.postId],
+    references: [posts.id],
+  }),
+  tag: one(tags, {
+    fields: [postTags.tagId],
+    references: [tags.id],
+  }),
+}));
