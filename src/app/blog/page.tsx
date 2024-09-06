@@ -5,12 +5,11 @@ export const dynamic = "force-dynamic";
 
 export default async function Blog() {
   const posts = await listBlogPosts();
-  const duplicatedPosts = [...posts, ...posts, ...posts];
 
   return (
     <>
       <div className="grid grid-cols-2 gap-4">
-        {duplicatedPosts.map((post) => (
+        {posts.map((post) => (
           <Post
             key={post.id}
             createdAt={post.createdAt}
