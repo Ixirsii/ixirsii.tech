@@ -13,7 +13,7 @@ export default async function Blog() {
           <Post
             key={post.id}
             createdAt={post.createdAt}
-            body={post.body}
+            preview={post.preview ?? post.body}
             slug={post.slug}
             tags={post.postTags.map(postTag => postTag.tag)}
             title={post.title}

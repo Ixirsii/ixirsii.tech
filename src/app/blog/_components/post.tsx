@@ -6,14 +6,14 @@ import type * as schema from "~/server/db/schema";
 
 export default function Post({
   createdAt,
-  body,
+  preview,
   slug,
   tags,
   title,
   updatedAt,
 }: {
   createdAt: Date,
-  body: string,
+  preview: string,
   slug: string,
   tags: typeof schema.tags.$inferSelect[],
   title: string,
@@ -26,7 +26,7 @@ export default function Post({
     >
       <h3>{title}</h3>
       <Shiitake lines={2} tagName="p">
-        {body}
+        {preview}
       </Shiitake>
       <div className="mt-auto text-sm">
         <div>{`Created at: ${createdAt.toLocaleString()}`}</div>

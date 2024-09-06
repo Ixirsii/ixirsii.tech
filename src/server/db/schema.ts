@@ -56,6 +56,7 @@ export const posts = createTable(
       .default(sql`CURRENT_TIMESTAMP`)
       .notNull(),
     isPublished: boolean("is_published").default(false).notNull(),
+    preview: varchar("preview", { length: 256 }),
     slug: varchar("slug", { length: 256 }).notNull(),
     title: text("title").notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
