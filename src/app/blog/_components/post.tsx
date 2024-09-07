@@ -5,19 +5,17 @@ import Shiitake from "shiitake";
 import type * as schema from "~/server/db/schema";
 
 export default function Post({
-  createdAt,
   preview,
+  publishedAt,
   slug,
   tags,
   title,
-  updatedAt,
 }: {
-  createdAt: Date,
   preview: string,
+  publishedAt: Date | null,
   slug: string,
   tags: typeof schema.tags.$inferSelect[],
   title: string,
-  updatedAt: Date,
 }) {
   return (
     <Link
@@ -29,8 +27,9 @@ export default function Post({
         {preview}
       </Shiitake>
       <div className="mt-auto text-sm">
-        <div>{`Created at: ${createdAt.toLocaleString()}`}</div>
-        <div>{`Updated at: ${updatedAt.toLocaleString()}`}</div>
+        {publishedAt !== null && (
+            <div>{`Published at: ${publishedAt.toLocaleString()}`}</div>
+        )}
         <div>{`Tags: ${tags.map(tag => tag.name).join(", ")}`}</div>
       </div>
     </Link>

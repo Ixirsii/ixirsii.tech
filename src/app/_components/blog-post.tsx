@@ -1,8 +1,23 @@
 import Markdown from "react-markdown";
-import { getBlogPost } from "~/server/queries";
+import type * as schema from "~/server/db/schema";
 
-export default async function BlogPost({ slug }: { slug: string }) {
-  const blogPost = await getBlogPost(slug);
-
-  return (<Markdown>{blogPost?.body}</Markdown>);
+export default async function BlogPost({
+  blogPost,
+  tags
+}: {
+  blogPost: typeof schema.posts.$inferSelect;
+  tags?: string;
+}) {
+  if (blogPost != null) {
+    return (
+      <>
+        <Markdown>{blogPost.body}</Markdown>
+        <div>
+          {tags !== undefined && (<> Tags: {tags} </>) }
+        </div>
+      </>
+    );
+  } else {
+    return null;
+  }
 }

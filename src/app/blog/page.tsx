@@ -12,12 +12,11 @@ export default async function Blog() {
         {posts.map((post) => (
           <Post
             key={post.id}
-            createdAt={post.createdAt}
             preview={post.preview ?? post.body}
+            publishedAt={post.publishedAt}
             slug={post.slug}
             tags={post.postTags.map(postTag => postTag.tag)}
             title={post.title}
-            updatedAt={post.updatedAt}
           />
         ))}
       </div>

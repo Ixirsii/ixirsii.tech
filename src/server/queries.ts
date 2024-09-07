@@ -19,7 +19,7 @@ export async function listBlogPosts(offset = 0) {
   return await db.query.posts.findMany({
     limit: 10,
     offset: offset,
-    orderBy: (post, { desc }) => desc(post.createdAt),
+    orderBy: (post, { desc }) => desc(post.publishedAt),
     where: (post, { eq }) => eq(post.isPublished, true),
     with: {
       postTags: {
