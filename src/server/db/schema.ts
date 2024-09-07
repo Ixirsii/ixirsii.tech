@@ -23,50 +23,27 @@ export const createTable = pgTableCreator((name) => `ixirsii.tech_${name}`);
 
 /* ********************************* Tables ********************************* */
 
-export const tags = createTable("tag", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 256 }).notNull(),
-});
-
-export const users = createTable("user", {
-  id: serial("id").primaryKey(),
-  about: text("about"),
-  email: varchar("email", { length: 256 }).notNull(),
-  name: varchar("name", { length: 256 }).notNull(),
-});
-
-export const links = createTable("link", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 256 }).notNull(),
-  url: text("url").notNull(),
-  userId: integer("user_id")
-    .notNull()
-    .references(() => users.id),
-});
-
 export const posts = createTable(
   "post",
   {
     id: serial("id").primaryKey(),
-    authorId: integer("author_id")
-      .notNull()
-      .references(() => users.id),
     body: text("body").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
     isPublished: boolean("is_published").default(false).notNull(),
     preview: varchar("preview", { length: 256 }),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
     slug: varchar("slug", { length: 256 }).notNull(),
     title: text("title").notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .default(sql`CURRENT_TIMESTAMP`)
-      .notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }),
   },
   (table) => ({
     slugIndex: index("slug_idx").on(table.slug),
   }),
 );
+
+export const tags = createTable("tag", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+});
 
 export const postTags = createTable("post_tag", {
   id: serial("id").primaryKey(),
@@ -80,23 +57,7 @@ export const postTags = createTable("post_tag", {
 
 /* ******************************** Relations ******************************* */
 
-export const usersRelations = relations(users, ({ many }) => ({
-  links: many(links),
-  posts: many(posts),
-}));
-
-export const linksRelations = relations(links, ({ one }) => ({
-  user: one(users, {
-    fields: [links.userId],
-    references: [users.id],
-  }),
-}));
-
-export const postsRelations = relations(posts, ({ many, one }) => ({
-  author: one(users, {
-    fields: [posts.authorId],
-    references: [users.id],
-  }),
+export const postsRelations = relations(posts, ({ many }) => ({
   postTags: many(postTags),
 }));
 

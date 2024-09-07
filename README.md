@@ -4,7 +4,6 @@
 
 - [ ] Blogs page
   - [ ] Show tags on blog posts (in addition to previews)
-  - [ ] Show author on blog posts
   - [ ] Change created date to published date
   - [ ] Show published and updated dates on post page
 - [ ] Code page
@@ -16,7 +15,6 @@
 - [ ] Home page
   - [ ] Display recent blogs, codes, and social media posts
 - [ ] Add auth
-- [ ] Add profile picture to users (If auth doesn't have this)?
 - [ ] Add login page
 - [ ] Add admin page
   - [ ] Database changes

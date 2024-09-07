@@ -6,7 +6,6 @@ export async function getBlogPost(slug: string) {
     where: (post, { and, eq }) =>
       and(eq(post.slug, slug), eq(post.isPublished, true)),
     with: {
-      author: true,
       postTags: {
         with: {
           tag: true,
@@ -23,7 +22,6 @@ export async function listBlogPosts(offset = 0) {
     orderBy: (post, { desc }) => desc(post.createdAt),
     where: (post, { eq }) => eq(post.isPublished, true),
     with: {
-      author: true,
       postTags: {
         with: {
           tag: true,
