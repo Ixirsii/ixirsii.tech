@@ -6,6 +6,7 @@
   - [✔] Show tags on blog posts (in addition to previews)
   - [✔] Change created date to published date
   - [✔] Show published and updated dates on post page
+  - [ ] Add pagination
 - [ ] Code page
   - [ ] Decide how I even want the page to look/what data to present
 - [ ] Tags page
