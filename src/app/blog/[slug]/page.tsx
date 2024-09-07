@@ -13,7 +13,12 @@ export default async function BlogPostPage({
 
   if (blogPost !== undefined) {
     return (
-      <BlogPost blogPost={blogPost} tags={tags} />
+      <BlogPost
+        blogPost={blogPost}
+        publishedAt={blogPost.publishedAt ?? undefined}
+        tags={tags}
+        updatedAt={blogPost.updatedAt ?? undefined}
+      />
     );
   } else {
     return null;
