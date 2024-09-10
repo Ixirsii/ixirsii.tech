@@ -6,7 +6,7 @@ updates:
     schedule:
       day: sunday
       interval: weekly
-      time: 09:00
+      time: "09:00"
       timezone: America/Los_Angeles
     target-branch: development
 
@@ -15,6 +15,6 @@ updates:
     schedule:
       day: sunday
       interval: weekly
-      time: 09:00
+      time: "09:00"
       timezone: America/Los_Angeles
     target-branch: development
