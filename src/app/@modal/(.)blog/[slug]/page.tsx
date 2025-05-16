@@ -1,5 +1,5 @@
 import BlogPost from '~/app/_components/blog-post';
-import { getBlogPost } from "~/server/queries";
+import { getBlogPost } from "~/server/db/queries";
 import { Modal } from './modal';
 
 export default async function BlogModal({

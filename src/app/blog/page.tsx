@@ -1,5 +1,5 @@
 import Post from "~/app/blog/_components/post";
-import { listBlogPosts } from "~/server/queries";
+import { listBlogPosts } from "~/server/db/queries";
 
 export const dynamic = "force-dynamic";
 

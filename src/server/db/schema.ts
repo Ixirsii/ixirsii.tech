@@ -2,58 +2,51 @@
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
 import { relations, sql } from "drizzle-orm";
-import {
-  boolean,
-  index,
-  integer,
-  pgTableCreator,
-  serial,
-  text,
-  timestamp,
-  varchar,
-} from "drizzle-orm/pg-core";
+import { index, pgTableCreator, primaryKey } from "drizzle-orm/pg-core";
 
 /**
- * This is an example of how to use the multi-project schema feature of Drizzle
- * ORM. Use the same database instance for multiple projects.
+ * This is an example of how to use the multi-project schema feature of Drizzle ORM.
+ * Use the same database instance for multiple projects.
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
 export const createTable = pgTableCreator((name) => `ixirsii.tech_${name}`);
 
-/* ********************************* Tables ********************************* */
-
 export const posts = createTable(
   "post",
-  {
-    id: serial("id").primaryKey(),
-    body: text("body").notNull(),
-    isPublished: boolean("is_published").default(false).notNull(),
-    preview: varchar("preview", { length: 256 }),
-    publishedAt: timestamp("published_at", { withTimezone: true }),
-    slug: varchar("slug", { length: 256 }).notNull(),
-    title: text("title").notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }),
-  },
-  (table) => ({
-    slugIndex: index("slug_idx").on(table.slug),
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    createdAt: d
+      .timestamp({ withTimezone: true })
+      .default(sql`CURRENT_TIMESTAMP`)
+      .notNull(),
+    updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
+    body: d.text().notNull(),
+    isPublished: d.boolean().default(false).notNull(),
+    preview: d.varchar({ length: 256 }).notNull(),
+    publishedAt: d.timestamp({ withTimezone: true }),
+    slug: d.varchar({ length: 256 }).notNull(),
+    title: d.varchar({ length: 256 }).notNull(),
   }),
+  (table) => [index("slug_idx").on(table.slug)]
 );
 
-export const tags = createTable("tag", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 256 }).notNull(),
-});
+export const tags = createTable(
+  "tag",
+  (d) => ({
+    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+    name: d.varchar({ length: 256 }).notNull(),
+  })
+);
 
-export const postTags = createTable("post_tag", {
-  id: serial("id").primaryKey(),
-  postId: integer("post_id")
-    .notNull()
-    .references(() => posts.id),
-  tagId: integer("tag_id")
-    .notNull()
-    .references(() => tags.id),
-});
+export const postTags = createTable(
+  "post_tag",
+  (d) => ({
+    postId: d.integer().notNull().references(() => posts.id),
+    tagId: d.integer().notNull().references(() => tags.id),
+  }),
+  (table) => [primaryKey({ columns: [table.postId, table.tagId] })]
+);
 
 /* ******************************** Relations ******************************* */
 
