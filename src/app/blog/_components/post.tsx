@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Shiitake from "shiitake";
 import type * as schema from "~/server/db/schema";
 
 export default function Post({
@@ -11,26 +10,24 @@ export default function Post({
   tags,
   title,
 }: {
-  preview: string,
-  publishedAt: Date | null,
-  slug: string,
-  tags: typeof schema.tags.$inferSelect[],
-  title: string,
+  preview: string;
+  publishedAt: Date | null;
+  slug: string;
+  tags: (typeof schema.tags.$inferSelect)[];
+  title: string;
 }) {
   return (
     <Link
-      className="bg-teal-800/10 hover:bg-teal-800/20 flex flex-col grow h-full p-4 rounded-xl"
+      className="flex h-full grow flex-col rounded-xl bg-teal-800/10 p-4 hover:bg-teal-800/20"
       href={`/blog/${slug}`}
     >
       <h3>{title}</h3>
-      <Shiitake lines={2} tagName="p">
-        {preview}
-      </Shiitake>
+      <p>{preview}</p>
       <div className="mt-auto text-sm">
         {publishedAt !== null && (
-            <div>{`Published at: ${publishedAt.toLocaleString()}`}</div>
+          <div>{`Published at: ${publishedAt.toLocaleString()}`}</div>
         )}
-        <div>{`Tags: ${tags.map(tag => tag.name).join(", ")}`}</div>
+        <div>{`Tags: ${tags.map((tag) => tag.name).join(", ")}`}</div>
       </div>
     </Link>
   );

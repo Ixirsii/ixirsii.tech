@@ -18,7 +18,7 @@ const geist = Geist({
 export default function RootLayout({
   children,
   modal,
-}: Readonly<{ children: React.ReactNode, modal: React.ReactNode }>) {
+}: Readonly<{ children: React.ReactNode; modal: React.ReactNode }>) {
   return (
     <html lang="en" className={`${geist.variable}`}>
       <body className="min-h-screen bg-slate-50">

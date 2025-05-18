@@ -28,24 +28,27 @@ export const posts = createTable(
     slug: d.varchar({ length: 256 }).notNull(),
     title: d.varchar({ length: 256 }).notNull(),
   }),
-  (table) => [index("slug_idx").on(table.slug)]
+  (table) => [index("slug_idx").on(table.slug)],
 );
 
-export const tags = createTable(
-  "tag",
-  (d) => ({
-    id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
-    name: d.varchar({ length: 256 }).notNull(),
-  })
-);
+export const tags = createTable("tag", (d) => ({
+  id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
+  name: d.varchar({ length: 256 }).notNull(),
+}));
 
 export const postTags = createTable(
   "post_tag",
   (d) => ({
-    postId: d.integer().notNull().references(() => posts.id),
-    tagId: d.integer().notNull().references(() => tags.id),
+    postId: d
+      .integer()
+      .notNull()
+      .references(() => posts.id),
+    tagId: d
+      .integer()
+      .notNull()
+      .references(() => tags.id),
   }),
-  (table) => [primaryKey({ columns: [table.postId, table.tagId] })]
+  (table) => [primaryKey({ columns: [table.postId, table.tagId] })],
 );
 
 /* ******************************** Relations ******************************* */

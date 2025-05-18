@@ -7,12 +7,12 @@ export default function About() {
       <h1>About</h1>
 
       <p>
-        Ryan (Ixirsii) is a software developer, gamer, and music enthusiast. 
-        He has a Bachelor of Science in Computer Science from the University
-        of North Texas. Most of Ryan's professional experience is in Java,
+        Ryan (Ixirsii) is a software developer, gamer, and music enthusiast. He
+        has a Bachelor of Science in Computer Science from the University of
+        North Texas. Most of Ryan&#39;s professional experience is in Java,
         writing APIs that interface with NoSQL databases but he also has
-        experience in Kotlin, Rust, and SQL databases on the backend, as well
-        as JavaScript and TypeScript experience on the frontend.
+        experience in Kotlin, Rust, and SQL databases on the backend, as well as
+        JavaScript and TypeScript experience on the frontend.
       </p>
 
       <p>
@@ -24,22 +24,23 @@ export default function About() {
 
       <hr />
 
-      <div className="divide-x divide-dashed divide-teal-800 flex flex-row justify-center">
+      <div className="flex flex-row justify-center divide-x divide-dashed divide-teal-800">
         <div className="flex-1 text-right">
           <h2 className="mr-4">Podcasts</h2>
 
-          <div className="bg-teal-800/10 hover:bg-teal-800/20 flex flex-row py-4 rounded-xl">
+          <div className="flex flex-row rounded-xl bg-teal-800/10 py-4 hover:bg-teal-800/20">
             <Link
               className="mx-4"
               href="https://www.deliberatesound.org/"
-              target="_blank">
-                <Image
-                  src="/images/Deliberate Sound Logo.png"
-                  alt="Deliberate Sound"
-                  style={{ objectFit: "contain" }}
-                  width={128}
-                  height={128}
-                />
+              target="_blank"
+            >
+              <Image
+                src="/images/Deliberate Sound Logo.png"
+                alt="Deliberate Sound"
+                style={{ objectFit: "contain" }}
+                width={128}
+                height={128}
+              />
             </Link>
             <div className="flex-1">
               <Link href="https://www.deliberatesound.org/" target="_blank">
@@ -48,14 +49,15 @@ export default function About() {
               <div className="links">
                 <Link
                   href="https://www.deliberatesound.org/our-lie-in-april"
-                  target="_blank">
-                    Our Lie In April
-                    <Image
-                      src="/images/Our Lie In April Logo.png"
-                      alt="Our Lie In April"
-                      width="24"
-                      height="24"
-                    />
+                  target="_blank"
+                >
+                  Our Lie In April
+                  <Image
+                    src="/images/Our Lie In April Logo.png"
+                    alt="Our Lie In April"
+                    width="24"
+                    height="24"
+                  />
                 </Link>
               </div>
             </div>
@@ -129,7 +131,10 @@ export default function About() {
               />
               Mastodon
             </Link>
-            <Link href="https://open.spotify.com/user/shadowhawk54" target="_blank">
+            <Link
+              href="https://open.spotify.com/user/shadowhawk54"
+              target="_blank"
+            >
               <Image
                 src="/images/Spotify Logo.svg"
                 alt="Spotify"
@@ -157,13 +162,7 @@ export default function About() {
               Twitch
             </Link>
             <Link href="https://x.com/Ixirsii" target="_blank">
-              <Image
-                src="/images/X Logo.svg"
-                alt="X"
-                width="24"
-                height="24"
-              />
-              X
+              <Image src="/images/X Logo.svg" alt="X" width="24" height="24" />X
             </Link>
             <Link href="https://www.youtube.com/@ixirsii" target="_blank">
               <Image

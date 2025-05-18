@@ -1,26 +1,24 @@
-import BlogPost from '~/app/_components/blog-post';
+"use client";
+
+import { type ReactNode, use, useEffect, useState } from "react";
+import BlogPost from "~/app/_components/blog-post";
 import { getBlogPost } from "~/server/db/queries";
 
-export default async function BlogPostPage({
-  params: { slug: slug },
+export default function BlogPostPage({
+  params,
 }: {
-  params: { slug: string },
-}) {
-  const blogPost = await getBlogPost(slug);
-  const tags = blogPost?.postTags.map((postTag) => postTag.tag)
-    .map((tag) => tag.name)
-    .join(", ");
+  params: Promise<{ slug: string }>;
+}): ReactNode {
+  const { slug } = use(params);
+  const [blogPost, setBlogPost] = useState<Awaited<
+    ReturnType<typeof getBlogPost>
+  > | null>(null);
 
-  if (blogPost !== undefined) {
-    return (
-      <BlogPost
-        blogPost={blogPost}
-        publishedAt={blogPost.publishedAt ?? undefined}
-        tags={tags}
-        updatedAt={blogPost.updatedAt ?? undefined}
-      />
-    );
-  } else {
-    return null;
-  }
+  useEffect(() => {
+    getBlogPost(slug)
+      .then(setBlogPost)
+      .catch((error) => console.error(error));
+  }, [slug]);
+
+  return <BlogPost blogPost={blogPost} />;
 }

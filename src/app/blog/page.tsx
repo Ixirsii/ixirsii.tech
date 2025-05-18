@@ -1,10 +1,21 @@
+"use client";
+
+import { type ReactNode, useEffect, useState } from "react";
 import Post from "~/app/blog/_components/post";
 import { listBlogPosts } from "~/server/db/queries";
 
 export const dynamic = "force-dynamic";
 
-export default async function Blog() {
-  const posts = await listBlogPosts();
+export default function Blog(): ReactNode {
+  const [posts, setPosts] = useState<Awaited<ReturnType<typeof listBlogPosts>>>(
+    [],
+  );
+
+  useEffect(() => {
+    listBlogPosts()
+      .then(setPosts)
+      .catch((error) => console.error(error));
+  }, []);
 
   return (
     <>
@@ -15,7 +26,7 @@ export default async function Blog() {
             preview={post.preview ?? post.body}
             publishedAt={post.publishedAt}
             slug={post.slug}
-            tags={post.postTags.map(postTag => postTag.tag)}
+            tags={post.postTags.map((postTag) => postTag.tag)}
             title={post.title}
           />
         ))}
@@ -23,4 +34,3 @@ export default async function Blog() {
     </>
   );
 }
-
