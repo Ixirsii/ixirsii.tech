@@ -1,31 +1,20 @@
-"use client";
+import { type ReactNode } from "react";
 
-import { type ReactNode, use, useEffect, useState } from "react";
-import { Modal } from "~/app/@modal/(.)blog/[slug]/modal";
-import BlogPost from "~/app/_components/blog-post";
-import { getBlogPost } from "~/server/db/queries";
+import { Modal } from "~/app/@modal/_components";
+import { BlogPost } from "~/app/_components";
+import { type BlogPostWithTags, getBlogPost } from "~/server/db";
 
-export default function BlogModal({
+export default async function BlogModal({
   params,
 }: {
-  params: Promise<{ slug: string }>;
-}): ReactNode {
-  const { slug } = use(params);
-  const [blogPost, setBlogPost] = useState<Awaited<
-    ReturnType<typeof getBlogPost>
-  > | null>(null);
-
-  useEffect(() => {
-    getBlogPost(slug)
-      .then(setBlogPost)
-      .catch((error) => console.error(error));
-  }, [slug]);
+  params: Readonly<Promise<{ slug: string }>>;
+}): Promise<ReactNode> {
+  const { slug } = await params;
+  const blogPost: BlogPostWithTags = await getBlogPost(slug);
 
   return (
     <Modal>
-      <div className="overflow-y-scroll">
-        <BlogPost blogPost={blogPost} />
-      </div>
+      <BlogPost blogPost={blogPost} />
     </Modal>
   );
 }

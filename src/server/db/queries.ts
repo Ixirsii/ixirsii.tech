@@ -16,9 +16,14 @@ export async function getBlogPost(slug: string) {
   });
 }
 
-export async function listBlogPosts(offset = 0) {
+/**
+ * Post with tags.
+ */
+export type BlogPostWithTags = Awaited<ReturnType<typeof getBlogPost>>;
+
+export async function listBlogPosts(offset = 0, limit = 10) {
   return db.query.posts.findMany({
-    limit: 10,
+    limit: limit,
     offset: offset,
     orderBy: (post, { desc }) => desc(post.publishedAt),
     where: (post, { eq }) => eq(post.isPublished, true),
@@ -31,3 +36,8 @@ export async function listBlogPosts(offset = 0) {
     },
   });
 }
+
+/**
+ * List of posts with tags.
+ */
+export type BlogPostsWithTags = Awaited<ReturnType<typeof listBlogPosts>>;

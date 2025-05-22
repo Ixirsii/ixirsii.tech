@@ -1,29 +1,29 @@
-"use client";
-
 import Link from "next/link";
-import type * as schema from "~/server/db/schema";
+import type { ReactNode } from "react";
 
-export default function Post({
+import type { tags as tagsSchema } from "~/server/db";
+
+export function Preview({
   preview,
   publishedAt,
   slug,
   tags,
   title,
-}: {
+}: Readonly<{
   preview: string;
   publishedAt: Date | null;
   slug: string;
-  tags: (typeof schema.tags.$inferSelect)[];
+  tags: (typeof tagsSchema.$inferSelect)[];
   title: string;
-}) {
+}>): ReactNode {
   return (
     <Link
-      className="flex h-full grow flex-col rounded-xl bg-teal-800/10 p-4 hover:bg-teal-800/20"
+      className="preview"
       href={`/blog/${slug}`}
     >
       <h3>{title}</h3>
       <p>{preview}</p>
-      <div className="mt-auto text-sm">
+      <div className="metadata">
         {publishedAt !== null && (
           <div>{`Published at: ${publishedAt.toLocaleString()}`}</div>
         )}

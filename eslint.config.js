@@ -2,6 +2,7 @@ import { FlatCompat } from "@eslint/eslintrc";
 import tseslint from "typescript-eslint";
 // @ts-ignore -- no types for this plugin
 import drizzle from "eslint-plugin-drizzle";
+import pluginImport from "eslint-plugin-import";
 
 const compat = new FlatCompat({
   baseDirectory: import.meta.dirname,
@@ -16,6 +17,7 @@ export default tseslint.config(
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
       drizzle,
+      pluginImport,
     },
     extends: [
       ...tseslint.configs.recommended,
@@ -46,6 +48,35 @@ export default tseslint.config(
         "error",
         { drizzleObjectName: ["db", "ctx.db"] },
       ],
+      "import/order": [
+        "error",
+        {
+          alphabetize: {
+            order: "asc",
+            caseInsensitive: true,
+          },
+          groups: [
+            // Imports of builtins are first
+            "builtin",
+            // Then external imports
+            "external",
+            // Then internal imports
+            "internal",
+            // Then sibling and parent imports. They can be mingled together
+            ["sibling", "parent"],
+            // Then index file imports
+            "index",
+            // Then any arcane TypeScript imports
+            "object",
+            // Then the omitted imports: type, unknown
+          ],
+          named: true,
+          "newlines-between": "always",
+        },
+      ],
+    },
+    settings: {
+      "import/internal-regex": "^~/",
     },
   },
   {

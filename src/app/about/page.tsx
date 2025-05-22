@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 
-export default function About() {
+export default function About(): ReactNode {
   return (
     <>
       <h1>About</h1>
@@ -24,16 +25,12 @@ export default function About() {
 
       <hr />
 
-      <div className="flex flex-row justify-center divide-x divide-dashed divide-teal-800">
-        <div className="flex-1 text-right">
-          <h2 className="mr-4">Podcasts</h2>
+      <div className="link-container">
+        <div className="podcast-container">
+          <h2>Podcasts</h2>
 
-          <div className="flex flex-row rounded-xl bg-teal-800/10 py-4 hover:bg-teal-800/20">
-            <Link
-              className="mx-4"
-              href="https://www.deliberatesound.org/"
-              target="_blank"
-            >
+          <div className="podcast">
+            <Link href="https://www.deliberatesound.org/" target="_blank">
               <Image
                 src="/images/Deliberate Sound Logo.png"
                 alt="Deliberate Sound"
@@ -42,10 +39,12 @@ export default function About() {
                 height={128}
               />
             </Link>
-            <div className="flex-1">
+
+            <div className="social-container">
               <Link href="https://www.deliberatesound.org/" target="_blank">
-                <h3 className="mr-4">Deliberate Sound</h3>
+                <h3>Deliberate Sound</h3>
               </Link>
+
               <div className="links">
                 <Link
                   href="https://www.deliberatesound.org/our-lie-in-april"
@@ -64,10 +63,10 @@ export default function About() {
           </div>
         </div>
 
-        <div className="flex-1">
-          <h2 className="ml-4">Links</h2>
+        <div className="social-container">
+          <h2>Links</h2>
 
-          <div className="links w-fit">
+          <div className="links">
             <Link href="https://anilist.co/user/Ixirsii" target="_blank">
               <Image
                 src="/images/AniList Logo.svg"
@@ -84,7 +83,7 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              BitBucket
+              <span>BitBucket</span>
             </Link>
             <Link href="https://bsky.app/profile/ixirsii.tech" target="_blank">
               <Image
@@ -93,7 +92,7 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              Bluesky
+              <span>Bluesky</span>
             </Link>
             <Link href="https://discord.gg/KTgshSbEUU" target="_blank">
               <Image
@@ -102,7 +101,7 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              Discord
+              <span>Discord</span>
             </Link>
             <Link href="https://github.com/Ixirsii" target="_blank">
               <Image
@@ -111,7 +110,7 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              GitHub
+              <span>GitHub</span>
             </Link>
             <Link href="https://www.instagram.com/ixirsii/" target="_blank">
               <Image
@@ -120,7 +119,7 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              Instagram
+              <span>Instagram</span>
             </Link>
             <Link href="https://mastodon.social/@ixirsii" target="_blank">
               <Image
@@ -129,7 +128,7 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              Mastodon
+              <span>Mastodon</span>
             </Link>
             <Link
               href="https://open.spotify.com/user/shadowhawk54"
@@ -141,7 +140,7 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              Spotify
+              <span>Spotify</span>
             </Link>
             <Link href="https://www.threads.net/@ixirsii" target="_blank">
               <Image
@@ -150,7 +149,7 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              Threads
+              <span>Threads</span>
             </Link>
             <Link href="https://www.twitch.tv/ixirsii" target="_blank">
               <Image
@@ -159,10 +158,11 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              Twitch
+              <span>Twitch</span>
             </Link>
             <Link href="https://x.com/Ixirsii" target="_blank">
-              <Image src="/images/X Logo.svg" alt="X" width="24" height="24" />X
+              <Image src="/images/X Logo.svg" alt="X" width="24" height="24" />
+              <span>X</span>
             </Link>
             <Link href="https://www.youtube.com/@ixirsii" target="_blank">
               <Image
@@ -171,7 +171,7 @@ export default function About() {
                 width="24"
                 height="24"
               />
-              YouTube
+              <span>YouTube</span>
             </Link>
           </div>
         </div>

@@ -1,7 +1,19 @@
 @import "tailwindcss";
 
-main {
-  @apply pt-4;
+@theme {
+  --font-mono:
+          "Source Code Pro", ui-monospace, SFMono, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+  --font-sans:
+          "Lato", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
+          "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/* ********************************** Body ********************************** */
+
+body {
+  @apply bg-slate-50;
+  @apply min-h-screen;
 }
 
 h1,
@@ -11,7 +23,7 @@ h4,
 h5,
 h6 {
   @apply font-extrabold;
-  @apply mb-2;
+  @apply my-4;
   @apply text-teal-800;
 }
 
@@ -25,20 +37,76 @@ h2 {
 }
 
 h3 {
-  @apply text-2xl;
+  @apply text-3xl;
 }
 
 h4 {
-  @apply text-xl;
+  @apply text-2xl;
 }
 
 h5 {
-  @apply text-lg;
-  @apply underline;
+  @apply text-xl;
 }
 
 h6 {
   @apply text-lg;
+}
+
+/* ********************************* Header ********************************* */
+
+header {
+  @apply bg-teal-800;
+  @apply overflow-auto;
+  @apply text-white;
+}
+
+header a {
+  @apply text-white;
+}
+
+header h1 {
+  @apply text-white;
+}
+
+nav {
+  @apply bg-teal-900;
+  @apply flex;
+  @apply flex-row;
+  @apply font-semibold;
+  @apply mx-[10%];
+  @apply w-4/5;
+}
+
+.nav-link {
+  @apply flex-1;
+  @apply hover:bg-white/25;
+  @apply leading-8;
+  @apply text-center;
+}
+
+/* ******************************** Content ********************************* */
+
+main {
+  @apply mt-4;
+  @apply mx-[10%];
+  @apply w-4/5;
+}
+
+a {
+  @apply text-teal-800;
+}
+
+blockquote {
+  @apply bg-slate-200;
+  @apply border-teal-800;
+  @apply border-l-2;
+  @apply my-2;
+  @apply px-6;
+}
+
+code {
+  @apply bg-slate-200;
+  @apply rounded;
 }
 
 hr {
@@ -46,8 +114,8 @@ hr {
   @apply my-4;
 }
 
-li ul {
-  @apply my-0;
+li {
+  @apply list-inside;
 }
 
 p {
@@ -56,22 +124,24 @@ p {
 
 ul {
   @apply list-disc;
-  @apply my-4;
-  @apply ps-10;
+  @apply m-6;
 }
 
-.blog {
-  @apply mb-8;
+/* ******************************* About page ******************************* */
+
+.link {
+  @apply flex;
+  @apply flex-row;
+  @apply gap-2;
 }
 
-.blog a {
-  @apply text-teal-800;
-}
-
-.blog hr {
-  @apply border-teal-800;
-  @apply my-4;
-  @apply w-full;
+.link-container {
+  @apply divide-x;
+  @apply divide-dashed;
+  @apply divide-teal-800;
+  @apply flex;
+  @apply flex-row;
+  @apply justify-center;
 }
 
 .links {
@@ -90,28 +160,47 @@ ul {
   @apply mx-2;
 }
 
-.modal-backdrop {
-  @apply absolute;
-  @apply bg-white/70;
-  @apply bottom-0;
+.podcast {
+  @apply bg-teal-800/10;
+  @apply hover:bg-teal-800/20;
+  @apply container;
   @apply flex;
-  @apply items-center;
-  @apply justify-center;
-  @apply left-0;
-  @apply right-0;
-  @apply top-0;
-  @apply z-10;
+  @apply flex-row;
+  @apply rounded-xl;
 }
 
-.modal {
-  @apply bg-white;
-  @apply border-none;
-  @apply h-4/5;
-  @apply p-5;
-  @apply relative;
-  @apply rounded-xl;
-  @apply w-4/5;
+.podcast-container {
+  @apply flex;
+  @apply flex-1;
+  @apply flex-col;
+  @apply items-end;
+  @apply p-4;
 }
+
+.social-container {
+  @apply flex-1;
+  @apply p-4;
+}
+
+/* ******************************* Blog page ******************************** */
+
+.metadata {
+  @apply mt-auto;
+  @apply text-sm;
+}
+
+.preview {
+  @apply bg-teal-800/10;
+  @apply hover:bg-teal-800/20;
+  @apply flex;
+  @apply flex-col;
+  @apply grow;
+  @apply h-full;
+  @apply rounded-xl;
+  @apply p-4;
+}
+
+/* ********************************* Modal ********************************** */
 
 .close-button {
   @apply absolute;
@@ -137,4 +226,119 @@ ul {
 .close-button:after {
   content: "x";
   @apply text-black;
+}
+
+.modal {
+  @apply bg-white;
+  @apply border-none;
+  @apply h-4/5;
+  @apply p-5;
+  @apply relative;
+  @apply rounded-xl;
+  @apply w-4/5;
+}
+
+.modal-backdrop {
+  @apply absolute;
+  @apply bg-white/70;
+  @apply bottom-0;
+  @apply flex;
+  @apply items-center;
+  @apply justify-center;
+  @apply left-0;
+  @apply right-0;
+  @apply top-0;
+  @apply z-10;
+}
+
+/* ********************************* Fonts ********************************** */
+
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 100;
+  src:
+          local("Lato Thin"),
+          url("../fonts/Lato Thin.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: italic;
+  font-weight: 100;
+  src:
+          local("Lato Thin Italic"),
+          url("../fonts/Lato Thin Italic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 300;
+  src:
+          local("Lato Light"),
+          url("../fonts/Lato Light.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: italic;
+  font-weight: 300;
+  src:
+          local("Lato Light Italic"),
+          url("../fonts/Lato Light Italic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 400;
+  src:
+          local("Lato"),
+          url("../fonts/Lato Regular.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: italic;
+  font-weight: 400;
+  src:
+          local("Lato Italic"),
+          url("../fonts/Lato Italic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 700;
+  src:
+          local("Lato Bold"),
+          url("../fonts/Lato Bold.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: italic;
+  font-weight: 700;
+  src:
+          local("Lato Bold Italic"),
+          url("../fonts/Lato Bold Italic.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: normal;
+  font-weight: 900;
+  src:
+          local("Lato Black"),
+          url("../fonts/Lato Black.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Lato";
+  font-style: italic;
+  font-weight: 900;
+  src:
+          local("Lato Black Italic"),
+          url("../fonts/Lato Black Italic.ttf") format("truetype");
 }

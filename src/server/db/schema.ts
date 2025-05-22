@@ -23,17 +23,20 @@ export const posts = createTable(
     updatedAt: d.timestamp({ withTimezone: true }).$onUpdate(() => new Date()),
     body: d.text().notNull(),
     isPublished: d.boolean().default(false).notNull(),
-    preview: d.varchar({ length: 256 }).notNull(),
+    preview: d.varchar({ length: 512 }).notNull(),
     publishedAt: d.timestamp({ withTimezone: true }),
-    slug: d.varchar({ length: 256 }).notNull(),
-    title: d.varchar({ length: 256 }).notNull(),
+    slug: d.varchar({ length: 255 }).notNull(),
+    title: d.varchar({ length: 255 }).notNull(),
   }),
-  (table) => [index("slug_idx").on(table.slug)],
+  (table) => [
+    index("slug_idx").on(table.slug),
+    index("title_idx").on(table.title),
+  ],
 );
 
 export const tags = createTable("tag", (d) => ({
   id: d.integer().primaryKey().generatedByDefaultAsIdentity(),
-  name: d.varchar({ length: 256 }).notNull(),
+  name: d.varchar({ length: 255 }).notNull(),
 }));
 
 export const postTags = createTable(
