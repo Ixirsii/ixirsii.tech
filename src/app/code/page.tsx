@@ -1,5 +1,5 @@
-export default function Code() {
-  return (
-    <p>Code!</p>
-  );
+import type { ReactNode } from "react";
+
+export default function Code(): ReactNode {
+  return <p>Code!</p>;
 }

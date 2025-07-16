@@ -1,3 +1,5 @@
-export default async function Home() {
+import type { ReactNode } from "react";
+
+export default function Home(): ReactNode {
   return null;
 }

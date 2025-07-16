@@ -1,24 +1,20 @@
-import BlogPost from '~/app/_components/blog-post';
-import { getBlogPost } from "~/server/queries";
-import { Modal } from './modal';
+import { type ReactNode } from "react";
+
+import { Modal } from "~/app/@modal/_components";
+import { BlogPost } from "~/app/_components";
+import { type BlogPostWithTags, getBlogPost } from "~/server/db";
 
 export default async function BlogModal({
-  params: { slug: slug },
+  params,
 }: {
-  params: { slug: string };
-}) {
-  const blogPost = await getBlogPost(slug);
+  params: Readonly<Promise<{ slug: string }>>;
+}): Promise<ReactNode> {
+  const { slug } = await params;
+  const blogPost: BlogPostWithTags = await getBlogPost(slug);
 
-  if (blogPost !== undefined) {
-    return (
-      <Modal>
-        <div className="overflow-y-scroll">
-          <BlogPost blogPost={blogPost} />
-        </div>
-      </Modal>
-    );
-  } else {
-    return null;
-  }
-
+  return (
+    <Modal>
+      <BlogPost blogPost={blogPost} />
+    </Modal>
+  );
 }

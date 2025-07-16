@@ -1,26 +1,23 @@
-import Post from "~/app/blog/_components/post";
-import { listBlogPosts } from "~/server/queries";
+import { type ReactNode } from "react";
 
-export const dynamic = "force-dynamic";
+import { Preview } from "~/app/blog/_components";
+import { type BlogPostsWithTags, listBlogPosts } from "~/server/db";
 
-export default async function Blog() {
-  const posts = await listBlogPosts();
+export default async function Blog(): Promise<ReactNode> {
+  const posts: BlogPostsWithTags = await listBlogPosts();
 
   return (
-    <>
-      <div className="grid grid-cols-2 gap-4">
-        {posts.map((post) => (
-          <Post
-            key={post.id}
-            preview={post.preview ?? post.body}
-            publishedAt={post.publishedAt}
-            slug={post.slug}
-            tags={post.postTags.map(postTag => postTag.tag)}
-            title={post.title}
-          />
-        ))}
-      </div>
-    </>
+    <div className="grid grid-cols-2 gap-4">
+      {posts.map((post) => (
+        <Preview
+          key={post.id}
+          preview={post.preview ?? post.body}
+          publishedAt={post.publishedAt}
+          slug={post.slug}
+          tags={post.postTags.map((postTag) => postTag.tag)}
+          title={post.title}
+        />
+      ))}
+    </div>
   );
 }
-

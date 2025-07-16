@@ -1,26 +1,15 @@
-import BlogPost from '~/app/_components/blog-post';
-import { getBlogPost } from "~/server/queries";
+import { type ReactNode } from "react";
+
+import { BlogPost } from "~/app/_components";
+import { type BlogPostWithTags, getBlogPost } from "~/server/db";
 
 export default async function BlogPostPage({
-  params: { slug: slug },
+  params,
 }: {
-  params: { slug: string },
-}) {
-  const blogPost = await getBlogPost(slug);
-  const tags = blogPost?.postTags.map((postTag) => postTag.tag)
-    .map((tag) => tag.name)
-    .join(", ");
+  params: Readonly<Promise<{ slug: string }>>;
+}): Promise<ReactNode> {
+  const { slug } = await params;
+  const blogPost: BlogPostWithTags = await getBlogPost(slug);
 
-  if (blogPost !== undefined) {
-    return (
-      <BlogPost
-        blogPost={blogPost}
-        publishedAt={blogPost.publishedAt ?? undefined}
-        tags={tags}
-        updatedAt={blogPost.updatedAt ?? undefined}
-      />
-    );
-  } else {
-    return null;
-  }
+  return <BlogPost blogPost={blogPost} />;
 }
