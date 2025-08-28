@@ -17,10 +17,7 @@ export function Preview({
   title: string;
 }>): ReactNode {
   return (
-    <Link
-      className="preview"
-      href={`/blog/${slug}`}
-    >
+    <Link className="preview" href={`/blog/${slug}`}>
       <h3>{title}</h3>
       <p>{preview}</p>
       <div className="metadata">
