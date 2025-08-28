@@ -79,15 +79,3 @@ export const postTagsRelations = relations(postTags, ({ one }) => ({
     references: [tags.id],
   }),
 }));
-
-/* ********************************* Config ********************************** */
-
-export default defineConfig({
-  schema: "./src/schema/*",
-  out: "./drizzle",
-  dialect: "postgresql",
-  dbCredentials: {
-    url: env.POSTGRES_URL,
-  },
-  tablesFilter: ["ixirsii.tech_"],
-});
