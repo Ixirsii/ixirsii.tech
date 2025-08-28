@@ -1,8 +1,13 @@
 // Example model schema from the Drizzle docs
 // https://orm.drizzle.team/docs/sql-schema-declaration
 
+import { defineConfig } from "drizzle-kit";
 import { relations, sql } from "drizzle-orm";
 import { index, pgTableCreator, primaryKey } from "drizzle-orm/pg-core";
+
+import { env } from "~/env";
+
+const createIndex = (name: string) => `ixirsii.tech_${name}_idx`;
 
 /**
  * This is an example of how to use the multi-project schema feature of Drizzle ORM.
@@ -10,7 +15,7 @@ import { index, pgTableCreator, primaryKey } from "drizzle-orm/pg-core";
  *
  * @see https://orm.drizzle.team/docs/goodies#multi-project-schema
  */
-export const createTable = pgTableCreator((name) => `ixirsii.tech_${name}`);
+const createTable = pgTableCreator((name) => `ixirsii.tech_${name}`);
 
 export const posts = createTable(
   "post",
@@ -29,8 +34,8 @@ export const posts = createTable(
     title: d.varchar({ length: 255 }).notNull(),
   }),
   (table) => [
-    index("slug_idx").on(table.slug),
-    index("title_idx").on(table.title),
+    index(createIndex("slug")).on(table.slug),
+    index(createIndex("title")).on(table.title),
   ],
 );
 
@@ -74,3 +79,15 @@ export const postTagsRelations = relations(postTags, ({ one }) => ({
     references: [tags.id],
   }),
 }));
+
+/* ********************************* Config ********************************** */
+
+export default defineConfig({
+  schema: "./src/schema/*",
+  out: "./drizzle",
+  dialect: "postgresql",
+  dbCredentials: {
+    url: env.POSTGRES_URL,
+  },
+  tablesFilter: ["ixirsii.tech_"],
+});
