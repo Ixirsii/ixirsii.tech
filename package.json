@@ -26,8 +26,8 @@
     "drizzle-orm": "0.44.1",
     "next": "16.0.7",
     "postgres": "3.4.7",
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-markdown": "10.1.0",
     "source-code-pro": "2.38.0",
     "zod": "4.0.5"
