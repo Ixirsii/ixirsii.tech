@@ -9,18 +9,24 @@ export function Header(): ReactNode {
 
   return (
     <header>
-      <h1><Link href="/">Ixirsii</Link></h1>
+      <h1>
+        <Link href="/">Ixirsii</Link>
+      </h1>
 
       <nav>
-        <Link className={pathname.startsWith("/about") ? "active" : ""} href="/about">
+        <Link
+          className={pathname.startsWith("/about") ? "active" : ""}
+          href="/about"
+        >
           About
         </Link>
-        <Link className={pathname.startsWith("/blog") ? "active" : ""} href="/blog">
+        <Link
+          className={pathname.startsWith("/blog") ? "active" : ""}
+          href="/blog"
+        >
           Blog
         </Link>
-        <Link href="https://www.9dev.tech">
-          Code
-        </Link>
+        <Link href="https://www.9dev.tech">Code</Link>
       </nav>
     </header>
   );

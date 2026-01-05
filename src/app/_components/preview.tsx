@@ -36,12 +36,13 @@ export function Preview({
             <div>{publishedLocaleString}</div>
           </>
         )}
-        {updatedLocaleString !== null && updatedLocaleString !== publishedLocaleString && (
-          <>
-            <div>Updated at:</div>
-            <div>{updatedLocaleString}</div>
-          </>
-        )}
+        {updatedLocaleString !== null &&
+          updatedLocaleString !== publishedLocaleString && (
+            <>
+              <div>Updated at:</div>
+              <div>{updatedLocaleString}</div>
+            </>
+          )}
         <div>Tags:</div>
         <div>{tags.map((tag) => tag.name).join(", ")}</div>
       </div>

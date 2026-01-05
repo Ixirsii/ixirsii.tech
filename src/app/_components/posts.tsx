@@ -22,4 +22,3 @@ export async function Posts(): Promise<ReactNode> {
     </div>
   );
 }
-

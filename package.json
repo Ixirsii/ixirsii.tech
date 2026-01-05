@@ -14,8 +14,8 @@
     "fix": "pnpm run lint:fix && pnpm run format:write",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
     "format:write": "prettier --write \"**/*.{ts,tsx,js,jsx,mdx}\" --cache",
-    "lint": "next lint",
-    "lint:fix": "next lint --fix",
+    "lint": "eslint",
+    "lint:fix": "eslint --fix",
     "preview": "next build && next start",
     "start": "next start",
     "typecheck": "tsc --noEmit"
@@ -25,6 +25,7 @@
     "@vercel/speed-insights": "1.2.0",
     "drizzle-orm": "0.44.1",
     "next": "16.0.7",
+    "postcss-load-config": "6.0.1",
     "postgres": "3.4.7",
     "react": "19.2.3",
     "react-dom": "19.2.3",
