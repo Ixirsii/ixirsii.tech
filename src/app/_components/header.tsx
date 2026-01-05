@@ -1,21 +1,24 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 export function Header(): ReactNode {
+  const pathname = usePathname();
+
   return (
     <header>
-      <h1>
-        <Link href="/">Ixirsii</Link>
-      </h1>
+      <h1><Link href="/">Ixirsii</Link></h1>
 
       <nav>
-        <Link className="nav-link" href="/about">
+        <Link className={pathname.startsWith("/about") ? "active" : ""} href="/about">
           About
         </Link>
-        <Link className="nav-link" href="/blog">
+        <Link className={pathname.startsWith("/blog") ? "active" : ""} href="/blog">
           Blog
         </Link>
-        <Link className="nav-link" href="/code">
+        <Link href="https://www.9dev.tech">
           Code
         </Link>
       </nav>
