@@ -29,13 +29,14 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "10.1.0",
+    "rehype-raw": "7.0.0",
     "source-code-pro": "2.38.0",
     "zod": "4.0.5"
   },
   "devDependencies": {
     "@eslint/eslintrc": "3.3.1",
     "@next/eslint-plugin-next": "15.3.2",
-    "@tailwindcss/postcss": "4.0.15",
+    "@tailwindcss/postcss": "4.1.18",
     "@types/node": "24.10.1",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
@@ -48,7 +49,7 @@
     "postcss": "8.5.3",
     "prettier": "3.5.3",
     "prettier-plugin-tailwindcss": "0.6.13",
-    "tailwindcss": "4.1.7",
+    "tailwindcss": "4.1.18",
     "typescript": "5.8.2",
     "typescript-eslint": "8.35.1"
   },

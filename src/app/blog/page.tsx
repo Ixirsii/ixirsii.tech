@@ -1,23 +1,13 @@
+import { type Metadata } from "next";
 import { type ReactNode } from "react";
 
-import { Preview } from "~/app/blog/_components";
-import { type BlogPostsWithTags, listBlogPosts } from "~/server/db";
+import { Posts } from "~/app/_components";
+
+export const dynamic = "force-dynamic";
+export const metadata: Metadata = {
+  title: "Blog | Ixirsii",
+};
 
 export default async function Blog(): Promise<ReactNode> {
-  const posts: BlogPostsWithTags = await listBlogPosts();
-
-  return (
-    <div className="grid grid-cols-2 gap-4">
-      {posts.map((post) => (
-        <Preview
-          key={post.id}
-          preview={post.preview ?? post.body}
-          publishedAt={post.publishedAt}
-          slug={post.slug}
-          tags={post.postTags.map((postTag) => postTag.tag)}
-          title={post.title}
-        />
-      ))}
-    </div>
-  );
+  return <Posts />;
 }

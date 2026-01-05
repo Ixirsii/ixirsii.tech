@@ -1,6 +1,11 @@
+import { type Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { type ReactNode } from "react";
+
+export const metadata: Metadata = {
+  title: "About | Ixirsii",
+};
 
 export default function About(): ReactNode {
   return (
@@ -76,15 +81,6 @@ export default function About(): ReactNode {
               />
               <span>Anilist</span>
             </Link>
-            <Link href="https://bitbucket.org/Ixirsii/" target="_blank">
-              <Image
-                src="/images/BitBucket Logo.svg"
-                alt="BitBucket"
-                width="24"
-                height="24"
-              />
-              <span>BitBucket</span>
-            </Link>
             <Link href="https://bsky.app/profile/ixirsii.tech" target="_blank">
               <Image
                 src="/images/Bluesky Logo.svg"
@@ -103,14 +99,14 @@ export default function About(): ReactNode {
               />
               <span>Discord</span>
             </Link>
-            <Link href="https://github.com/Ixirsii" target="_blank">
+            <Link href="https://gitlab.com/ixirsii" target="_blank">
               <Image
-                src="/images/GitHub Logo.svg"
-                alt="GitHub"
+                src="/images/GitLab Logo.svg"
+                alt="GitLab"
                 width="24"
                 height="24"
               />
-              <span>GitHub</span>
+              <span>GitLab</span>
             </Link>
             <Link href="https://www.instagram.com/ixirsii/" target="_blank">
               <Image
