@@ -7,7 +7,7 @@ check:
   before_script:
     - bun install
 
-  image: bun:1.x
+  image: oven/bun:1.3
 
   script:
     - bun check
