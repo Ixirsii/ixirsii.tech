@@ -1,29 +1,30 @@
-import { FlatCompat } from "@eslint/eslintrc";
+import { defineConfig, globalIgnores } from "eslint/config";
+import importPlugin from "eslint-plugin-import";
+import prettier from "eslint-plugin-prettier/recommended";
+import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
-// @ts-ignore -- no types for this plugin
-import drizzle from "eslint-plugin-drizzle";
-import pluginImport from "eslint-plugin-import";
 
-const compat = new FlatCompat({
-  baseDirectory: import.meta.dirname,
-});
-
-export default tseslint.config(
+export default defineConfig([
+  globalIgnores([".next", "next-env.d.ts"]),
   {
-    ignores: [".next"],
-  },
-  ...compat.extends("next/core-web-vitals"),
-  {
+    name: "9developers",
     files: ["**/*.ts", "**/*.tsx"],
-    plugins: {
-      drizzle,
-      pluginImport,
-    },
     extends: [
       ...tseslint.configs.recommended,
       ...tseslint.configs.recommendedTypeChecked,
       ...tseslint.configs.stylisticTypeChecked,
+      importPlugin.flatConfigs.recommended,
+      importPlugin.flatConfigs.typescript,
+      reactHooks.configs.flat.recommended,
     ],
+    languageOptions: {
+      parserOptions: {
+        projectService: true,
+      },
+    },
+    linterOptions: {
+      reportUnusedDisableDirectives: true,
+    },
     rules: {
       "@typescript-eslint/array-type": "off",
       "@typescript-eslint/consistent-type-definitions": "off",
@@ -39,14 +40,6 @@ export default tseslint.config(
       "@typescript-eslint/no-misused-promises": [
         "error",
         { checksVoidReturn: { attributes: false } },
-      ],
-      "drizzle/enforce-delete-with-where": [
-        "error",
-        { drizzleObjectName: ["db", "ctx.db"] },
-      ],
-      "drizzle/enforce-update-with-where": [
-        "error",
-        { drizzleObjectName: ["db", "ctx.db"] },
       ],
       "import/order": [
         "error",
@@ -77,16 +70,11 @@ export default tseslint.config(
     },
     settings: {
       "import/internal-regex": "^~/",
-    },
-  },
-  {
-    linterOptions: {
-      reportUnusedDisableDirectives: true,
-    },
-    languageOptions: {
-      parserOptions: {
-        projectService: true,
+      "import/resolver": {
+        node: true,
+        typescript: true,
       },
     },
   },
-);
+  prettier,
+]);
