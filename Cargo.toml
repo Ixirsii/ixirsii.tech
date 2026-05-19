@@ -2,5 +2,43 @@
 name = "ixirsii-tech"
 version = "0.1.0"
 edition = "2024"
+authors = ["Ryan Porterfield <ixirsii@9dev.tech>"]
+description = "ixirsii.tech HTMX website"
+license = "BSD 3-Clause"
+repository = "https://codeberg.org/Ixirsii/ixirsii.tech"
+readme = "README.md"
+keywords = ["web", "axum", "htmx", "blog"]
+categories = ["web-programming"]
 
 [dependencies]
+askama = "0.16.0"
+chrono = "0.4"
+pulldown-cmark = "0.13"
+axum = "0.8.9"
+axum-htmx = "0.8.1"
+axum-login = "0.18.0"
+dotenvy = "0.15.7"
+sqlx = { version = "0.8.6", features = [
+  "mysql",
+  "runtime-tokio",
+  "tls-native-tls",
+  "migrate",
+  "chrono",
+] }
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
+tower-http = { version = "0.6.11", features = ["fs"] }
+tracing = "0.1.44"
+tracing-subscriber = "0.3.23"
+
+[lints.rust]
+unsafe_code = "deny"
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery = { level = "warn", priority = -1 }
+cargo = { level = "warn", priority = -1 }
+multiple_crate_versions = "allow"
+unwrap_used = "deny"
+expect_used = "deny"
+missing_errors_doc = "deny"
+missing_panics_doc = "deny"

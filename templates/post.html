@@ -1,0 +1,22 @@
+{% extends "base.html" %} {% block content %}
+<article>
+  <h1>{{ post.title }}</h1>
+
+  <div class="metadata">
+    {% if post.published_at.len() != 0 %}
+      <div>Published:</div>
+      <div>{{ post.published_at }}</div>
+    {% endif %}
+    {% if post.updated_at.len() != 0 %}
+      <div>Updated:</div>
+      <div>{{ post.updated_at }}</div>
+    {% endif %}
+    {% if post.tags_html.len() != 0 %}
+      <div>Tags:</div>
+      <div>{{ post.tags_html|safe }}</div>
+    {% endif %}
+  </div>
+
+  {{ post.body|safe }}
+</article>
+{% endblock %}

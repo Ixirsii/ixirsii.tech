@@ -1,0 +1,24 @@
+{% extends "base.html" %} {% block content %}
+{% for post in posts %}
+  <article>
+    <h2><a href="/blog/{{ post.slug }}">{{ post.title }}</a></h2>
+
+    {{ post.body|safe }}
+
+    <div class="metadata">
+      <div>Published:</div>
+      <div>{{ post.published_at }}</div>
+      {% if post.updated_at.len() != 0 %}
+        <div>Updated:</div>
+        <div>{{ post.updated_at }}</div>
+      {% endif %}
+      {% if post.tags_html.len() != 0 %}
+        <div>Tags:</div>
+        <div>{{ post.tags_html|safe }}</div>
+      {% endif %}
+    </div>
+  </article>
+{% else %}
+  <p>No posts yet.</p>
+{% endfor %}
+{% endblock %}
