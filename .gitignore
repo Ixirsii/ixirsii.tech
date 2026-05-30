@@ -14,7 +14,7 @@ debug
 target
 
 # Dependencies
-node_modules
+.tailwindcss/
 
 # Env
 .env

@@ -9,7 +9,7 @@
 | `cargo clippy` | Lint with strict clippy config (denies `unwrap_used`, `expect_used`, `missing_errors_doc`, `missing_panics_doc`) |
 | `cargo fmt` | Format with `edition = "2024"` rules |
 
-`build.rs` runs `bun install && bunx tailwindcss -i src/main.css -o src/static/main.css --minify` automatically before every Cargo build. Tailwind v4 is configured entirely in `src/main.css` (no JS config file).
+`build.rs` auto-downloads the standalone Tailwind CSS CLI (via `curl`) and runs `tailwindcss -i src/main.css -o src/static/main.css --minify` before every Cargo build. No Node.js or `bun` needed. Tailwind v4 is configured entirely in `src/main.css` (no JS config file).
 
 No tests exist (no `tests/` directory, no test modules). Do not add `#[cfg(test)]` without confirming.
 
@@ -28,7 +28,7 @@ No tests exist (no `tests/` directory, no test modules). Do not add `#[cfg(test)
 
 - `dotenv().ok()` loads `.env` manually on startup (no auto-load middleware). The `.ok()` silently swallows `.env` load failures; missing vars surface cryptically at the first `var()` call instead.
 - Server address is hardcoded to `127.0.0.1:3000` — not configurable via env.
-- `build.rs` runs `bun install && bunx tailwindcss -i src/main.css -o src/static/main.css --minify`. Both commands check `ExitStatus::success()` and abort the build with stderr output on failure.
+- `build.rs` auto-downloads the platform-specific standalone Tailwind CSS CLI binary (cached in `.tailwindcss/`) and runs it. Aborts the build with stderr output on failure. Requires `curl` to be installed.
 - Askama derives (`#[derive(Template)]`) are in `src/handler/page.rs`. Structs are ordered alphabetically (AboutPage, BlogIndexPage, BlogPostPage, CodePage, HomePage), then private helpers.
 - Handlers are re-exported via `pub use crate::handler::page::*;` in `src/handler/mod.rs` (before the `mod page` declaration).
 - Strict clippy config in `Cargo.toml` `[lints.clippy]`: `pedantic`/`nursery`/`cargo` = warn, `unwrap_used`/`expect_used`/`missing_errors_doc`/`missing_panics_doc` = deny. `rustfmt.toml` sets `edition = "2024"`.
@@ -37,4 +37,4 @@ No tests exist (no `tests/` directory, no test modules). Do not add `#[cfg(test)
 
 ## If stuck
 
-Check `build.rs` first for any missing build steps (`bun` not installed, CSS not regenerated). Check `src/main.rs` for the route table. If the app won't start, ensure `DATABASE_URL` is set (the app fails hard if unreachable).
+If the build fails, check `build.rs` first — it requires `curl` to be installed and network access for the initial Tailwind CLI download. If CSS isn't regenerated, check `src/main.css` for syntax errors. Check `src/main.rs` for the route table. If the app won't start, ensure `DATABASE_URL` is set (the app fails hard if unreachable).
