@@ -510,6 +510,17 @@ select {
   @apply text-end;
 }
 
+/* ********************************** Code ********************************** */
+
+.button {
+  @apply bg-ctp-surface0;
+  @apply hover:bg-ctp-surface2;
+  @apply inline-block;
+  @apply p-3;
+  @apply rounded-lg;
+  @apply transition-colors;
+}
+
 /* ********************************** Blog ********************************** */
 
 .metadata {

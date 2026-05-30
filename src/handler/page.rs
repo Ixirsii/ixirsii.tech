@@ -10,9 +10,10 @@ use std::collections::HashMap;
 use crate::{
     AppState,
     database::{
-        Post, get_post_by_slug, get_posts_by_tag, get_tag_by_slug,
-        get_tags_for_post, list_posts, list_posts_paginated, list_tags_with_counts,
+        Post, get_post_by_slug, get_posts_by_tag, get_tag_by_slug, get_tags_for_post, list_posts,
+        list_posts_paginated, list_tags_with_counts,
     },
+    projects::{ALL_PROJECTS, Project, project_by_slug},
 };
 
 #[derive(Template)]
@@ -41,6 +42,14 @@ struct BlogPostPage<'a> {
 #[template(path = "code_page.html")]
 struct CodePage<'a> {
     title: &'a str,
+    projects: &'a [Project],
+}
+
+#[derive(Template)]
+#[template(path = "code_project.html")]
+struct CodeProjectPage {
+    title: String,
+    project: ProjectView,
 }
 
 #[derive(Template)]
@@ -80,6 +89,16 @@ struct TagCloudEntry {
     slug: String,
     count: i64,
     class: String,
+}
+
+struct ProjectView {
+    name: &'static str,
+    tagline: &'static str,
+    description: String,
+    repo_url: &'static str,
+    website_url: Option<&'static str>,
+    screenshots: &'static [crate::projects::Screenshot],
+    tech_tags: &'static [&'static str],
 }
 
 impl From<Post> for PostView {
@@ -211,7 +230,42 @@ pub async fn blog_post(
 /// # Errors
 /// Returns `500 Internal Server Error` if template rendering fails.
 pub async fn code_page(State(_state): State<AppState>) -> Result<Html<String>, StatusCode> {
-    let page = CodePage { title: "Code" };
+    let page = CodePage {
+        title: "Code",
+        projects: ALL_PROJECTS,
+    };
+
+    Ok(Html(
+        page.render()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    ))
+}
+
+/// Renders an individual project page.
+///
+/// # Errors
+/// Returns `404 Not Found` if the slug doesn't match any project, or
+/// `500 Internal Server Error` if template rendering fails.
+pub async fn code_project(
+    State(_state): State<AppState>,
+    Path(slug): Path<String>,
+) -> Result<Html<String>, StatusCode> {
+    let Some(project) = project_by_slug(&slug) else {
+        return Err(StatusCode::NOT_FOUND);
+    };
+
+    let page = CodeProjectPage {
+        title: project.name.to_string(),
+        project: ProjectView {
+            name: project.name,
+            tagline: project.tagline,
+            description: render_markdown(project.description),
+            repo_url: project.repo_url,
+            website_url: project.website_url,
+            screenshots: project.screenshots,
+            tech_tags: project.tech_tags,
+        },
+    };
 
     Ok(Html(
         page.render()
@@ -223,9 +277,7 @@ pub async fn code_page(State(_state): State<AppState>) -> Result<Html<String>, S
 ///
 /// # Errors
 /// Returns `500 Internal Server Error` if database queries or template rendering fails.
-pub async fn tags_index(
-    State(state): State<AppState>,
-) -> Result<Html<String>, StatusCode> {
+pub async fn tags_index(State(state): State<AppState>) -> Result<Html<String>, StatusCode> {
     let tags = list_tags_with_counts(&state.db_pool)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

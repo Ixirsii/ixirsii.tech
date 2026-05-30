@@ -7,6 +7,7 @@ use tracing::{error, info, instrument};
 
 mod database;
 mod handler;
+mod projects;
 
 /* ********************************************************************************************** *
  *                                           AppState                                            *
@@ -118,6 +119,7 @@ async fn main() -> Result<()> {
         .route("/blog", get(handler::blog_index))
         .route("/blog/{slug}", get(handler::blog_post))
         .route("/code", get(handler::code_page))
+        .route("/code/{slug}", get(handler::code_project))
         .route("/tags", get(handler::tags_index))
         .route("/tags/{slug}", get(handler::tag_posts))
         .nest_service("/static", static_service)

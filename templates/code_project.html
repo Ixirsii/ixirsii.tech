@@ -1,0 +1,20 @@
+{% extends "base.html" %} {% block content %}
+<article class="mb-6">
+  <h1>{{ project.name }}</h1>
+  <p class="text-ctp-subtext0 text-lg">{{ project.tagline }}</p>
+
+  {{ project.description|safe }}
+
+  <div class="metadata">
+    <div>Tech:</div>
+    <div>{{ project.tech_tags|join(", ") }}</div>
+  </div>
+
+  <div class="flex gap-4 mt-6">
+    <a href="{{ project.repo_url }}" target="_blank" class="button">Source</a>
+    {% if project.website_url.is_some() %}
+    <a href="{{ project.website_url.as_ref().unwrap() }}" target="_blank" class="button">Website</a>
+    {% endif %}
+  </div>
+</article>
+{% endblock %}

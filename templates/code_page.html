@@ -1,3 +1,18 @@
 {% extends "base.html" %} {% block content %}
 <h1>Code</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+{% for project in projects %}
+  <article class="flex flex-col mb-0">
+    <h2><a href="/code/{{ project.slug }}">{{ project.name }}</a></h2>
+
+    <p class="mb-0">{{ project.tagline }}</p>
+
+    <div class="metadata mt-auto">
+      <div>Tech:</div>
+      <div>{{ project.tech_tags|join(", ") }}</div>
+    </div>
+  </article>
+{% endfor %}
+</div>
 {% endblock %}
