@@ -1,0 +1,15 @@
+{% extends "base.html" %} {% block content %}
+<h1>Tags</h1>
+
+<div class="flex flex-wrap gap-2">
+{% for tag in tags %}
+  <div class="tag">
+    <a class="{{ tag.class }}" href="/tags/{{ tag.slug }}">
+      {{ tag.name }} ({{ tag.count }})
+    </a>
+  </div>
+{% else %}
+  <p>No tags yet.</p>
+{% endfor %}
+</div>
+{% endblock %}

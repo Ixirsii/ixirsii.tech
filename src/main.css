@@ -262,6 +262,9 @@ main {
 
 main a {
   @apply hover:underline;
+}
+
+article a {
   @apply text-ctp-sapphire;
 }
 
@@ -462,6 +465,10 @@ select {
   @apply flex-row;
   @apply gap-2;
   @apply rounded-lg;
+}
+
+.about-links a {
+  @apply text-ctp-sapphire;
 }
 
 .about-links {

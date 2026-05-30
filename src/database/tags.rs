@@ -6,6 +6,12 @@ pub struct Tag {
     pub slug: String,
 }
 
+pub struct TagWithCount {
+    pub name: String,
+    pub slug: String,
+    pub count: i64,
+}
+
 /* ********************************************************************************************** *
  *                                             Create                                             *
  * ********************************************************************************************** */
@@ -42,6 +48,20 @@ pub async fn list_tags(pool: &MySqlPool) -> Result<Vec<Tag>, sqlx::Error> {
     sqlx::query_as!(Tag, "SELECT id, name, slug FROM tags ORDER BY name")
         .fetch_all(pool)
         .await
+}
+
+#[allow(clippy::cast_possible_truncation)]
+pub async fn list_tags_with_counts(pool: &MySqlPool) -> Result<Vec<TagWithCount>, sqlx::Error> {
+    sqlx::query_as!(
+        TagWithCount,
+        "SELECT t.name, t.slug, COUNT(pt.post_id) AS `count`
+         FROM tags t
+         LEFT JOIN post_tags pt ON pt.tag_id = t.id
+         GROUP BY t.name, t.slug
+         ORDER BY t.name"
+    )
+    .fetch_all(pool)
+    .await
 }
 
 /* ********************************************************************************************** *

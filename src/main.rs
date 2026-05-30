@@ -118,6 +118,8 @@ async fn main() -> Result<()> {
         .route("/blog", get(handler::blog_index))
         .route("/blog/{slug}", get(handler::blog_post))
         .route("/code", get(handler::code_page))
+        .route("/tags", get(handler::tags_index))
+        .route("/tags/{slug}", get(handler::tag_posts))
         .nest_service("/static", static_service)
         .with_state(app_state);
     let listener = TcpListener::bind("127.0.0.1:3000").await?;

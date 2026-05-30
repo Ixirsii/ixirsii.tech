@@ -38,7 +38,8 @@ pub async fn get_posts_by_tag(pool: &MySqlPool, tag_slug: &str) -> Result<Vec<Po
          JOIN post_tags pt ON pt.post_id = p.id
          JOIN tags t ON t.id = pt.tag_id
          WHERE t.slug = ?
-         ORDER BY p.created_at DESC",
+           AND p.published_at IS NOT NULL AND p.published_at <= NOW()
+         ORDER BY p.published_at DESC",
         tag_slug
     )
     .fetch_all(pool)
