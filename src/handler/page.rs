@@ -12,26 +12,26 @@ use crate::{
 };
 
 #[derive(Template)]
-#[template(path = "about.html")]
+#[template(path = "about_page.html")]
 struct AboutPage<'a> {
     title: &'a str,
 }
 
 #[derive(Template)]
-#[template(path = "blog.html")]
+#[template(path = "blog_index.html")]
 struct BlogIndexPage<'a> {
     title: &'a str,
 }
 
 #[derive(Template)]
-#[template(path = "post.html")]
+#[template(path = "blog_post.html")]
 struct BlogPostPage<'a> {
     title: &'a str,
     post: &'a PostView,
 }
 
 #[derive(Template)]
-#[template(path = "code.html")]
+#[template(path = "code_page.html")]
 struct CodePage<'a> {
     title: &'a str,
 }
