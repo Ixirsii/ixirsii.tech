@@ -224,7 +224,7 @@ nav {
 }
 
 nav a {
-  @apply hover:bg-ctp-sapphire/30;
+  @apply hover:bg-ctp-surface0;
   @apply flex;
   @apply md:flex-1;
   @apply md:flex-col;
@@ -267,9 +267,7 @@ main a {
 
 article {
   @apply bg-ctp-surface0;
-  @apply max-w-3xl;
   @apply mb-6;
-  @apply mx-auto;
   @apply p-6;
   @apply rounded-lg;
 }
@@ -486,8 +484,8 @@ select {
 }
 
 .project {
-  @apply bg-ctp-sapphire/20;
-  @apply hover:bg-ctp-sapphire/30;
+  @apply bg-ctp-surface0;
+  @apply hover:bg-ctp-surface1;
   @apply flex-1;
   @apply flex-row;
   @apply gap-2;

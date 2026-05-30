@@ -1,14 +1,15 @@
 use askama::Template;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::Html,
 };
 use pulldown_cmark::{Parser, html};
+use std::collections::HashMap;
 
 use crate::{
     AppState,
-    database::{Post, get_post_by_slug, get_tags_for_post, list_posts},
+    database::{Post, get_post_by_slug, get_tags_for_post, list_posts, list_posts_paginated},
 };
 
 #[derive(Template)]
@@ -21,6 +22,9 @@ struct AboutPage<'a> {
 #[template(path = "blog_index.html")]
 struct BlogIndexPage<'a> {
     title: &'a str,
+    posts: &'a [PostView],
+    current_page: u32,
+    total_pages: u32,
 }
 
 #[derive(Template)]
@@ -47,6 +51,7 @@ struct PostView {
     slug: String,
     title: String,
     body: String,
+    preview: String,
     published_at: String,
     updated_at: String,
     tags_html: String,
@@ -58,6 +63,10 @@ impl From<Post> for PostView {
             slug: post.slug,
             title: post.title,
             body: render_markdown(&post.body),
+            preview: post
+                .preview
+                .map(|p| render_markdown(&p))
+                .unwrap_or_default(),
             published_at: post
                 .published_at
                 .map(|d| d.format("%B %e, %Y").to_string())
@@ -84,15 +93,52 @@ pub async fn about_page(State(_state): State<AppState>) -> Result<Html<String>, 
     ))
 }
 
-/// Renders the blog page.
+/// Renders the blog page with paginated post cards.
 ///
 /// # Errors
-/// Returns `500 Internal Server Error` if template rendering fails.
-pub async fn blog_index(State(_state): State<AppState>) -> Result<Html<String>, StatusCode> {
-    let page = BlogIndexPage { title: "Blog" };
+/// Returns `500 Internal Server Error` if database queries or template rendering fails.
+pub async fn blog_index(
+    State(state): State<AppState>,
+    Query(params): Query<HashMap<String, String>>,
+) -> Result<Html<String>, StatusCode> {
+    const PAGE_SIZE: u32 = 8;
+    let page = params
+        .get("page")
+        .and_then(|p| p.parse::<u32>().ok())
+        .filter(|&p| p > 0)
+        .unwrap_or(1);
+
+    let (posts, total) = list_posts_paginated(&state.db_pool, page, PAGE_SIZE)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let total_pages = total.div_ceil(PAGE_SIZE);
+
+    let mut post_views: Vec<PostView> = Vec::with_capacity(posts.len());
+    for post in posts {
+        let tags = get_tags_for_post(&state.db_pool, post.id)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        let tags_html = tags
+            .iter()
+            .map(|t| format!("<a href=\"/tags/{}\">{}</a>", t.slug, t.name))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let mut view = PostView::from(post);
+        view.tags_html = tags_html;
+        post_views.push(view);
+    }
+
+    let page_data = BlogIndexPage {
+        title: "Blog",
+        posts: &post_views,
+        current_page: page,
+        total_pages,
+    };
 
     Ok(Html(
-        page.render()
+        page_data
+            .render()
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
     ))
 }

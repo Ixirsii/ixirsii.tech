@@ -82,6 +82,38 @@ pub async fn list_posts(pool: &MySqlPool, limit: u32) -> Result<Vec<Post>, sqlx:
     .await
 }
 
+pub async fn list_posts_paginated(
+    pool: &MySqlPool,
+    page: u32,
+    page_size: u32,
+) -> Result<(Vec<Post>, u32), sqlx::Error> {
+    let offset = (page.saturating_sub(1)) * page_size;
+
+    let posts = sqlx::query_as!(
+        Post,
+        "SELECT id, title, slug, body, preview, published_at, created_at, updated_at \
+         FROM posts \
+         WHERE published_at IS NOT NULL AND published_at <= NOW() \
+         ORDER BY published_at DESC \
+         LIMIT ? OFFSET ?",
+        page_size,
+        offset
+    )
+    .fetch_all(pool)
+    .await?;
+
+    let total: i64 = sqlx::query_scalar!(
+        "SELECT COUNT(*) FROM posts WHERE published_at IS NOT NULL AND published_at <= NOW()"
+    )
+    .fetch_one(pool)
+    .await?;
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let total = total as u32;
+
+    Ok((posts, total))
+}
+
 /* ********************************************************************************************** *
  *                                             Update                                             *
  * ********************************************************************************************** */

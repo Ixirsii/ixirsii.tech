@@ -1,3 +1,37 @@
 {% extends "base.html" %} {% block content %}
 <h1>Blog</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+{% for post in posts %}
+  <article class="flex flex-col mb-0">
+    <h3><a href="/blog/{{ post.slug }}">{{ post.title }}</a></h3>
+
+    {{ post.preview|safe }}
+
+    <div class="metadata mt-auto">
+      {% if post.published_at.len() != 0 %}
+        <div>Published:</div>
+        <div>{{ post.published_at }}</div>
+      {% endif %}
+      {% if post.tags_html.len() != 0 %}
+        <div>Tags:</div>
+        <div>{{ post.tags_html|safe }}</div>
+      {% endif %}
+    </div>
+  </article>
+{% else %}
+  <p>No posts yet.</p>
+{% endfor %}
+</div>
+
+{% if total_pages > 1 %}
+<div class="flex justify-center gap-4 mt-8">
+  {% if current_page > 1 %}
+    <a href="/blog?page={{ current_page - 1 }}">&larr; Previous</a>
+  {% endif %}
+  {% if current_page < total_pages %}
+    <a href="/blog?page={{ current_page + 1 }}">Next &rarr;</a>
+  {% endif %}
+</div>
+{% endif %}
 {% endblock %}
