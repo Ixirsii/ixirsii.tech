@@ -6,8 +6,7 @@ use tower_http::services::ServeDir;
 use tracing::{error, info, instrument};
 
 mod database;
-mod handler;
-mod projects;
+mod page;
 
 /* ********************************************************************************************** *
  *                                           AppState                                            *
@@ -114,14 +113,14 @@ async fn main() -> Result<()> {
 
     let static_service = ServeDir::new("./src/static");
     let app = Router::new()
-        .route("/", get(handler::home))
-        .route("/about", get(handler::about_page))
-        .route("/blog", get(handler::blog_index))
-        .route("/blog/{slug}", get(handler::blog_post))
-        .route("/code", get(handler::code_page))
-        .route("/code/{slug}", get(handler::code_project))
-        .route("/tags", get(handler::tags_index))
-        .route("/tags/{slug}", get(handler::tag_posts))
+        .route("/", get(page::home))
+        .route("/about", get(page::about_page))
+        .route("/blog", get(page::blog_index))
+        .route("/blog/{slug}", get(page::blog_post))
+        .route("/code", get(page::code_index))
+        .route("/code/{slug}", get(page::code_project))
+        .route("/tags", get(page::tag_index))
+        .route("/tags/{slug}", get(page::tag_posts))
         .nest_service("/static", static_service)
         .with_state(app_state);
     let listener = TcpListener::bind("127.0.0.1:3000").await?;

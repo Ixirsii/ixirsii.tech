@@ -44,13 +44,6 @@ pub async fn get_tag_by_slug(pool: &MySqlPool, slug: &str) -> Result<Option<Tag>
         .await
 }
 
-pub async fn list_tags(pool: &MySqlPool) -> Result<Vec<Tag>, sqlx::Error> {
-    sqlx::query_as!(Tag, "SELECT id, name, slug FROM tags ORDER BY name")
-        .fetch_all(pool)
-        .await
-}
-
-#[allow(clippy::cast_possible_truncation)]
 pub async fn list_tags_with_counts(pool: &MySqlPool) -> Result<Vec<TagWithCount>, sqlx::Error> {
     sqlx::query_as!(
         TagWithCount,
