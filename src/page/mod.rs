@@ -8,7 +8,7 @@ pub use home::home;
 use pulldown_cmark::{Parser, html};
 pub use tag::{tag_index, tag_posts};
 
-use crate::database::{Post, Tag};
+use crate::database::{Post, PostWithTagRow, Tag};
 
 mod about;
 mod blog;
@@ -61,6 +61,48 @@ impl From<Tag> for TagView {
             slug: tag.slug,
         }
     }
+}
+
+pub fn build_post_views(rows: Vec<PostWithTagRow>) -> Vec<PostView> {
+    let mut post_views = Vec::new();
+    let mut current_post_id = None;
+
+    for row in rows {
+        let PostWithTagRow {
+            id,
+            title,
+            slug,
+            body,
+            preview,
+            published_at,
+            created_at,
+            updated_at,
+            tag_name,
+            tag_slug,
+        } = row;
+
+        if current_post_id != Some(id) {
+            current_post_id = Some(id);
+            post_views.push(PostView::from(Post {
+                id,
+                title,
+                slug,
+                body,
+                preview,
+                published_at,
+                created_at,
+                updated_at,
+            }));
+        }
+
+        if let (Some(name), Some(slug)) = (tag_name, tag_slug)
+            && let Some(post_view) = post_views.last_mut()
+        {
+            post_view.tags.push(TagView { name, slug });
+        }
+    }
+
+    post_views
 }
 
 pub fn render_markdown(text: &str) -> String {

@@ -9,8 +9,8 @@ use axum::{
 
 use crate::{
     AppState,
-    database::{get_posts_by_tag, get_tag_by_slug, get_tags_for_post, list_tags_with_counts},
-    page::{PostView, TagView},
+    database::{get_posts_by_tag, get_tag_by_slug, list_tags_with_counts},
+    page::{PostView, build_post_views},
 };
 
 const TAG_CLOUD_COLORS: [&str; 12] = [
@@ -108,19 +108,10 @@ pub async fn tag_posts(
         return Err(StatusCode::NOT_FOUND);
     };
 
-    let posts = get_posts_by_tag(&state.db_pool, &slug)
+    let post_rows = get_posts_by_tag(&state.db_pool, &slug)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
-    let mut post_views: Vec<PostView> = Vec::with_capacity(posts.len());
-    for post in posts {
-        let tags = get_tags_for_post(&state.db_pool, post.id)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let mut view = PostView::from(post);
-        view.tags = tags.into_iter().map(TagView::from).collect();
-        post_views.push(view);
-    }
+    let post_views: Vec<PostView> = build_post_views(post_rows);
 
     let title = format!("Tag: {}", tag.name);
 

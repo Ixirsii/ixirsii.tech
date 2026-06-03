@@ -12,6 +12,19 @@ pub struct Post {
     pub updated_at: Option<NaiveDateTime>,
 }
 
+pub struct PostWithTagRow {
+    pub id: u64,
+    pub title: String,
+    pub slug: String,
+    pub body: String,
+    pub preview: Option<String>,
+    pub published_at: Option<NaiveDateTime>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: Option<NaiveDateTime>,
+    pub tag_name: Option<String>,
+    pub tag_slug: Option<String>,
+}
+
 /* ********************************************************************************************** *
  *                                             Create                                             *
  * ********************************************************************************************** */
@@ -68,14 +81,21 @@ pub async fn get_post_by_slug(pool: &MySqlPool, slug: &str) -> Result<Option<Pos
     .await
 }
 
-pub async fn list_posts(pool: &MySqlPool, limit: u32) -> Result<Vec<Post>, sqlx::Error> {
+pub async fn list_posts(pool: &MySqlPool, limit: u32) -> Result<Vec<PostWithTagRow>, sqlx::Error> {
     sqlx::query_as!(
-        Post,
-        "SELECT id, title, slug, body, preview, published_at, created_at, updated_at
-         FROM posts
-         WHERE published_at IS NOT NULL AND published_at <= NOW()
-         ORDER BY published_at DESC
-         LIMIT ?",
+        PostWithTagRow,
+        "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at, p.updated_at,
+                t.name AS tag_name, t.slug AS tag_slug
+         FROM (
+             SELECT id, title, slug, body, preview, published_at, created_at, updated_at
+             FROM posts
+             WHERE published_at IS NOT NULL AND published_at <= NOW()
+             ORDER BY published_at DESC
+             LIMIT ?
+         ) p
+         LEFT JOIN post_tags pt ON pt.post_id = p.id
+         LEFT JOIN tags t ON t.id = pt.tag_id
+         ORDER BY p.published_at DESC, p.id, t.name",
         limit
     )
     .fetch_all(pool)
@@ -86,16 +106,23 @@ pub async fn list_posts_paginated(
     pool: &MySqlPool,
     page: u32,
     page_size: u32,
-) -> Result<(Vec<Post>, u32), sqlx::Error> {
+) -> Result<(Vec<PostWithTagRow>, u32), sqlx::Error> {
     let offset = (page.saturating_sub(1)) * page_size;
 
     let posts = sqlx::query_as!(
-        Post,
-        "SELECT id, title, slug, body, preview, published_at, created_at, updated_at \
-         FROM posts \
-         WHERE published_at IS NOT NULL AND published_at <= NOW() \
-         ORDER BY published_at DESC \
-         LIMIT ? OFFSET ?",
+        PostWithTagRow,
+        "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at, p.updated_at,
+                t.name AS tag_name, t.slug AS tag_slug
+         FROM (
+             SELECT id, title, slug, body, preview, published_at, created_at, updated_at
+             FROM posts
+             WHERE published_at IS NOT NULL AND published_at <= NOW()
+             ORDER BY published_at DESC
+             LIMIT ? OFFSET ?
+         ) p
+         LEFT JOIN post_tags pt ON pt.post_id = p.id
+         LEFT JOIN tags t ON t.id = pt.tag_id
+         ORDER BY p.published_at DESC, p.id, t.name",
         page_size,
         offset
     )

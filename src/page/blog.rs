@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use crate::{
     AppState,
     database::{get_post_by_slug, get_tags_for_post, list_posts_paginated},
-    page::{PostView, TagView},
+    page::{PostView, TagView, build_post_views},
 };
 
 #[derive(Template)]
@@ -45,21 +45,12 @@ pub async fn blog_index(
         .filter(|&p| p > 0)
         .unwrap_or(1);
 
-    let (posts, total) = list_posts_paginated(&state.db_pool, page, PAGE_SIZE)
+    let (post_rows, total) = list_posts_paginated(&state.db_pool, page, PAGE_SIZE)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     let total_pages = total.div_ceil(PAGE_SIZE);
-
-    let mut post_views: Vec<PostView> = Vec::with_capacity(posts.len());
-    for post in posts {
-        let tags = get_tags_for_post(&state.db_pool, post.id)
-            .await
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let mut view = PostView::from(post);
-        view.tags = tags.into_iter().map(TagView::from).collect();
-        post_views.push(view);
-    }
+    let post_views: Vec<PostView> = build_post_views(post_rows);
 
     let page_data = BlogIndexPage {
         title: "Blog",
