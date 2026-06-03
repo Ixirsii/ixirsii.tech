@@ -47,9 +47,12 @@ pub async fn get_tag_by_slug(pool: &MySqlPool, slug: &str) -> Result<Option<Tag>
 pub async fn list_tags_with_counts(pool: &MySqlPool) -> Result<Vec<TagWithCount>, sqlx::Error> {
     sqlx::query_as!(
         TagWithCount,
-        "SELECT t.name, t.slug, COUNT(pt.post_id) AS `count`
+        "SELECT t.name, t.slug, COUNT(p.id) AS `count`
          FROM tags t
          LEFT JOIN post_tags pt ON pt.tag_id = t.id
+         LEFT JOIN posts p ON p.id = pt.post_id
+            AND p.published_at IS NOT NULL
+            AND p.published_at <= NOW()
          GROUP BY t.name, t.slug
          ORDER BY t.name"
     )

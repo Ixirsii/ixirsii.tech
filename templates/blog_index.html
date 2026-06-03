@@ -13,9 +13,13 @@
         <div>Published:</div>
         <div>{{ post.published_at }}</div>
       {% endif %}
-      {% if post.tags_html.len() != 0 %}
+      {% if post.tags.len() != 0 %}
         <div>Tags:</div>
-        <div>{{ post.tags_html|safe }}</div>
+        <div>
+          {% for tag in post.tags %}
+            <a href="/tags/{{ tag.slug }}">{{ tag.name }}</a>{% if !loop.last %}, {% endif %}
+          {% endfor %}
+        </div>
       {% endif %}
     </div>
   </article>

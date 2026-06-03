@@ -11,10 +11,12 @@
   </div>
 
   <div class="flex gap-4 mt-6">
-    <a href="{{ project.repo_url }}" target="_blank" class="button">Source</a>
-    {% if project.website_url.is_some() %}
-    <a href="{{ project.website_url.as_ref().unwrap() }}" target="_blank" class="button">Website</a>
-    {% endif %}
+    <a href="{{ project.repo_url }}" target="_blank" rel="noopener noreferrer" class="button">Source</a>
+    {% match project.website_url %}
+    {% when Some with (url) %}
+    <a href="{{ url }}" target="_blank" rel="noopener noreferrer" class="button">Website</a>
+    {% when None %}
+    {% endmatch %}
   </div>
 </article>
 {% endblock %}

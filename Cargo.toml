@@ -12,6 +12,7 @@ categories = ["web-programming"]
 
 [dependencies]
 askama = "0.16.0"
+ammonia = "4.1.2"
 chrono = "0.4"
 pulldown-cmark = "0.13"
 axum = "0.8.9"

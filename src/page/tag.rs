@@ -10,7 +10,7 @@ use axum::{
 use crate::{
     AppState,
     database::{get_posts_by_tag, get_tag_by_slug, get_tags_for_post, list_tags_with_counts},
-    page::PostView,
+    page::{PostView, TagView},
 };
 
 const TAG_CLOUD_COLORS: [&str; 12] = [
@@ -56,9 +56,12 @@ struct TagPostsPage<'a> {
 /// # Errors
 /// Returns `500 Internal Server Error` if database queries or template rendering fails.
 pub async fn tag_index(State(state): State<AppState>) -> Result<Html<String>, StatusCode> {
-    let tags = list_tags_with_counts(&state.db_pool)
+    let tags: Vec<_> = list_tags_with_counts(&state.db_pool)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .into_iter()
+        .filter(|tag| tag.count > 0)
+        .collect();
 
     let max_count = tags.iter().map(|t| t.count).max().unwrap_or(0);
 
@@ -114,13 +117,8 @@ pub async fn tag_posts(
         let tags = get_tags_for_post(&state.db_pool, post.id)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let tags_html = tags
-            .iter()
-            .map(|t| format!("<a href=\"/tags/{}\">{}</a>", t.slug, t.name))
-            .collect::<Vec<_>>()
-            .join(", ");
         let mut view = PostView::from(post);
-        view.tags_html = tags_html;
+        view.tags = tags.into_iter().map(TagView::from).collect();
         post_views.push(view);
     }
 

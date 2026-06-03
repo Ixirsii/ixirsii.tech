@@ -1,13 +1,14 @@
 //! Page route handlers.
 
 pub use about::about_page;
+use ammonia::clean;
 pub use blog::{blog_index, blog_post};
 pub use code::{code_index, code_project};
 pub use home::home;
 use pulldown_cmark::{Parser, html};
 pub use tag::{tag_index, tag_posts};
 
-use crate::database::Post;
+use crate::database::{Post, Tag};
 
 mod about;
 mod blog;
@@ -22,7 +23,12 @@ pub struct PostView {
     preview: String,
     published_at: String,
     updated_at: String,
-    tags_html: String,
+    tags: Vec<TagView>,
+}
+
+pub struct TagView {
+    name: String,
+    slug: String,
 }
 
 impl From<Post> for PostView {
@@ -43,7 +49,16 @@ impl From<Post> for PostView {
                 .updated_at
                 .map(|d| d.format("%B %e, %Y").to_string())
                 .unwrap_or_default(),
-            tags_html: String::new(),
+            tags: Vec::new(),
+        }
+    }
+}
+
+impl From<Tag> for TagView {
+    fn from(tag: Tag) -> Self {
+        Self {
+            name: tag.name,
+            slug: tag.slug,
         }
     }
 }
@@ -52,5 +67,5 @@ pub fn render_markdown(text: &str) -> String {
     let parser = Parser::new(text);
     let mut output = String::new();
     html::push_html(&mut output, parser);
-    output
+    clean(&output)
 }

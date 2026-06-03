@@ -1,3 +1,9 @@
--- Add migration script here
-INSERT INTO tags(name, slug) VALUES ('letter case', 'letter-case');
-INSERT INTO tags(name, slug) VALUES ('title case', 'title-case');
+INSERT INTO tags (name, slug) VALUES
+  ('letter case', 'letter-case'),
+  ('title case', 'title-case'),
+  ('rust', 'rust'),
+  ('axum', 'axum'),
+  ('htmx', 'htmx'),
+  ('mysql', 'mysql'),
+  ('personal site', 'personal-site'),
+  ('drafts', 'drafts');

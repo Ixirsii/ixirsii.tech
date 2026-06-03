@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use crate::{
     AppState,
     database::{get_post_by_slug, get_tags_for_post, list_posts_paginated},
-    page::PostView,
+    page::{PostView, TagView},
 };
 
 #[derive(Template)]
@@ -56,13 +56,8 @@ pub async fn blog_index(
         let tags = get_tags_for_post(&state.db_pool, post.id)
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-        let tags_html = tags
-            .iter()
-            .map(|t| format!("<a href=\"/tags/{}\">{}</a>", t.slug, t.name))
-            .collect::<Vec<_>>()
-            .join(", ");
         let mut view = PostView::from(post);
-        view.tags_html = tags_html;
+        view.tags = tags.into_iter().map(TagView::from).collect();
         post_views.push(view);
     }
 
@@ -99,13 +94,8 @@ pub async fn blog_post(
     let tags = get_tags_for_post(&state.db_pool, post.id)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let tags_html = tags
-        .iter()
-        .map(|t| format!("<a href=\"/tags/{}\">{}</a>", t.slug, t.name))
-        .collect::<Vec<_>>()
-        .join(", ");
     let mut view = PostView::from(post);
-    view.tags_html = tags_html;
+    view.tags = tags.into_iter().map(TagView::from).collect();
 
     let page = BlogPostPage {
         title: &view.title,
