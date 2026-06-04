@@ -1,0 +1,11 @@
+<div class="tags">
+{% for tag in tags %}
+  <div class="tag">
+    <a class="{{ tag.class }}" href="/tags/{{ tag.slug }}">
+      {{ tag.name }} ({{ tag.count }})
+    </a>
+  </div>
+{% else %}
+  <p class="text-ctp-subtext0">No matching tags.</p>
+{% endfor %}
+</div>

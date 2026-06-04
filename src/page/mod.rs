@@ -6,7 +6,7 @@ pub use blog::{blog_index, blog_post};
 pub use code::{code_index, code_project};
 pub use home::home;
 use pulldown_cmark::{Parser, html};
-pub use tag::{tag_index, tag_posts};
+pub use tag::{tag_index, tag_posts, tag_search};
 
 use crate::database::{Post, PostWithTagRow, Tag};
 

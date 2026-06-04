@@ -120,6 +120,7 @@ async fn main() -> Result<()> {
         .route("/code", get(page::code_index))
         .route("/code/{slug}", get(page::code_project))
         .route("/tags", get(page::tag_index))
+        .route("/tags/search", get(page::tag_search))
         .route("/tags/{slug}", get(page::tag_posts))
         .nest_service("/static", static_service)
         .with_state(app_state);

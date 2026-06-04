@@ -2,10 +2,11 @@
 
 use askama::Template;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::Html,
 };
+use serde::Deserialize;
 
 use crate::{
     AppState,
@@ -35,11 +36,16 @@ struct TagCloudEntry {
     class: String,
 }
 
-#[allow(clippy::cast_precision_loss)]
 #[derive(Template)]
 #[template(path = "tags_index.html")]
 struct TagsPage<'a> {
     title: &'a str,
+    tags: &'a [TagCloudEntry],
+}
+
+#[derive(Template)]
+#[template(path = "tags_cloud.html")]
+struct TagsCloud<'a> {
     tags: &'a [TagCloudEntry],
 }
 
@@ -51,35 +57,17 @@ struct TagPostsPage<'a> {
     posts: &'a [PostView],
 }
 
+#[derive(Deserialize)]
+pub struct TagSearchParams {
+    filter: Option<String>,
+}
+
 /// Renders the tag index page (tag cloud).
 ///
 /// # Errors
 /// Returns `500 Internal Server Error` if database queries or template rendering fails.
 pub async fn tag_index(State(state): State<AppState>) -> Result<Html<String>, StatusCode> {
-    let tags: Vec<_> = list_tags_with_counts(&state.db_pool)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-        .into_iter()
-        .filter(|tag| tag.count > 0)
-        .collect();
-
-    let max_count = tags.iter().map(|t| t.count).max().unwrap_or(0);
-
-    let entries: Vec<TagCloudEntry> = tags
-        .into_iter()
-        .enumerate()
-        .map(|(i, tag)| {
-            let size = tag_cloud_size(tag.count, max_count);
-            let color = TAG_CLOUD_COLORS[i % TAG_CLOUD_COLORS.len()];
-            let class = format!("{size} {color}");
-            TagCloudEntry {
-                name: tag.name,
-                slug: tag.slug,
-                count: tag.count,
-                class,
-            }
-        })
-        .collect();
+    let entries = load_tag_cloud_entries(&state, None).await?;
 
     let page = TagsPage {
         title: "Tags",
@@ -88,6 +76,24 @@ pub async fn tag_index(State(state): State<AppState>) -> Result<Html<String>, St
 
     Ok(Html(
         page.render()
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
+    ))
+}
+
+/// Renders the tag cloud fragment for tag search.
+///
+/// # Errors
+/// Returns `500 Internal Server Error` if database queries or template rendering fails.
+pub async fn tag_search(
+    State(state): State<AppState>,
+    Query(params): Query<TagSearchParams>,
+) -> Result<Html<String>, StatusCode> {
+    let entries = load_tag_cloud_entries(&state, params.filter.as_deref()).await?;
+    let cloud = TagsCloud { tags: &entries };
+
+    Ok(Html(
+        cloud
+            .render()
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
     ))
 }
@@ -131,6 +137,7 @@ pub async fn tag_posts(
  *                                       Private functions                                        *
  * ********************************************************************************************** */
 
+#[allow(clippy::cast_precision_loss)]
 fn tag_cloud_size(count: i64, max_count: i64) -> &'static str {
     if max_count == 0 {
         return "text-sm";
@@ -147,4 +154,36 @@ fn tag_cloud_size(count: i64, max_count: i64) -> &'static str {
     } else {
         "text-sm"
     }
+}
+
+async fn load_tag_cloud_entries(
+    state: &AppState,
+    filter: Option<&str>,
+) -> Result<Vec<TagCloudEntry>, StatusCode> {
+    let filter = filter.unwrap_or_default().trim().to_lowercase();
+    let tags: Vec<_> = list_tags_with_counts(&state.db_pool)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .into_iter()
+        .filter(|tag| tag.count > 0)
+        .filter(|tag| filter.is_empty() || tag.name.to_lowercase().contains(&filter))
+        .collect();
+
+    let max_count = tags.iter().map(|tag| tag.count).max().unwrap_or(0);
+
+    Ok(tags
+        .into_iter()
+        .enumerate()
+        .map(|(i, tag)| {
+            let size = tag_cloud_size(tag.count, max_count);
+            let color = TAG_CLOUD_COLORS[i % TAG_CLOUD_COLORS.len()];
+            let class = format!("{size} {color}");
+            TagCloudEntry {
+                name: tag.name,
+                slug: tag.slug,
+                count: tag.count,
+                class,
+            }
+        })
+        .collect())
 }

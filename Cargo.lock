@@ -1048,6 +1048,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "pulldown-cmark",
+ "serde",
  "sqlx",
  "tokio",
  "tower-http",
