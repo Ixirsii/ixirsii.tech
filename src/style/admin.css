@@ -1,0 +1,285 @@
+/* ********************************* Admin ********************************** */
+
+.admin-shell {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-6;
+}
+
+.admin-header {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-4;
+  @apply justify-between;
+  @apply md:flex-row;
+  @apply md:items-start;
+}
+
+.admin-grid {
+  @apply grid;
+  @apply gap-4;
+  @apply md:grid-cols-2;
+}
+
+.admin-grid-tight {
+  @apply items-start;
+}
+
+.admin-stack {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-4;
+}
+
+.admin-panel {
+  @apply bg-ctp-surface0;
+  @apply border;
+  @apply border-ctp-sapphire/20;
+  @apply p-6;
+  @apply rounded-lg;
+  @apply shadow-ctp-sapphire;
+  @apply shadow-lg/10;
+}
+
+.admin-link-card {
+  @apply hover:bg-ctp-surface1;
+  @apply text-ctp-text;
+  @apply transition-colors;
+}
+
+.admin-link-card:hover {
+  @apply no-underline;
+}
+
+.admin-toolbar {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-4;
+  @apply md:flex-row;
+  @apply md:items-end;
+}
+
+.admin-toolbar-field {
+  @apply flex;
+  @apply flex-1;
+  @apply flex-col;
+  @apply gap-2;
+}
+
+.admin-toolbar label,
+.admin-form-field label,
+.admin-tag-fieldset legend {
+  @apply font-mono;
+  @apply text-ctp-subtext1;
+  @apply text-sm;
+}
+
+.admin-toolbar select,
+.admin-form-field input,
+.admin-form-field select,
+.admin-form-field textarea {
+  @apply bg-ctp-mantle;
+  @apply border;
+  @apply border-ctp-surface2;
+  @apply p-3;
+  @apply rounded-lg;
+  @apply text-ctp-text;
+  @apply transition-colors;
+}
+
+.admin-form-field textarea {
+  @apply font-mono;
+  @apply min-h-36;
+}
+
+.admin-toolbar select:focus-visible,
+.admin-form-field input:focus-visible,
+.admin-form-field select:focus-visible,
+.admin-form-field textarea:focus-visible {
+  @apply border-ctp-sapphire;
+  @apply outline-none;
+}
+
+.admin-form {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-4;
+}
+
+.admin-editor-grid {
+  @apply grid;
+  @apply gap-4;
+  @apply xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)];
+}
+
+.admin-preview-stack {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-4;
+}
+
+.admin-preview-panel {
+  @apply min-h-64;
+}
+
+.admin-preview-header {
+  @apply mb-4;
+}
+
+.admin-preview-header h2 {
+  @apply mb-1;
+}
+
+.admin-markdown-preview {
+  @apply bg-ctp-mantle;
+  @apply min-h-40;
+  @apply p-4;
+  @apply rounded-lg;
+}
+
+.admin-markdown-preview > :last-child {
+  @apply mb-0;
+}
+
+.admin-post-card {
+  @apply gap-4;
+  @apply flex;
+  @apply flex-col;
+}
+
+.admin-post-card-header,
+.admin-actions {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-3;
+  @apply md:flex-row;
+  @apply md:items-start;
+  @apply md:justify-between;
+}
+
+.admin-post-title-row {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-2;
+  @apply md:flex-row;
+  @apply md:items-center;
+}
+
+.admin-post-title-row h2 {
+  @apply mb-0;
+}
+
+.admin-slug {
+  @apply font-mono;
+  @apply text-ctp-subtext0;
+  @apply text-sm;
+}
+
+.admin-tag-list,
+.admin-tag-options {
+  @apply flex;
+  @apply flex-wrap;
+  @apply gap-2;
+}
+
+.admin-tag-chip,
+.admin-tag-option {
+  @apply bg-ctp-mantle;
+  @apply border;
+  @apply border-ctp-surface2;
+  @apply rounded-lg;
+}
+
+.admin-tag-chip {
+  @apply px-3;
+  @apply py-1;
+}
+
+.admin-tag-option {
+  @apply flex;
+  @apply gap-2;
+  @apply items-center;
+  @apply px-3;
+  @apply py-2;
+}
+
+.admin-tag-option input {
+  @apply accent-ctp-sapphire;
+}
+
+.status-badge {
+  @apply border;
+  @apply px-3;
+  @apply py-1;
+  @apply rounded-full;
+  @apply text-sm;
+}
+
+.status-published {
+  @apply bg-ctp-green/10;
+  @apply border-ctp-green/40;
+  @apply text-ctp-green;
+}
+
+.status-scheduled {
+  @apply bg-ctp-peach/10;
+  @apply border-ctp-peach/40;
+  @apply text-ctp-peach;
+}
+
+.status-unscheduled {
+  @apply bg-ctp-overlay0/10;
+  @apply border-ctp-overlay0/40;
+  @apply text-ctp-subtext0;
+}
+
+.admin-empty {
+  @apply text-ctp-subtext0;
+}
+
+.admin-tag-row {
+  @apply bg-ctp-mantle;
+  @apply border;
+  @apply border-ctp-surface2;
+  @apply p-4;
+  @apply rounded-lg;
+}
+
+.admin-tag-row-fields {
+  @apply grid;
+  @apply gap-4;
+  @apply md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_max-content];
+}
+
+.admin-count-field {
+  @apply justify-end;
+}
+
+.admin-count {
+  @apply bg-ctp-surface0;
+  @apply border;
+  @apply border-ctp-surface2;
+  @apply px-3;
+  @apply py-3;
+  @apply rounded-lg;
+  @apply text-ctp-subtext1;
+}
+
+.admin-inline-delete {
+  @apply mt-4;
+}
+
+.admin-form-field-error input,
+.admin-form-field-error textarea,
+.admin-form-field-error select {
+  @apply border-ctp-red;
+}
+
+.admin-form-field-error-message {
+  @apply text-ctp-red;
+  @apply font-mono;
+  @apply text-sm;
+  @apply mt-1;
+}
+
+

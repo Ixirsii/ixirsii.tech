@@ -1,0 +1,69 @@
+/* ********************************* About ********************************** */
+
+.about {
+  @apply md:divide-ctp-sapphire;
+  @apply md:divide-dashed;
+  @apply md:divide-x;
+  @apply flex;
+  @apply flex-col;
+  @apply md:flex-row;
+  @apply gap-4;
+  @apply md:justify-center;
+}
+
+.about-column {
+  @apply flex;
+  @apply flex-1;
+  @apply flex-col;
+}
+
+.about-column a {
+  @apply flex;
+  @apply flex-row;
+  @apply gap-2;
+  @apply rounded-lg;
+}
+
+.about-links a {
+  @apply text-ctp-sapphire;
+}
+
+.about-links {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-2;
+  @apply md:items-end;
+  @apply w-fit;
+}
+
+.about-projects {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-4;
+}
+
+.about-projects a {
+  @apply hover:no-underline;
+  @apply text-ctp-text;
+}
+
+.project {
+  @apply bg-ctp-surface0;
+  @apply hover:bg-ctp-surface1;
+  @apply flex-1;
+  @apply flex-row;
+  @apply gap-2;
+  @apply items-center;
+  @apply justify-between;
+  @apply p-2;
+}
+
+.project h3 {
+  @apply mb-0;
+}
+
+.project span {
+  @apply flex-4;
+  @apply text-end;
+}
+

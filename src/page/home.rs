@@ -3,16 +3,19 @@
 use askama::Template;
 use axum::{extract::State, http::StatusCode, response::Html};
 
+use tracing::error;
+
 use crate::{
-    AppState,
-    database::list_posts,
-    page::{PostView, build_post_views},
+    AdminAuthSession, AppState,
+    database::list_published_posts,
+    page::{PAGE_SIZE, PostView},
 };
 
 #[derive(Template)]
 #[template(path = "home.html")]
 struct HomePage<'a> {
     title: &'a str,
+    show_admin_link: bool,
     posts: &'a [PostView],
 }
 
@@ -20,19 +23,28 @@ struct HomePage<'a> {
 ///
 /// # Errors
 /// Returns `500 Internal Server Error` if template rendering fails.
-pub async fn home(State(state): State<AppState>) -> Result<Html<String>, StatusCode> {
-    let post_rows = list_posts(&state.db_pool, 10)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let post_views: Vec<PostView> = build_post_views(post_rows);
-
+pub async fn home(
+    State(state): State<AppState>,
+    auth_session: AdminAuthSession,
+) -> Result<Html<String>, StatusCode> {
+    let posts: Vec<PostView> = match list_published_posts(&(*state.db_pool), 1, PAGE_SIZE).await {
+        Ok(posts) => posts.into_iter().map(PostView::from).collect(),
+        Err(err) => {
+            error!(error = %err, "home: failed to fetch published posts");
+            return Err(StatusCode::INTERNAL_SERVER_ERROR);
+        }
+    };
     let page = HomePage {
-        title: "Home",
-        posts: &post_views,
+        title: "Home | Ixirsii",
+        show_admin_link: auth_session.user.is_some(),
+        posts: &posts,
     };
 
-    Ok(Html(
-        page.render()
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-    ))
+    match page.render() {
+        Ok(html) => Ok(Html(html)),
+        Err(err) => {
+            error!(error = %err, "home: template render failed");
+            Err(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
 }

@@ -7,7 +7,11 @@ use axum::{
     response::Html,
 };
 
-use crate::{AppState, page::render_markdown};
+use crate::{AdminAuthSession, AppState, page::render_markdown};
+
+/* ********************************************************************************************** *
+ *                                           Constants                                            *
+ * ********************************************************************************************** */
 
 const ALL_PROJECTS: &[Project] = &[
     Project {
@@ -64,6 +68,7 @@ const ALL_PROJECTS: &[Project] = &[
 #[template(path = "code_page.html")]
 struct CodePage<'a> {
     title: &'a str,
+    show_admin_link: bool,
     projects: &'a [Project],
 }
 
@@ -71,6 +76,7 @@ struct CodePage<'a> {
 #[template(path = "code_project.html")]
 struct CodeProjectPage {
     title: String,
+    show_admin_link: bool,
     project: ProjectView,
 }
 
@@ -97,9 +103,13 @@ struct ProjectView {
 ///
 /// # Errors
 /// Returns `500 Internal Server Error` if template rendering fails.
-pub async fn code_index(State(_state): State<AppState>) -> Result<Html<String>, StatusCode> {
+pub async fn code_index(
+    State(_state): State<AppState>,
+    auth_session: AdminAuthSession,
+) -> Result<Html<String>, StatusCode> {
     let page = CodePage {
         title: "Code",
+        show_admin_link: auth_session.user.is_some(),
         projects: ALL_PROJECTS,
     };
 
@@ -116,6 +126,7 @@ pub async fn code_index(State(_state): State<AppState>) -> Result<Html<String>, 
 /// `500 Internal Server Error` if template rendering fails.
 pub async fn code_project(
     State(_state): State<AppState>,
+    auth_session: AdminAuthSession,
     Path(slug): Path<String>,
 ) -> Result<Html<String>, StatusCode> {
     let Some(project) = project_by_slug(&slug) else {
@@ -124,6 +135,7 @@ pub async fn code_project(
 
     let page = CodeProjectPage {
         title: project.name.to_string(),
+        show_admin_link: auth_session.user.is_some(),
         project: ProjectView {
             name: project.name,
             tagline: project.tagline,

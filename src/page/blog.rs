@@ -9,15 +9,16 @@ use axum::{
 use std::collections::HashMap;
 
 use crate::{
-    AppState,
-    database::{get_post_by_slug, get_tags_for_post, list_posts_paginated},
-    page::{PostView, TagView, build_post_views},
+    AdminAuthSession, AppState,
+    database::{count_published_posts, get_post_by_slug, list_published_posts},
+    page::{PAGE_SIZE, PostView},
 };
 
 #[derive(Template)]
 #[template(path = "blog_index.html")]
 struct BlogIndexPage<'a> {
     title: &'a str,
+    show_admin_link: bool,
     posts: &'a [PostView],
     current_page: u32,
     total_pages: u32,
@@ -27,6 +28,7 @@ struct BlogIndexPage<'a> {
 #[template(path = "blog_post.html")]
 struct BlogPostPage<'a> {
     title: &'a str,
+    show_admin_link: bool,
     post: &'a PostView,
 }
 
@@ -36,24 +38,24 @@ struct BlogPostPage<'a> {
 /// Returns `500 Internal Server Error` if database queries or template rendering fails.
 pub async fn blog_index(
     State(state): State<AppState>,
+    auth_session: AdminAuthSession,
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Html<String>, StatusCode> {
-    const PAGE_SIZE: u32 = 8;
     let page = params
         .get("page")
         .and_then(|p| p.parse::<u32>().ok())
-        .filter(|&p| p > 0)
         .unwrap_or(1);
-
-    let (post_rows, total) = list_posts_paginated(&state.db_pool, page, PAGE_SIZE)
+    let post_rows = list_published_posts(&(*state.db_pool), page, PAGE_SIZE)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-
+    let post_views: Vec<PostView> = post_rows.into_iter().map(PostView::from).collect();
+    let total = count_published_posts(&(*state.db_pool))
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let total_pages = total.div_ceil(PAGE_SIZE);
-    let post_views: Vec<PostView> = build_post_views(post_rows);
-
     let page_data = BlogIndexPage {
-        title: "Blog",
+        title: "Blog | Ixirsii",
+        show_admin_link: auth_session.user.is_some(),
         posts: &post_views,
         current_page: page,
         total_pages,
@@ -73,24 +75,20 @@ pub async fn blog_index(
 /// `500 Internal Server Error` if template rendering fails.
 pub async fn blog_post(
     State(state): State<AppState>,
+    auth_session: AdminAuthSession,
     Path(slug): Path<String>,
 ) -> Result<Html<String>, StatusCode> {
-    let Some(post) = get_post_by_slug(&state.db_pool, &slug)
+    let Some(post) = get_post_by_slug(&(*state.db_pool), &slug)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     else {
         return Err(StatusCode::NOT_FOUND);
     };
 
-    let tags = get_tags_for_post(&state.db_pool, post.id)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
-    let mut view = PostView::from(post);
-    view.tags = tags.into_iter().map(TagView::from).collect();
-
     let page = BlogPostPage {
-        title: &view.title,
-        post: &view,
+        title: &format!("{0} | Ixirsii", post.title),
+        show_admin_link: auth_session.user.is_some(),
+        post: &PostView::from(post),
     };
 
     Ok(Html(

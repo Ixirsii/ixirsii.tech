@@ -1,0 +1,9 @@
+/* ********************************** Blog ********************************** */
+
+.metadata {
+  @apply gap-x-2;
+  @apply grid;
+  @apply grid-cols-[max-content_1fr];
+  @apply text-ctp-subtext0;
+  @apply text-sm;
+}

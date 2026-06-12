@@ -1,0 +1,145 @@
+{% extends "base.html" %} {% block content %}
+<section class="admin-shell">
+  <div class="admin-header">
+    <div>
+      <p class="login-kicker">Posts</p>
+      <h1>{{ heading }}</h1>
+      {% if is_edit %}
+        <p>Update the stored content, publication timing, slug, and tag assignments for this post.</p>
+      {% else %}
+        <p>Create a new post. The initial slug will be generated automatically from the title.</p>
+      {% endif %}
+    </div>
+
+    <a class="button" href="/admin/posts">Back to Posts</a>
+  </div>
+
+  <div class="admin-editor-grid">
+    <div class="admin-stack">
+      <form class="admin-panel admin-form" action="{{ form_action }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        {% if let Some(message) = errors.security %}
+          <p class="admin-security-alert"><strong>Security Check Failed.</strong> {{ message }}</p>
+        {% endif %}
+
+        <div class="admin-form-field{% if errors.title.is_some() %} admin-form-field-error{% endif %}">
+          <label for="post-title">Title</label>
+          <input id="post-title" name="title" type="text" value="{{ form.title }}" required>
+          {% if let Some(msg) = errors.title %}
+            <p class="admin-form-field-error-message">{{ msg }}</p>
+          {% endif %}
+        </div>
+
+        {% if is_edit %}
+          <div class="admin-form-field{% if errors.slug.is_some() %} admin-form-field-error{% endif %}">
+            <label for="post-slug">Slug</label>
+            <input id="post-slug" name="slug" type="text" value="{{ form.slug }}" required>
+            {% if let Some(msg) = errors.slug %}
+              <p class="admin-form-field-error-message">{{ msg }}</p>
+            {% endif %}
+          </div>
+        {% else %}
+          <p class="login-hint">Slug will be generated from the title when the post is created.</p>
+        {% endif %}
+
+        <div class="admin-form-field{% if errors.published_at.is_some() %} admin-form-field-error{% endif %}">
+          <label for="post-published-at">Publish Date</label>
+          <input id="post-published-at" name="published_at" type="datetime-local" value="{{ form.published_at }}">
+          {% if let Some(msg) = errors.published_at %}
+            <p class="admin-form-field-error-message">{{ msg }}</p>
+          {% endif %}
+        </div>
+
+        <div class="admin-form-field">
+          <label for="post-preview">Preview</label>
+          <textarea
+            id="post-preview"
+            name="preview"
+            rows="6"
+            hx-post="/admin/posts/preview/preview"
+            hx-include="closest form"
+            hx-target="#preview-render"
+            hx-swap="innerHTML"
+            hx-trigger="input changed delay:300ms"
+          >{{ form.preview }}</textarea>
+        </div>
+
+        <div class="admin-form-field{% if errors.body.is_some() %} admin-form-field-error{% endif %}">
+          <label for="post-body">Body</label>
+          <textarea
+            id="post-body"
+            name="body"
+            rows="16"
+            hx-post="/admin/posts/preview/body"
+            hx-include="closest form"
+            hx-target="#body-render"
+            hx-swap="innerHTML"
+            hx-trigger="input changed delay:300ms"
+            required
+          >{{ form.body }}</textarea>
+          {% if let Some(msg) = errors.body %}
+            <p class="admin-form-field-error-message">{{ msg }}</p>
+          {% endif %}
+        </div>
+
+        <fieldset class="admin-form-field admin-tag-fieldset">
+          <legend>Tags</legend>
+          <div class="admin-tag-options">
+            {% for tag in form.tags %}
+              <label class="admin-tag-option" for="tag-{{ tag.id }}">
+                <input id="tag-{{ tag.id }}" name="tag_ids" type="checkbox" value="{{ tag.id }}" {% if tag.selected %}checked{% endif %}>
+                <span>{{ tag.name }}</span>
+                <span class="admin-slug">/{{ tag.slug }}</span>
+              </label>
+            {% else %}
+              <p class="admin-empty">No tags exist yet. Create tags in <a href="/admin/tags">tag management</a>.</p>
+            {% endfor %}
+          </div>
+        </fieldset>
+
+        <div class="admin-actions">
+          <button class="login-submit" type="submit">Save Post</button>
+        </div>
+      </form>
+
+      {% if let Some(action) = delete_action %}
+        <form class="admin-inline-delete" action="{{ action }}" method="post" onsubmit="return confirm('Delete this post?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+          <button type="submit">Delete Post</button>
+        </form>
+      {% endif %}
+    </div>
+
+    <div class="admin-preview-stack">
+      <section class="admin-panel admin-preview-panel">
+        <div class="admin-preview-header">
+          <h2>Preview Preview</h2>
+          <p class="login-hint">Rendered markdown for the summary block.</p>
+        </div>
+        <div id="preview-render" class="admin-markdown-preview">
+          {% if form.preview_html.len() == 0 %}
+            <p class="admin-empty">Write preview markdown to see it rendered here.</p>
+          {% else %}
+            {{ form.preview_html|safe }}
+          {% endif %}
+        </div>
+      </section>
+
+      <section class="admin-panel admin-preview-panel">
+        <div class="admin-preview-header">
+          <h2>Body Preview</h2>
+          <p class="login-hint">Rendered markdown for the full post body.</p>
+        </div>
+        <div id="body-render" class="admin-markdown-preview">
+          {% if form.body_html.len() == 0 %}
+            <p class="admin-empty">Write post body markdown to see it rendered here.</p>
+          {% else %}
+            {{ form.body_html|safe }}
+          {% endif %}
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+{% endblock %}

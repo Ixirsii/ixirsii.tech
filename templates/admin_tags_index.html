@@ -1,0 +1,85 @@
+{% extends "base.html" %} {% block content %}
+<section class="admin-shell">
+  <div class="admin-header">
+    <div>
+      <p class="login-kicker">Tags</p>
+      <h1>Manage Tags</h1>
+      <p>Create new tags, rename existing ones, and remove tags you no longer need.</p>
+    </div>
+
+    <a class="button" href="/admin">Back to Dashboard</a>
+  </div>
+
+  <div class="admin-grid admin-grid-tight">
+    <section class="admin-panel">
+      <h2>Create Tag</h2>
+
+      {% if let Some(message) = create_errors.security %}
+        <p class="admin-security-alert"><strong>Security Check Failed.</strong> {{ message }}</p>
+      {% endif %}
+
+      <form class="admin-form" action="/admin/tags" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="admin-form-field{% if create_errors.name.is_some() %} admin-form-field-error{% endif %}">
+          <label for="create-tag-name">Name</label>
+          <input id="create-tag-name" name="name" type="text" value="{{ create_name }}" required>
+          {% if let Some(msg) = create_errors.name %}
+            <p class="admin-form-field-error-message">{{ msg }}</p>
+          {% endif %}
+        </div>
+
+        <p class="login-hint">Slug will be generated from the name when the tag is created.</p>
+
+        <button class="login-submit" type="submit">Create Tag</button>
+      </form>
+    </section>
+
+    <section class="admin-panel">
+      <h2>Existing Tags</h2>
+
+      <div class="admin-stack">
+        {% for tag in tags %}
+          <form class="admin-tag-row" action="/admin/tags/{{ tag.id }}" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+            <div class="admin-tag-row-fields">
+              <div class="admin-form-field{% if tag.errors.name.is_some() %} admin-form-field-error{% endif %}">
+                <label for="tag-name-{{ tag.id }}">Name</label>
+                <input id="tag-name-{{ tag.id }}" name="name" type="text" value="{{ tag.name }}" required>
+                {% if let Some(msg) = tag.errors.name %}
+                  <p class="admin-form-field-error-message">{{ msg }}</p>
+                {% endif %}
+              </div>
+
+              <div class="admin-form-field{% if tag.errors.slug.is_some() %} admin-form-field-error{% endif %}">
+                <label for="tag-slug-{{ tag.id }}">Slug</label>
+                <input id="tag-slug-{{ tag.id }}" name="slug" type="text" value="{{ tag.slug }}" required>
+                {% if let Some(msg) = tag.errors.slug %}
+                  <p class="admin-form-field-error-message">{{ msg }}</p>
+                {% endif %}
+              </div>
+
+              <div class="admin-form-field admin-count-field">
+                <label>Usage</label>
+                <span class="admin-count">{{ tag.count }} posts</span>
+              </div>
+            </div>
+
+            {% if let Some(message) = tag.errors.security %}
+              <p class="admin-security-alert"><strong>Security Check Failed.</strong> {{ message }}</p>
+            {% endif %}
+
+            <div class="admin-actions">
+              <button type="submit">Save Tag</button>
+              <button formaction="/admin/tags/{{ tag.id }}/delete" formmethod="post" onclick="return confirm('Delete this tag?');" type="submit">Delete Tag</button>
+            </div>
+          </form>
+        {% else %}
+          <p class="admin-empty">No tags exist yet.</p>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+</section>
+{% endblock %}

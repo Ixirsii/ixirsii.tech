@@ -1,0 +1,52 @@
+/* ********************************** Tags ********************************** */
+
+.search {
+  @apply bg-ctp-surface1;
+  @apply border;
+  @apply border-ctp-sapphire;
+  @apply flex;
+  @apply flex-row;
+  @apply items-center;
+  @apply mb-6;
+  @apply rounded-lg;
+  @apply transition-colors;
+}
+
+.search:focus-within {
+  @apply border-ctp-sapphire;
+}
+
+.search label {
+  @apply flex;
+  @apply h-fit;
+  @apply p-2;
+  @apply text-ctp-subtext0;
+}
+
+.search input {
+  @apply bg-ctp-surface0;
+  @apply grow;
+  @apply min-w-0;
+  @apply p-2;
+  @apply rounded-r-lg;
+  @apply text-ctp-text;
+}
+
+.search input::placeholder {
+  color: var(--ctp-overlay1);
+}
+
+.search input:focus-visible {
+  @apply outline-none;
+}
+
+.tag {
+  @apply flex;
+  @apply items-center;
+}
+
+.tags {
+  @apply flex;
+  @apply flex-wrap;
+  @apply gap-2;
+}

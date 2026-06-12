@@ -1,118 +1,232 @@
+//! Post database operations.
+
 use chrono::NaiveDateTime;
-use sqlx::MySqlPool;
+use sqlx::{FromRow, MySqlExecutor, query, query_as, query_scalar};
 
-pub struct Post {
+use tracing::instrument;
+
+use crate::{
+    Error, Result,
+    database::{Post, PostSort, PostStatusFilter, SqlClause, Tag},
+};
+
+/// Post with tag database row.
+#[derive(Debug, FromRow)]
+struct PostWithTagRow {
     pub id: u64,
     pub title: String,
     pub slug: String,
     pub body: String,
     pub preview: Option<String>,
-    pub published_at: Option<NaiveDateTime>,
     pub created_at: NaiveDateTime,
-    pub updated_at: Option<NaiveDateTime>,
-}
-
-pub struct PostWithTagRow {
-    pub id: u64,
-    pub title: String,
-    pub slug: String,
-    pub body: String,
-    pub preview: Option<String>,
     pub published_at: Option<NaiveDateTime>,
-    pub created_at: NaiveDateTime,
     pub updated_at: Option<NaiveDateTime>,
-    pub tag_name: Option<String>,
-    pub tag_slug: Option<String>,
+    pub tag_id: u64,
+    pub tag_name: String,
+    pub tag_slug: String,
 }
 
 /* ********************************************************************************************** *
  *                                             Create                                             *
  * ********************************************************************************************** */
 
+/// Create a new post.
+///
+/// # Errors
+/// Returns [`Error::DatabaseInsertError`] on failure to write to database.
+#[instrument(skip(executor, body, preview))]
 pub async fn create_post(
-    pool: &MySqlPool,
+    executor: impl MySqlExecutor<'_>,
     title: &str,
     slug: &str,
     body: &str,
     preview: Option<&str>,
-) -> Result<Post, sqlx::Error> {
-    let result = sqlx::query!(
-        "INSERT INTO posts (title, slug, body, preview) VALUES (?, ?, ?, ?)",
-        title,
-        slug,
-        body,
-        preview
-    )
-    .execute(pool)
-    .await?;
-
-    get_post_by_id(pool, result.last_insert_id()).await
+    published_at: Option<NaiveDateTime>,
+) -> Result<u64> {
+    query("INSERT INTO posts (title, slug, body, preview, published_at) VALUES (?, ?, ?, ?, ?)")
+        .bind(title)
+        .bind(slug)
+        .bind(body)
+        .bind(preview)
+        .bind(published_at)
+        .execute(executor)
+        .await
+        .map(|result| result.last_insert_id())
+        .map_err(|sql_err| Error::DatabaseInsertError(sql_err.to_string()))
 }
 
 /* ********************************************************************************************** *
  *                                             Delete                                             *
  * ********************************************************************************************** */
 
+/// Delete post.
+///
+/// # Errors
+/// Returns [`Error::DatabaseDeleteError`] on failure to write to database.
+#[instrument(skip(executor))]
+pub async fn delete_post(executor: impl MySqlExecutor<'_>, post_id: u64) -> Result<()> {
+    query("DELETE FROM posts WHERE id = ?")
+        .bind(post_id)
+        .execute(executor)
+        .await
+        .map(|_| ())
+        .map_err(|sql_err| Error::DatabaseDeleteError(sql_err.to_string()))
+}
+
 /* ********************************************************************************************** *
  *                                              Read                                              *
  * ********************************************************************************************** */
 
-pub async fn get_post_by_id(pool: &MySqlPool, id: u64) -> Result<Post, sqlx::Error> {
-    sqlx::query_as!(
-        Post,
-        "SELECT id, title, slug, body, preview, published_at, created_at, updated_at
-         FROM posts
-         WHERE id = ?",
-        id
+/// Count number of posts which have been published.
+///
+/// # Errors
+/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+#[instrument(skip(executor))]
+pub async fn count_published_posts(executor: impl MySqlExecutor<'_>) -> Result<u32> {
+    query_scalar(
+        "SELECT COUNT(*) FROM posts WHERE published_at IS NOT NULL AND published_at <= NOW()",
     )
-    .fetch_one(pool)
+    .fetch_one(executor)
     .await
+    .map(|total: i32| total.cast_unsigned())
+    .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
 }
 
-pub async fn get_post_by_slug(pool: &MySqlPool, slug: &str) -> Result<Option<Post>, sqlx::Error> {
-    sqlx::query_as!(
-        Post,
-        "SELECT id, title, slug, body, preview, published_at, created_at, updated_at
-         FROM posts
-         WHERE slug = ?",
-        slug
+/// Get post (published or unpublished) by id.
+///
+/// # Errors
+/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+#[instrument(skip(executor))]
+pub async fn get_post_by_id(executor: impl MySqlExecutor<'_>, id: u64) -> Result<Option<Post>> {
+    query_as::<_, PostWithTagRow>(
+        "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at,\
+                p.updated_at, t.id AS tag_id, t.name AS tag_name, t.slug AS tag_slug
+         FROM (
+             SELECT id, title, slug, body, preview, published_at, created_at, updated_at
+             FROM posts
+             WHERE id = ?
+         ) p
+         LEFT JOIN post_tags pt ON pt.post_id = p.id
+         LEFT JOIN tags t ON t.id = pt.tag_id
+         ORDER BY t.name",
     )
-    .fetch_optional(pool)
+    .bind(id)
+    .fetch_all(executor)
     .await
+    .map(merge_tags_to_option)
+    .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
 }
 
-pub async fn list_posts(pool: &MySqlPool, limit: u32) -> Result<Vec<PostWithTagRow>, sqlx::Error> {
-    sqlx::query_as!(
-        PostWithTagRow,
-        "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at, p.updated_at,
-                t.name AS tag_name, t.slug AS tag_slug
+/// Get post by slug.
+///
+/// # Errors
+/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+#[instrument(skip(executor))]
+pub async fn get_post_by_slug(
+    executor: impl MySqlExecutor<'_>,
+    slug: &str,
+) -> Result<Option<Post>> {
+    query_as::<_, PostWithTagRow>(
+        "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at,\
+                p.updated_at, t.id AS tag_id, t.name AS tag_name, t.slug AS tag_slug
+         FROM (
+             SELECT id, title, slug, body, preview, published_at, created_at, updated_at
+             FROM posts
+             WHERE slug = ? AND published_at IS NOT NULL AND published_at <= NOW()
+         ) p
+         LEFT JOIN post_tags pt ON pt.post_id = p.id
+         LEFT JOIN tags t ON t.id = pt.tag_id
+         ORDER BY t.name",
+    )
+    .bind(slug)
+    .fetch_all(executor)
+    .await
+    .map(merge_tags_to_option)
+    .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+}
+
+/// List posts (possibly including unpublished) for admin dashboard.
+///
+/// # Errors
+/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+#[instrument(skip(executor))]
+pub async fn list_posts(
+    executor: impl MySqlExecutor<'_>,
+    filter: &PostStatusFilter,
+    page: u32,
+    page_size: u32,
+    sort: &PostSort,
+) -> Result<Vec<Post>> {
+    let offset = (page.saturating_sub(1)) * page_size;
+    let order_clause = sort.get_sql_clause();
+    let where_clause = filter.get_sql_clause();
+    let sql = format!(
+        "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at,\
+                p.updated_at, t.id AS tag_id, t.name AS tag_name, t.slug AS tag_slug
          FROM (
              SELECT id, title, slug, body, preview, published_at, created_at, updated_at
              FROM posts
              WHERE published_at IS NOT NULL AND published_at <= NOW()
              ORDER BY published_at DESC
-             LIMIT ?
+             LIMIT ? OFFSET ?
          ) p
          LEFT JOIN post_tags pt ON pt.post_id = p.id
          LEFT JOIN tags t ON t.id = pt.tag_id
-         ORDER BY p.published_at DESC, p.id, t.name",
-        limit
-    )
-    .fetch_all(pool)
-    .await
+         {where_clause}
+         ORDER BY {order_clause}, p.id"
+    );
+
+    query_as::<_, PostWithTagRow>(&sql)
+        .bind(page_size)
+        .bind(offset)
+        .fetch_all(executor)
+        .await
+        .map(merge_tags)
+        .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
 }
 
-pub async fn list_posts_paginated(
-    pool: &MySqlPool,
+/// Get posts which have a tag.
+///
+/// # Errors
+/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+#[instrument(skip(executor))]
+pub async fn list_posts_by_tag(
+    executor: impl MySqlExecutor<'_>,
+    tag_slug: &str,
+) -> Result<Vec<Post>> {
+    query_as::<_, PostWithTagRow>(
+        "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at, p.updated_at,
+                t.id AS tag_id, t.name AS tag_name, t.slug AS tag_slug
+         FROM posts p
+         JOIN post_tags pt_filter ON pt_filter.post_id = p.id
+         JOIN tags t_filter ON t_filter.id = pt_filter.tag_id
+         LEFT JOIN post_tags pt ON pt.post_id = p.id
+         LEFT JOIN tags t ON t.id = pt.tag_id
+         WHERE t_filter.slug = ?
+           AND p.published_at IS NOT NULL AND p.published_at <= NOW()
+         ORDER BY p.published_at DESC, p.id, t.name")
+        .bind(tag_slug)
+    .fetch_all(executor)
+    .await
+    .map(merge_tags)
+    .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+}
+
+/// List a page of posts.
+///
+/// # Errors
+/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+#[instrument(skip(executor))]
+pub async fn list_published_posts(
+    executor: impl MySqlExecutor<'_>,
     page: u32,
     page_size: u32,
-) -> Result<(Vec<PostWithTagRow>, u32), sqlx::Error> {
+) -> Result<Vec<Post>> {
     let offset = (page.saturating_sub(1)) * page_size;
 
-    let posts = sqlx::query_as!(
-        PostWithTagRow,
-        "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at, p.updated_at,
-                t.name AS tag_name, t.slug AS tag_slug
+    query_as::<_, PostWithTagRow>(
+        "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at,\
+                p.updated_at, t.id AS tag_id, t.name AS tag_name, t.slug AS tag_slug
          FROM (
              SELECT id, title, slug, body, preview, published_at, created_at, updated_at
              FROM posts
@@ -123,24 +237,156 @@ pub async fn list_posts_paginated(
          LEFT JOIN post_tags pt ON pt.post_id = p.id
          LEFT JOIN tags t ON t.id = pt.tag_id
          ORDER BY p.published_at DESC, p.id, t.name",
-        page_size,
-        offset
     )
-    .fetch_all(pool)
-    .await?;
+    .bind(page_size)
+    .bind(offset)
+    .fetch_all(executor)
+    .await
+    .map(merge_tags)
+    .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+}
 
-    let total: i64 = sqlx::query_scalar!(
-        "SELECT COUNT(*) FROM posts WHERE published_at IS NOT NULL AND published_at <= NOW()"
-    )
-    .fetch_one(pool)
-    .await?;
+/// Check if the provided slug already exists for a post.
+///
+/// # Errors
+/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+#[instrument(skip(executor))]
+pub async fn slug_exists(executor: impl MySqlExecutor<'_>, slug: &str) -> Result<bool> {
+    query_scalar("SELECT COUNT(*) FROM posts WHERE slug = ?")
+        .bind(slug)
+        .fetch_one(executor)
+        .await
+        .map(|count: i64| count > 0)
+        .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+}
 
-    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-    let total = total as u32;
-
-    Ok((posts, total))
+/// Check if the provided slug already exists for a different post.
+///
+/// # Errors
+/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+#[instrument(skip(executor))]
+pub async fn slug_exists_for_other_post(
+    executor: impl MySqlExecutor<'_>,
+    slug: &str,
+    post_id: u64,
+) -> Result<bool> {
+    query_scalar("SELECT COUNT(*) FROM posts WHERE slug = ? AND id <> ?")
+        .bind(slug)
+        .bind(post_id)
+        .fetch_one(executor)
+        .await
+        .map(|count: i64| count > 0)
+        .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
 }
 
 /* ********************************************************************************************** *
  *                                             Update                                             *
  * ********************************************************************************************** */
+
+/// Update existing post.
+///
+/// # Errors
+/// Returns [`Error::DatabaseUpdateError`] on failure to write to database.
+#[instrument(skip(executor, body, preview))]
+pub async fn update_post(
+    executor: impl MySqlExecutor<'_>,
+    post_id: u64,
+    title: &str,
+    slug: &str,
+    body: &str,
+    preview: Option<&str>,
+    published_at: Option<NaiveDateTime>,
+) -> Result<()> {
+    query(
+        "UPDATE posts
+         SET title = ?, slug = ?, body = ?, preview = ?, published_at = ?, updated_at = NOW()
+         WHERE id = ?",
+    )
+    .bind(title)
+    .bind(slug)
+    .bind(body)
+    .bind(preview)
+    .bind(published_at)
+    .bind(post_id)
+    .execute(executor)
+    .await
+    .map(|_| ())
+    .map_err(|sql_err| Error::DatabaseUpdateError(sql_err.to_string()))
+}
+
+/* ********************************************************************************************** *
+ *                                       Private functions                                        *
+ * ********************************************************************************************** */
+
+fn merge_tags(rows: Vec<PostWithTagRow>) -> Vec<Post> {
+    let mut current_post_id = None;
+    let mut posts: Vec<Post> = Vec::new();
+
+    for row in rows {
+        if current_post_id != Some(row.id) {
+            current_post_id = Some(row.id);
+
+            posts.push(Post {
+                id: row.id,
+                title: row.title,
+                slug: row.slug,
+                body: row.body,
+                preview: row.preview,
+                published_at: row.published_at,
+                created_at: row.created_at,
+                updated_at: row.updated_at,
+                tags: Vec::new(),
+            });
+        }
+
+        if let Some(post) = posts.last_mut() {
+            post.tags.push(Tag {
+                id: row.tag_id,
+                name: row.tag_name,
+                slug: row.tag_slug,
+            });
+        }
+    }
+
+    posts
+}
+
+fn merge_tags_to_option(rows: Vec<PostWithTagRow>) -> Option<Post> {
+    rows.into_iter()
+        .map(
+            |PostWithTagRow {
+                 id,
+                 title,
+                 slug,
+                 body,
+                 preview,
+                 created_at,
+                 published_at,
+                 updated_at,
+                 tag_id,
+                 tag_name,
+                 tag_slug,
+             }| {
+                Post {
+                    id,
+                    title,
+                    slug,
+                    body,
+                    preview,
+                    published_at,
+                    created_at,
+                    updated_at,
+                    tags: vec![Tag {
+                        id: tag_id,
+                        name: tag_name,
+                        slug: tag_slug,
+                    }],
+                }
+            },
+        )
+        .reduce(|mut accumulator, row| {
+            accumulator.tags.extend_from_slice(&row.tags);
+
+            accumulator
+        })
+}

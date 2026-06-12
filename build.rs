@@ -9,12 +9,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let binary = resolve_tailwind(&cache_dir)?;
 
-    println!("cargo:rerun-if-changed=src/main.css");
+    println!("cargo:rerun-if-changed=src/style/main.css");
 
     let output = Command::new(&binary)
         .args([
             "-i",
-            "src/main.css",
+            "src/style/main.css",
             "-o",
             "src/static/main.css",
             "--minify",

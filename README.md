@@ -4,7 +4,7 @@
 [![License](https://img.shields.io/badge/License-BSD_3--Clause-blue.svg)][3]
 [![CI](https://codeberg.org/Ixirsii/ixirsii.tech/actions/workflows/ci.yml/badge.svg?branch=main)][4]
 
-[Personal website][1].
+Personal website.
 
 ## Tech stack
 
@@ -16,6 +16,17 @@
 | HTML templates  | [Askama][8]         |
 | Markdown parser | [pulldown_cmark][9] |
 | Javascript      | [HTMX][10]          |
+
+## Todo
+
+- Code review (un-vibe the code)
+  - Clean up templates
+  - Clean up styles
+  - Clean up database
+  - Clean up pages
+  - Clean up CSRF
+  - Clean up observability
+- Add CI
 
 [1]: https://ixirsii.tech
 [2]: https://discord.gg/KTgshSbEUU
