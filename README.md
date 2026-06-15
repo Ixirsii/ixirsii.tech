@@ -26,7 +26,6 @@ Personal website.
   - Clean up pages
   - Clean up CSRF
   - Clean up observability
-- Add CI
 
 [1]: https://ixirsii.tech
 [2]: https://discord.gg/KTgshSbEUU
