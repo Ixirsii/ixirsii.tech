@@ -5,10 +5,10 @@ use std::collections::HashSet;
 use chrono::NaiveDateTime;
 use sqlx::MySqlPool;
 
-use tracing::instrument;
+use tracing::{error, instrument};
 
 use crate::{
-    Error, Result,
+    Result,
     database::{
         add_tag_to_post, create_post, list_tags_for_post, remove_tag_from_post, update_post,
     },
@@ -21,7 +21,7 @@ use crate::{
 /// Create a new post and add tags.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseInsertError`] on failure to write to database.
+/// Returns [`crate::Error::Database`] on failure to write to database.
 #[instrument(skip(pool, body, preview, tag_ids))]
 pub async fn create_post_with_tags(
     pool: &MySqlPool,
@@ -32,10 +32,9 @@ pub async fn create_post_with_tags(
     published_at: Option<NaiveDateTime>,
     tag_ids: &[u64],
 ) -> Result<u64> {
-    let mut transaction = pool
-        .begin()
-        .await
-        .map_err(|sql_err| Error::DatabaseTransactionError(sql_err.to_string()))?;
+    let mut transaction = pool.begin().await.inspect_err(|error| {
+        error!(%error, operation = "begin", table = "posts", "database transaction failed");
+    })?;
     let post_id: u64 =
         create_post(&mut *transaction, title, slug, body, preview, published_at).await?;
 
@@ -43,10 +42,9 @@ pub async fn create_post_with_tags(
         add_tag_to_post(&mut *transaction, post_id, tag_id).await?;
     }
 
-    transaction
-        .commit()
-        .await
-        .map_err(|sql_err| Error::DatabaseTransactionError(sql_err.to_string()))?;
+    transaction.commit().await.inspect_err(|error| {
+        error!(%error, operation = "commit", table = "posts", "database transaction failed");
+    })?;
 
     Ok(post_id)
 }
@@ -66,7 +64,7 @@ pub async fn create_post_with_tags(
 /// Update a post and its tags.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseUpdateError`] on failure to write to database.
+/// Returns [`crate::Error::Database`] on failure to write to database.
 #[instrument(skip(pool, body, preview, tag_ids))]
 pub async fn update_post_with_tags(
     pool: &MySqlPool,
@@ -78,10 +76,9 @@ pub async fn update_post_with_tags(
     published_at: Option<NaiveDateTime>,
     tag_ids: &[u64],
 ) -> Result<()> {
-    let mut transaction = pool
-        .begin()
-        .await
-        .map_err(|sql_err| Error::DatabaseTransactionError(sql_err.to_string()))?;
+    let mut transaction = pool.begin().await.inspect_err(|error| {
+        error!(%error, operation = "begin", table = "posts", "database transaction failed");
+    })?;
 
     update_post(
         &mut *transaction,
@@ -106,8 +103,9 @@ pub async fn update_post_with_tags(
         add_tag_to_post(&mut *transaction, post_id, *tag_id).await?;
     }
 
-    transaction
-        .commit()
-        .await
-        .map_err(|sql_err| Error::DatabaseTransactionError(sql_err.to_string()))
+    transaction.commit().await.inspect_err(|error| {
+        error!(%error, operation = "commit", table = "posts", "database transaction failed");
+    })?;
+
+    Ok(())
 }

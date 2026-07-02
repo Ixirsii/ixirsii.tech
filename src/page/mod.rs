@@ -14,6 +14,7 @@ pub use admin_posts::*;
 pub use admin_tags::*;
 pub use blog::*;
 pub use code::*;
+pub use error::*;
 pub use home::*;
 pub use tag::*;
 
@@ -23,6 +24,7 @@ mod admin_posts;
 mod admin_tags;
 mod blog;
 mod code;
+mod error;
 mod home;
 mod tag;
 

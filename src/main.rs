@@ -3,15 +3,20 @@
 use std::sync::Arc;
 
 use axum::{
-    Router, middleware,
+    Router,
+    body::Body,
+    extract::Path,
+    http::{HeaderValue, StatusCode, header},
+    middleware,
+    response::{IntoResponse, Response},
     routing::{get, post},
     serve,
 };
 use axum_login::{AuthManagerLayerBuilder, login_required};
 use dotenvy::{dotenv, var};
+use include_dir::{Dir, include_dir};
 use sqlx::{MySqlPool, mysql::MySqlPoolOptions};
 use tokio::net::TcpListener;
-use tower_http::services::ServeDir;
 use tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
 use tracing::{error, info, instrument, warn};
 
@@ -23,12 +28,17 @@ mod observability;
 mod page;
 mod types;
 
+pub mod static_assets {
+    include!(concat!(env!("OUT_DIR"), "/static_assets.rs"));
+}
+
 /* ********************************************************************************************** *
  *                                           Constants                                            *
  * ********************************************************************************************** */
 
 pub const ADMIN_ROUTE: &str = "/admin";
 pub const LOGIN_ROUTE: &str = "/login";
+static STATIC_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/static");
 
 /* ********************************************************************************************** *
  *                                              Main                                              *
@@ -71,11 +81,9 @@ async fn get_db_pool() -> Result<MySqlPool> {
     {
         Ok(db_pool) => Ok(db_pool),
         Err(err) => {
-            let error = err.to_string();
+            error!(error = %err, "Error connecting to database");
 
-            error!(error = error, "Error connecting to database");
-
-            Err(Error::DatabaseConnectionError(error))
+            Err(Error::Database(err))
         }
     }
 }
@@ -117,14 +125,13 @@ fn get_routes(db_pool: MySqlPool) -> Router {
         .with_secure(!cfg!(debug_assertions))
         .with_same_site(SameSite::Lax);
     let auth_layer = AuthManagerLayerBuilder::new(app_state.clone(), session_layer).build();
-    let static_service = ServeDir::new("./src/static");
 
     let admin_routes = admin_routes.layer(middleware::from_fn_with_state(
         app_state.clone(),
         csrf::csrf_origin_check,
     ));
 
-    Router::new()
+    let app_routes = Router::new()
         .nest(ADMIN_ROUTE, admin_routes)
         .route("/", get(page::home))
         .route("/about", get(page::about_page))
@@ -136,8 +143,35 @@ fn get_routes(db_pool: MySqlPool) -> Router {
         .route("/tags", get(page::tag_index))
         .route("/tags/search", get(page::tag_search))
         .route("/tags/{slug}", get(page::tag_posts))
-        .nest_service("/static", static_service)
+        .fallback(page::not_found)
         .with_state(app_state)
+        .layer(auth_layer);
+
+    Router::new()
+        .route("/static/{*path}", get(static_asset))
+        .merge(app_routes)
         .layer(middleware::from_fn(observability::trace_request))
-        .layer(auth_layer)
+}
+
+async fn static_asset(Path(path): Path<String>) -> Response {
+    let Some(source_path) = static_assets::source_path_for_request(&path) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+    let Some(file) = STATIC_DIR.get_file(source_path) else {
+        return StatusCode::NOT_FOUND.into_response();
+    };
+
+    let mut response = Body::from(file.contents()).into_response();
+    let headers = response.headers_mut();
+    let mime = mime_guess::from_path(source_path).first_or_octet_stream();
+    let content_type = HeaderValue::from_str(mime.as_ref())
+        .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream"));
+
+    headers.insert(header::CONTENT_TYPE, content_type);
+    headers.insert(
+        header::CACHE_CONTROL,
+        HeaderValue::from_static("public, max-age=31536000, immutable"),
+    );
+
+    response
 }

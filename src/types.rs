@@ -6,7 +6,7 @@ use std::{
 
 use argon2::{Argon2, PasswordHash, PasswordVerifier, password_hash};
 use axum_login::{AuthSession, AuthnBackend};
-use sqlx::{MySqlPool, migrate::MigrateError};
+use sqlx::{Error as SqlxError, MySqlPool, migrate::MigrateError};
 
 use crate::database::{User, get_admin_user_by_id, get_admin_user_by_username};
 
@@ -71,73 +71,71 @@ pub struct Credentials {
 #[derive(Debug)]
 pub enum Error {
     /// A system error (reading file, etc.).
-    SystemError(String),
+    System(String),
     /// An error reading environment variables.
-    EnvironmentError(String),
-    /// An error connecting to the database.
-    DatabaseConnectionError(String),
-    /// An error creating a database table.
-    DatabaseTableCreationError(String),
-    /// An error inserting a row into the database.
-    DatabaseInsertError(String),
-    /// An error deleting a row from the database.
-    DatabaseDeleteError(String),
-    /// An error selecting from the database.
-    DatabaseSelectError(String),
-    /// An error updating a row in the database.
-    DatabaseUpdateError(String),
+    Environment(dotenvy::Error),
+    /// A database query or connection error.
+    Database(SqlxError),
     /// An error running database migrations.
-    DatabaseMigrationError(String),
-    /// An error executing a database transaction.
-    DatabaseTransactionError(String),
+    DatabaseMigration(MigrateError),
     /// An error listening on the specified TCP port.
-    NetworkError(String),
+    Network(std::io::Error),
     /// Password hash error.
-    PasswordError(String),
+    Password(password_hash::Error),
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::SystemError(error)
-            | Self::EnvironmentError(error)
-            | Self::DatabaseConnectionError(error)
-            | Self::DatabaseTableCreationError(error)
-            | Self::DatabaseInsertError(error)
-            | Self::DatabaseDeleteError(error)
-            | Self::DatabaseSelectError(error)
-            | Self::DatabaseUpdateError(error)
-            | Self::DatabaseMigrationError(error)
-            | Self::DatabaseTransactionError(error)
-            | Self::NetworkError(error)
-            | Self::PasswordError(error) => write!(f, "{error}"),
+            Self::System(error) => write!(f, "system error: {error}"),
+            Self::Environment(error) => write!(f, "environment error: {error}"),
+            Self::Database(error) => write!(f, "database error: {error}"),
+            Self::DatabaseMigration(error) => write!(f, "database migration error: {error}"),
+            Self::Network(error) => write!(f, "network error: {error}"),
+            Self::Password(error) => write!(f, "password error: {error}"),
         }
     }
 }
 
-impl std::error::Error for Error {}
+impl std::error::Error for Error {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::System(_) | Self::Password(_) => None,
+            Self::Environment(error) => Some(error),
+            Self::Database(error) => Some(error),
+            Self::DatabaseMigration(error) => Some(error),
+            Self::Network(error) => Some(error),
+        }
+    }
+}
 
 impl From<dotenvy::Error> for Error {
     fn from(error: dotenvy::Error) -> Self {
-        Self::EnvironmentError(error.to_string())
+        Self::Environment(error)
     }
 }
 
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
-        Self::NetworkError(error.to_string())
+        Self::Network(error)
+    }
+}
+
+impl From<SqlxError> for Error {
+    fn from(error: SqlxError) -> Self {
+        Self::Database(error)
     }
 }
 
 impl From<password_hash::Error> for Error {
     fn from(error: password_hash::Error) -> Self {
-        Self::PasswordError(error.to_string())
+        Self::Password(error)
     }
 }
 
 impl From<MigrateError> for Error {
     fn from(error: MigrateError) -> Self {
-        Self::DatabaseMigrationError(error.to_string())
+        Self::DatabaseMigration(error)
     }
 }
 

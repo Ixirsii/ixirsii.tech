@@ -3,7 +3,6 @@
 use askama::Template;
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
     response::Html,
 };
 use serde::Deserialize;
@@ -11,7 +10,7 @@ use serde::Deserialize;
 use crate::{
     AdminAuthSession, AppState,
     database::{get_tag_by_slug, list_posts_by_tag, list_tags_with_published_count},
-    page::PostView,
+    page::{PageError, PostView},
 };
 
 /* ********************************************************************************************** *
@@ -79,19 +78,19 @@ pub struct TagSearchParams {
 pub async fn tag_index(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
-) -> Result<Html<String>, StatusCode> {
-    let entries = get_tag_cloud(&state, None).await?;
+) -> Result<Html<String>, PageError> {
+    let show_admin_link = auth_session.user.is_some();
+    let entries = get_tag_cloud(&state, None, show_admin_link).await?;
 
     let page = TagsPage {
         title: "Tags | Ixirsii",
-        show_admin_link: auth_session.user.is_some(),
+        show_admin_link,
         tags: &entries,
     };
 
-    Ok(Html(
-        page.render()
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-    ))
+    Ok(Html(page.render().map_err(|_| {
+        PageError::internal_server_error(show_admin_link)
+    })?))
 }
 
 /// Renders the tag cloud fragment for tag search.
@@ -100,17 +99,16 @@ pub async fn tag_index(
 /// Returns `500 Internal Server Error` if database queries or template rendering fails.
 pub async fn tag_search(
     State(state): State<AppState>,
-    _auth_session: AdminAuthSession,
+    auth_session: AdminAuthSession,
     Query(params): Query<TagSearchParams>,
-) -> Result<Html<String>, StatusCode> {
-    let entries = get_tag_cloud(&state, params.filter.as_deref()).await?;
+) -> Result<Html<String>, PageError> {
+    let show_admin_link = auth_session.user.is_some();
+    let entries = get_tag_cloud(&state, params.filter.as_deref(), show_admin_link).await?;
     let cloud = TagsCloud { tags: &entries };
 
-    Ok(Html(
-        cloud
-            .render()
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-    ))
+    Ok(Html(cloud.render().map_err(|_| {
+        PageError::internal_server_error(show_admin_link)
+    })?))
 }
 
 /// Renders posts filtered by a tag.
@@ -122,32 +120,32 @@ pub async fn tag_posts(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
     Path(slug): Path<String>,
-) -> Result<Html<String>, StatusCode> {
+) -> Result<Html<String>, PageError> {
+    let show_admin_link = auth_session.user.is_some();
     let Some(tag) = get_tag_by_slug(&(*state.db_pool), &slug)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| PageError::internal_server_error(show_admin_link))?
     else {
-        return Err(StatusCode::NOT_FOUND);
+        return Err(PageError::not_found(show_admin_link));
     };
 
     let post_rows = list_posts_by_tag(&(*state.db_pool), &slug)
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+        .map_err(|_| PageError::internal_server_error(show_admin_link))?;
     let post_views: Vec<PostView> = post_rows.into_iter().map(PostView::from).collect();
 
     let title = format!("Tag: {}", tag.name);
 
     let page = TagPostsPage {
         title,
-        show_admin_link: auth_session.user.is_some(),
+        show_admin_link,
         tag_name: tag.name,
         posts: &post_views,
     };
 
-    Ok(Html(
-        page.render()
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-    ))
+    Ok(Html(page.render().map_err(|_| {
+        PageError::internal_server_error(show_admin_link)
+    })?))
 }
 
 /* ********************************************************************************************** *
@@ -157,11 +155,12 @@ pub async fn tag_posts(
 async fn get_tag_cloud(
     state: &AppState,
     filter: Option<&str>,
-) -> Result<Vec<TagCloudEntry>, StatusCode> {
+    show_admin_link: bool,
+) -> Result<Vec<TagCloudEntry>, PageError> {
     let filter = filter.unwrap_or_default().trim().to_lowercase();
     let tags: Vec<_> = list_tags_with_published_count(&(*state.db_pool))
         .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .map_err(|_| PageError::internal_server_error(show_admin_link))?
         .into_iter()
         .filter(|tag| tag.count > 0)
         .filter(|tag| filter.is_empty() || tag.name.to_lowercase().contains(&filter))

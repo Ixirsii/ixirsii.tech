@@ -3,11 +3,13 @@
 use askama::Template;
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
     response::Html,
 };
 
-use crate::{AdminAuthSession, AppState, page::render_markdown};
+use crate::{
+    AdminAuthSession, AppState,
+    page::{PageError, render_markdown},
+};
 
 /* ********************************************************************************************** *
  *                                           Constants                                            *
@@ -106,17 +108,17 @@ struct ProjectView {
 pub async fn code_index(
     State(_state): State<AppState>,
     auth_session: AdminAuthSession,
-) -> Result<Html<String>, StatusCode> {
+) -> Result<Html<String>, PageError> {
+    let show_admin_link = auth_session.user.is_some();
     let page = CodePage {
         title: "Code",
-        show_admin_link: auth_session.user.is_some(),
+        show_admin_link,
         projects: ALL_PROJECTS,
     };
 
-    Ok(Html(
-        page.render()
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-    ))
+    Ok(Html(page.render().map_err(|_| {
+        PageError::internal_server_error(show_admin_link)
+    })?))
 }
 
 /// Renders an individual project page.
@@ -128,14 +130,15 @@ pub async fn code_project(
     State(_state): State<AppState>,
     auth_session: AdminAuthSession,
     Path(slug): Path<String>,
-) -> Result<Html<String>, StatusCode> {
+) -> Result<Html<String>, PageError> {
+    let show_admin_link = auth_session.user.is_some();
     let Some(project) = project_by_slug(&slug) else {
-        return Err(StatusCode::NOT_FOUND);
+        return Err(PageError::not_found(show_admin_link));
     };
 
     let page = CodeProjectPage {
         title: project.name.to_string(),
-        show_admin_link: auth_session.user.is_some(),
+        show_admin_link,
         project: ProjectView {
             name: project.name,
             tagline: project.tagline,
@@ -146,10 +149,9 @@ pub async fn code_project(
         },
     };
 
-    Ok(Html(
-        page.render()
-            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
-    ))
+    Ok(Html(page.render().map_err(|_| {
+        PageError::internal_server_error(show_admin_link)
+    })?))
 }
 
 /* ********************************************************************************************** *

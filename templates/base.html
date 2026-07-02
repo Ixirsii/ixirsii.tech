@@ -6,9 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Ixirsii's personal website">
     <title>{{ title }} | Ixirsii</title>
-    <link rel="icon" href="/static/favicon.ico">
-    <link rel="stylesheet" href="/static/main.css">
-    <script src="/static/htmx.min.js"></script>
+    <link rel="icon" href="{{ crate::static_assets::static_url("favicon.ico") }}">
+    <link rel="stylesheet" href="{{ crate::static_assets::static_url("main.css") }}">
+    <script src="{{ crate::static_assets::static_url("htmx.min.js") }}"></script>
     <script>
       (function(){
         var t = localStorage.getItem('theme');

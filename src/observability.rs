@@ -3,12 +3,10 @@
 //! If `OTEL_EXPORTER_OTLP_ENDPOINT` is set, spans are exported to Datadog via
 //! OTLP. Otherwise, only structured console logging is used.
 
-use std::time::Instant;
-
 use axum::{extract::Request, middleware::Next, response::Response};
 use opentelemetry::trace::TracerProvider;
 use opentelemetry_otlp::WithExportConfig;
-use tracing::{Instrument, Span, info, info_span};
+use tracing::{Instrument, Span, info_span};
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -63,9 +61,7 @@ pub fn init_tracing() {
 /// - `http.method` — the HTTP verb
 /// - `http.route` — the request path
 /// - `http.status_code` — the response status
-/// - `duration_ms` — total request-to-response time in milliseconds
 pub async fn trace_request(request: Request, next: Next) -> Response {
-    let start = Instant::now();
     let method = request.method().clone();
     let uri = request.uri().clone();
 
@@ -80,10 +76,6 @@ pub async fn trace_request(request: Request, next: Next) -> Response {
         let response = next.run(request).await;
         let status = response.status();
         Span::current().record("http.status_code", status.as_u16());
-        info!(
-            duration_ms = start.elapsed().as_secs_f64() * 1000.0,
-            "request completed"
-        );
         response
     }
     .instrument(span)

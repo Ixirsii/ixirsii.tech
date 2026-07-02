@@ -2,9 +2,9 @@
 
 use sqlx::{MySqlExecutor, query};
 
-use tracing::instrument;
+use tracing::{error, instrument};
 
-use crate::{Error, Result};
+use crate::Result;
 
 /* ********************************************************************************************** *
  *                                             Create                                             *
@@ -13,7 +13,7 @@ use crate::{Error, Result};
 /// Add a tag to a post.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseInsertError`] on failure to write to database.
+/// Returns [`crate::Error::Database`] on failure to write to database.
 #[instrument(skip(executor))]
 pub async fn add_tag_to_post(
     executor: impl MySqlExecutor<'_>,
@@ -25,8 +25,11 @@ pub async fn add_tag_to_post(
         .bind(tag_id)
         .execute(executor)
         .await
-        .map(|_| ())
-        .map_err(|sql_err| Error::DatabaseInsertError(sql_err.to_string()))
+        .inspect_err(|error| {
+            error!(%error, operation = "insert", table = "post_tags", "database query failed");
+        })?;
+
+    Ok(())
 }
 
 /* ********************************************************************************************** *
@@ -36,7 +39,7 @@ pub async fn add_tag_to_post(
 /// Remove tag from post.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseDeleteError`] on failure to write to database.
+/// Returns [`crate::Error::Database`] on failure to write to database.
 #[instrument(skip(executor))]
 pub async fn remove_tag_from_post(
     executor: impl MySqlExecutor<'_>,
@@ -48,8 +51,11 @@ pub async fn remove_tag_from_post(
         .bind(tag_id)
         .execute(executor)
         .await
-        .map(|_| ())
-        .map_err(|sql_err| Error::DatabaseDeleteError(sql_err.to_string()))
+        .inspect_err(|error| {
+            error!(%error, operation = "delete", table = "post_tags", "database query failed");
+        })?;
+
+    Ok(())
 }
 
 /* ********************************************************************************************** *

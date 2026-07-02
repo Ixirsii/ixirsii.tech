@@ -3,9 +3,9 @@
 use axum_login::AuthUser;
 use sqlx::{FromRow, MySqlExecutor, query_as};
 
-use tracing::instrument;
+use tracing::{error, instrument};
 
-use crate::{Error, Result};
+use crate::Result;
 
 /// User.
 #[derive(Clone, Debug, FromRow)]
@@ -45,33 +45,45 @@ impl AuthUser for User {
 /// Get user by ID.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+/// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
 pub async fn get_admin_user_by_id(
     executor: impl MySqlExecutor<'_>,
     id: u64,
 ) -> Result<Option<User>> {
-    query_as::<_, User>("SELECT id, username, password_hash FROM admin_users WHERE id = ?")
-        .bind(id)
-        .fetch_optional(executor)
-        .await
-        .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+    let user = query_as::<_, User>(
+        "SELECT id, username, password_hash FROM admin_users WHERE id = ?",
+    )
+    .bind(id)
+    .fetch_optional(executor)
+    .await
+    .inspect_err(|error| {
+        error!(%error, operation = "select", table = "admin_users", "database query failed");
+    })?;
+
+    Ok(user)
 }
 
 /// Get user by username.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+/// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
 pub async fn get_admin_user_by_username(
     executor: impl MySqlExecutor<'_>,
     username: &str,
 ) -> Result<Option<User>> {
-    query_as::<_, User>("SELECT id, username, password_hash FROM admin_users WHERE username = ?")
-        .bind(username)
-        .fetch_optional(executor)
-        .await
-        .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+    let user = query_as::<_, User>(
+        "SELECT id, username, password_hash FROM admin_users WHERE username = ?",
+    )
+    .bind(username)
+    .fetch_optional(executor)
+    .await
+    .inspect_err(|error| {
+        error!(%error, operation = "select", table = "admin_users", "database query failed");
+    })?;
+
+    Ok(user)
 }
 
 /* ********************************************************************************************** *

@@ -3,10 +3,10 @@
 use chrono::NaiveDateTime;
 use sqlx::{FromRow, MySqlExecutor, query, query_as, query_scalar};
 
-use tracing::instrument;
+use tracing::{error, instrument};
 
 use crate::{
-    Error, Result,
+    Result,
     database::{Post, PostSort, PostStatusFilter, SqlClause, Tag},
 };
 
@@ -33,7 +33,7 @@ struct PostWithTagRow {
 /// Create a new post.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseInsertError`] on failure to write to database.
+/// Returns [`crate::Error::Database`] on failure to write to database.
 #[instrument(skip(executor, body, preview))]
 pub async fn create_post(
     executor: impl MySqlExecutor<'_>,
@@ -43,16 +43,21 @@ pub async fn create_post(
     preview: Option<&str>,
     published_at: Option<NaiveDateTime>,
 ) -> Result<u64> {
-    query("INSERT INTO posts (title, slug, body, preview, published_at) VALUES (?, ?, ?, ?, ?)")
-        .bind(title)
-        .bind(slug)
-        .bind(body)
-        .bind(preview)
-        .bind(published_at)
-        .execute(executor)
-        .await
-        .map(|result| result.last_insert_id())
-        .map_err(|sql_err| Error::DatabaseInsertError(sql_err.to_string()))
+    let result = query(
+        "INSERT INTO posts (title, slug, body, preview, published_at) VALUES (?, ?, ?, ?, ?)",
+    )
+    .bind(title)
+    .bind(slug)
+    .bind(body)
+    .bind(preview)
+    .bind(published_at)
+    .execute(executor)
+    .await
+    .inspect_err(|error| {
+        error!(%error, operation = "insert", table = "posts", "database query failed");
+    })?;
+
+    Ok(result.last_insert_id())
 }
 
 /* ********************************************************************************************** *
@@ -62,15 +67,18 @@ pub async fn create_post(
 /// Delete post.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseDeleteError`] on failure to write to database.
+/// Returns [`crate::Error::Database`] on failure to write to database.
 #[instrument(skip(executor))]
 pub async fn delete_post(executor: impl MySqlExecutor<'_>, post_id: u64) -> Result<()> {
     query("DELETE FROM posts WHERE id = ?")
         .bind(post_id)
         .execute(executor)
         .await
-        .map(|_| ())
-        .map_err(|sql_err| Error::DatabaseDeleteError(sql_err.to_string()))
+        .inspect_err(|error| {
+            error!(%error, operation = "delete", table = "posts", "database query failed");
+        })?;
+
+    Ok(())
 }
 
 /* ********************************************************************************************** *
@@ -80,25 +88,28 @@ pub async fn delete_post(executor: impl MySqlExecutor<'_>, post_id: u64) -> Resu
 /// Count number of posts which have been published.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+/// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
 pub async fn count_published_posts(executor: impl MySqlExecutor<'_>) -> Result<u32> {
-    query_scalar(
+    let total: i32 = query_scalar(
         "SELECT COUNT(*) FROM posts WHERE published_at IS NOT NULL AND published_at <= NOW()",
     )
     .fetch_one(executor)
     .await
-    .map(|total: i32| total.cast_unsigned())
-    .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+    .inspect_err(|error| {
+        error!(%error, operation = "select", table = "posts", "database query failed");
+    })?;
+
+    Ok(total.cast_unsigned())
 }
 
 /// Get post (published or unpublished) by id.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+/// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
 pub async fn get_post_by_id(executor: impl MySqlExecutor<'_>, id: u64) -> Result<Option<Post>> {
-    query_as::<_, PostWithTagRow>(
+    let rows = query_as::<_, PostWithTagRow>(
         "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at,\
                 p.updated_at, t.id AS tag_id, t.name AS tag_name, t.slug AS tag_slug
          FROM (
@@ -113,20 +124,23 @@ pub async fn get_post_by_id(executor: impl MySqlExecutor<'_>, id: u64) -> Result
     .bind(id)
     .fetch_all(executor)
     .await
-    .map(merge_tags_to_option)
-    .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+    .inspect_err(|error| {
+        error!(%error, operation = "select", table = "posts", "database query failed");
+    })?;
+
+    Ok(merge_tags_to_option(rows))
 }
 
 /// Get post by slug.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+/// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
 pub async fn get_post_by_slug(
     executor: impl MySqlExecutor<'_>,
     slug: &str,
 ) -> Result<Option<Post>> {
-    query_as::<_, PostWithTagRow>(
+    let rows = query_as::<_, PostWithTagRow>(
         "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at,\
                 p.updated_at, t.id AS tag_id, t.name AS tag_name, t.slug AS tag_slug
          FROM (
@@ -141,14 +155,17 @@ pub async fn get_post_by_slug(
     .bind(slug)
     .fetch_all(executor)
     .await
-    .map(merge_tags_to_option)
-    .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+    .inspect_err(|error| {
+        error!(%error, operation = "select", table = "posts", "database query failed");
+    })?;
+
+    Ok(merge_tags_to_option(rows))
 }
 
 /// List posts (possibly including unpublished) for admin dashboard.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+/// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
 pub async fn list_posts(
     executor: impl MySqlExecutor<'_>,
@@ -176,25 +193,28 @@ pub async fn list_posts(
          ORDER BY {order_clause}, p.id"
     );
 
-    query_as::<_, PostWithTagRow>(&sql)
+    let rows = query_as::<_, PostWithTagRow>(&sql)
         .bind(page_size)
         .bind(offset)
         .fetch_all(executor)
         .await
-        .map(merge_tags)
-        .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+        .inspect_err(|error| {
+            error!(%error, operation = "select", table = "posts", "database query failed");
+        })?;
+
+    Ok(merge_tags(rows))
 }
 
 /// Get posts which have a tag.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+/// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
 pub async fn list_posts_by_tag(
     executor: impl MySqlExecutor<'_>,
     tag_slug: &str,
 ) -> Result<Vec<Post>> {
-    query_as::<_, PostWithTagRow>(
+    let rows = query_as::<_, PostWithTagRow>(
         "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at, p.updated_at,
                 t.id AS tag_id, t.name AS tag_name, t.slug AS tag_slug
          FROM posts p
@@ -205,17 +225,20 @@ pub async fn list_posts_by_tag(
          WHERE t_filter.slug = ?
            AND p.published_at IS NOT NULL AND p.published_at <= NOW()
          ORDER BY p.published_at DESC, p.id, t.name")
-        .bind(tag_slug)
+    .bind(tag_slug)
     .fetch_all(executor)
     .await
-    .map(merge_tags)
-    .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+    .inspect_err(|error| {
+        error!(%error, operation = "select", table = "posts", "database query failed");
+    })?;
+
+    Ok(merge_tags(rows))
 }
 
 /// List a page of posts.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+/// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
 pub async fn list_published_posts(
     executor: impl MySqlExecutor<'_>,
@@ -224,7 +247,7 @@ pub async fn list_published_posts(
 ) -> Result<Vec<Post>> {
     let offset = (page.saturating_sub(1)) * page_size;
 
-    query_as::<_, PostWithTagRow>(
+    let rows = query_as::<_, PostWithTagRow>(
         "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at,\
                 p.updated_at, t.id AS tag_id, t.name AS tag_name, t.slug AS tag_slug
          FROM (
@@ -242,41 +265,50 @@ pub async fn list_published_posts(
     .bind(offset)
     .fetch_all(executor)
     .await
-    .map(merge_tags)
-    .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+    .inspect_err(|error| {
+        error!(%error, operation = "select", table = "posts", "database query failed");
+    })?;
+
+    Ok(merge_tags(rows))
 }
 
 /// Check if the provided slug already exists for a post.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+/// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
 pub async fn slug_exists(executor: impl MySqlExecutor<'_>, slug: &str) -> Result<bool> {
-    query_scalar("SELECT COUNT(*) FROM posts WHERE slug = ?")
+    let count: i64 = query_scalar("SELECT COUNT(*) FROM posts WHERE slug = ?")
         .bind(slug)
         .fetch_one(executor)
         .await
-        .map(|count: i64| count > 0)
-        .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+        .inspect_err(|error| {
+            error!(%error, operation = "select", table = "posts", "database query failed");
+        })?;
+
+    Ok(count > 0)
 }
 
 /// Check if the provided slug already exists for a different post.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseSelectError`] on failure to read from database.
+/// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
 pub async fn slug_exists_for_other_post(
     executor: impl MySqlExecutor<'_>,
     slug: &str,
     post_id: u64,
 ) -> Result<bool> {
-    query_scalar("SELECT COUNT(*) FROM posts WHERE slug = ? AND id <> ?")
+    let count: i64 = query_scalar("SELECT COUNT(*) FROM posts WHERE slug = ? AND id <> ?")
         .bind(slug)
         .bind(post_id)
         .fetch_one(executor)
         .await
-        .map(|count: i64| count > 0)
-        .map_err(|sql_err| Error::DatabaseSelectError(sql_err.to_string()))
+        .inspect_err(|error| {
+            error!(%error, operation = "select", table = "posts", "database query failed");
+        })?;
+
+    Ok(count > 0)
 }
 
 /* ********************************************************************************************** *
@@ -286,7 +318,7 @@ pub async fn slug_exists_for_other_post(
 /// Update existing post.
 ///
 /// # Errors
-/// Returns [`Error::DatabaseUpdateError`] on failure to write to database.
+/// Returns [`crate::Error::Database`] on failure to write to database.
 #[instrument(skip(executor, body, preview))]
 pub async fn update_post(
     executor: impl MySqlExecutor<'_>,
@@ -310,8 +342,11 @@ pub async fn update_post(
     .bind(post_id)
     .execute(executor)
     .await
-    .map(|_| ())
-    .map_err(|sql_err| Error::DatabaseUpdateError(sql_err.to_string()))
+    .inspect_err(|error| {
+        error!(%error, operation = "update", table = "posts", "database query failed");
+    })?;
+
+    Ok(())
 }
 
 /* ********************************************************************************************** *
