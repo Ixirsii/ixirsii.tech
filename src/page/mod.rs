@@ -15,6 +15,7 @@ pub use admin_tags::*;
 pub use blog::*;
 pub use code::*;
 pub use error::*;
+pub use hall_of_fame::*;
 pub use home::*;
 pub use tag::*;
 
@@ -25,6 +26,7 @@ mod admin_tags;
 mod blog;
 mod code;
 mod error;
+mod hall_of_fame;
 mod home;
 mod tag;
 
