@@ -170,19 +170,25 @@ body {
 
 header {
   @apply bg-ctp-mantle;
+  @apply mb-8;
+  @apply shadow-ctp-sapphire;
+  @apply shadow-lg/30;
+}
+
+.header-inner {
   @apply flex;
   @apply flex-col;
   @apply gap-4;
   @apply items-center;
   @apply lg:px-8;
-  @apply mb-8;
+  @apply max-w-5xl;
   @apply md:flex-row;
   @apply md:items-center;
   @apply md:justify-between;
+  @apply mx-auto;
   @apply px-4;
-  @apply shadow-ctp-sapphire;
-  @apply shadow-lg/30;
   @apply sm:px-6;
+  @apply w-full;
 }
 
 header a {
