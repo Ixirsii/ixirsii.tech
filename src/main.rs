@@ -140,6 +140,7 @@ fn get_routes(db_pool: MySqlPool) -> Router {
         .route("/code", get(page::code_index))
         .route("/code/{slug}", get(page::code_project))
         .route("/hall-of-fame", get(page::hall_of_fame_page))
+        .route("/health", get(health_check))
         .route(LOGIN_ROUTE, get(page::login_page).post(page::login_submit))
         .route("/tags", get(page::tag_index))
         .route("/tags/search", get(page::tag_search))
@@ -153,6 +154,10 @@ fn get_routes(db_pool: MySqlPool) -> Router {
         .route("/static/{*path}", get(static_asset))
         .merge(app_routes)
         .layer(middleware::from_fn(observability::trace_request))
+}
+
+async fn health_check() -> StatusCode {
+    StatusCode::OK
 }
 
 async fn well_known_asset(Path(path): Path<String>) -> Response {
