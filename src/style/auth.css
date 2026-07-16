@@ -15,11 +15,9 @@
 }
 
 .login-card {
-  @apply bg-ctp-surface0;
   @apply border;
   @apply border-ctp-sapphire/30;
   @apply p-6;
-  @apply rounded-lg;
   @apply shadow-ctp-sapphire;
   @apply shadow-lg/20;
 }
@@ -96,11 +94,6 @@
   @apply text-sm;
   @apply tracking-wide;
   text-transform: uppercase;
-}
-
-.login-shell {
-  @apply mx-auto;
-  @apply max-w-xl;
 }
 
 .login-submit {

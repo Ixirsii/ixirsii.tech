@@ -178,16 +178,12 @@ header {
 .header-inner {
   @apply flex;
   @apply flex-col;
+  @apply md:flex-row;
   @apply gap-4;
   @apply items-center;
-  @apply lg:px-8;
-  @apply max-w-5xl;
-  @apply md:flex-row;
-  @apply md:items-center;
   @apply md:justify-between;
+  @apply max-w-5xl;
   @apply mx-auto;
-  @apply px-4;
-  @apply sm:px-6;
   @apply w-full;
 }
 
@@ -220,10 +216,6 @@ nav a {
   @apply rounded-lg;
 }
 
-.active {
-  @apply bg-ctp-sapphire/20;
-}
-
 .settings {
   @apply flex;
   @apply flex-row;
@@ -241,9 +233,6 @@ nav a {
 main {
   @apply max-w-5xl;
   @apply mx-auto;
-  @apply lg:px-8;
-  @apply px-4;
-  @apply sm:px-6;
   @apply w-full;
 }
 
@@ -251,15 +240,12 @@ main a {
   @apply hover:underline;
 }
 
-article a {
-  @apply text-ctp-sapphire;
+article {
+  @apply mb-6;
 }
 
-article {
-  @apply bg-ctp-surface0;
-  @apply mb-6;
-  @apply p-6;
-  @apply rounded-lg;
+article a {
+  @apply text-ctp-sapphire;
 }
 
 blockquote {
@@ -420,6 +406,11 @@ select {
   @apply p-3;
   @apply rounded-lg;
   @apply transition-colors;
+}
+
+.card {
+  @apply bg-ctp-surface0;
+  @apply rounded-lg;
 }
 
 .loading {
