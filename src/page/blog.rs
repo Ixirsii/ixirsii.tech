@@ -54,7 +54,7 @@ pub async fn blog_index(
         .map_err(|_| PageError::internal_server_error(show_admin_link))?;
     let total_pages = total.div_ceil(PAGE_SIZE);
     let page_data = BlogIndexPage {
-        title: "Blog | Ixirsii",
+        title: "Blog",
         show_admin_link,
         posts: &post_views,
         current_page: page,
@@ -85,7 +85,7 @@ pub async fn blog_post(
     };
 
     let page = BlogPostPage {
-        title: &format!("{0} | Ixirsii", post.title),
+        title: &format!("{0}", post.title),
         show_admin_link,
         post: &PostView::from(post),
     };

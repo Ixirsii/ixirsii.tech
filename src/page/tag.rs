@@ -83,7 +83,7 @@ pub async fn tag_index(
     let entries = get_tag_cloud(&state, None, show_admin_link).await?;
 
     let page = TagsPage {
-        title: "Tags | Ixirsii",
+        title: "Tags",
         show_admin_link,
         tags: &entries,
     };

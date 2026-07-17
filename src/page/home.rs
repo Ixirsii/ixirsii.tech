@@ -35,7 +35,7 @@ pub async fn home(
         .map(PostView::from)
         .collect();
     let page = HomePage {
-        title: "Home | Ixirsii",
+        title: "Home",
         show_admin_link,
         posts: &posts,
     };
