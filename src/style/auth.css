@@ -6,7 +6,7 @@
   @apply border-ctp-peach/40;
   @apply mb-6;
   @apply p-3;
-  @apply rounded-lg;
+  @apply rounded-md;
   @apply text-ctp-peach;
 }
 
@@ -40,7 +40,7 @@
   @apply border-ctp-red/40;
   @apply mb-6;
   @apply p-3;
-  @apply rounded-lg;
+  @apply rounded-md;
   @apply text-ctp-red;
 }
 
@@ -55,7 +55,7 @@
   @apply border;
   @apply border-ctp-surface2;
   @apply p-3;
-  @apply rounded-lg;
+  @apply rounded-md;
   @apply text-ctp-text;
   @apply transition-colors;
 }

@@ -1160,6 +1160,7 @@ dependencies = [
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "pulldown-cmark",
+ "rand 0.9.4",
  "reqwest",
  "serde",
  "sha2",

@@ -192,8 +192,22 @@ header a {
 }
 
 header h1 {
-  @apply leading-normal;
   @apply mb-0;
+}
+
+.site-title {
+  @apply my-2;
+  @apply shrink-0;
+  @apply w-full;
+  @apply md:w-96;
+}
+
+.tagline {
+  @apply mb-0;
+  @apply text-ctp-subtext0;
+  @apply text-sm;
+  @apply whitespace-normal;
+  @apply md:whitespace-nowrap;
 }
 
 nav {
@@ -203,6 +217,8 @@ nav {
   @apply font-semibold;
   @apply md:grow;
   @apply items-center;
+  @apply md:items-stretch;
+  @apply md:self-stretch;
   @apply w-full;
 }
 
@@ -213,7 +229,7 @@ nav a {
   @apply md:flex-col;
   @apply justify-center;
   @apply leading-8;
-  @apply rounded-lg;
+  @apply rounded-md;
 }
 
 .settings {
@@ -236,16 +252,15 @@ main {
   @apply w-full;
 }
 
-main a {
-  @apply hover:underline;
+@layer base {
+  main a {
+    @apply hover:underline;
+    @apply text-ctp-sapphire;
+  }
 }
 
 article {
   @apply mb-6;
-}
-
-article a {
-  @apply text-ctp-sapphire;
 }
 
 blockquote {
@@ -266,7 +281,7 @@ button {
   @apply hover:bg-ctp-surface2;
   @apply cursor-pointer;
   @apply p-2;
-  @apply rounded-lg;
+  @apply rounded-md;
   @apply transition-colors;
 }
 
@@ -275,7 +290,7 @@ pre {
   @apply font-mono;
   @apply overflow-x-auto;
   @apply p-4;
-  @apply rounded-lg;
+  @apply rounded-md;
 }
 
 :not(pre) code {
@@ -303,7 +318,7 @@ details summary {
   @apply border-ctp-sapphire;
   @apply list-none;
   @apply p-2;
-  @apply rounded-lg;
+  @apply rounded-md;
   @apply whitespace-nowrap;
 }
 
@@ -404,13 +419,13 @@ select {
   @apply hover:bg-ctp-surface2;
   @apply inline-block;
   @apply p-3;
-  @apply rounded-lg;
+  @apply rounded-md;
   @apply transition-colors;
 }
 
 .card {
   @apply bg-ctp-surface0;
-  @apply rounded-lg;
+  @apply rounded-md;
 }
 
 .loading {

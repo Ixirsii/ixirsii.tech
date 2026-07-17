@@ -4,28 +4,10 @@
   @apply md:divide-ctp-sapphire;
   @apply md:divide-dashed;
   @apply md:divide-x;
-  @apply flex;
-  @apply flex-col;
-  @apply md:flex-row;
   @apply gap-4;
-  @apply md:justify-center;
-}
-
-.about-column {
-  @apply flex;
-  @apply flex-1;
-  @apply flex-col;
-}
-
-.about-column a {
-  @apply flex;
-  @apply flex-row;
-  @apply gap-2;
-  @apply rounded-lg;
-}
-
-.about-links a {
-  @apply text-ctp-sapphire;
+  @apply grid;
+  @apply grid-cols-1;
+  @apply md:grid-cols-2;
 }
 
 .about-links {
@@ -33,7 +15,11 @@
   @apply flex-col;
   @apply gap-2;
   @apply md:items-end;
-  @apply w-fit;
+}
+
+.about-links a {
+  @apply flex;
+  @apply gap-2;
 }
 
 .about-projects {
@@ -42,20 +28,22 @@
   @apply gap-4;
 }
 
-.about-projects a {
-  @apply hover:no-underline;
-  @apply text-ctp-text;
-}
-
 .project {
   @apply bg-ctp-surface0;
   @apply hover:bg-ctp-surface1;
-  @apply flex-1;
-  @apply flex-row;
-  @apply gap-2;
+  @apply gap-x-3;
+  @apply gap-y-1;
+  @apply grid;
+  @apply grid-cols-[4rem_1fr];
   @apply items-center;
-  @apply justify-between;
-  @apply p-2;
+  @apply hover:no-underline;
+  @apply p-3;
+  @apply rounded-md;
+  @apply text-ctp-text;
+}
+
+.project > :first-child {
+  @apply row-span-2;
 }
 
 .project h3 {
@@ -63,7 +51,5 @@
 }
 
 .project span {
-  @apply flex-4;
-  @apply text-end;
+  @apply text-ctp-subtext0;
 }
-

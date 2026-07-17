@@ -2,6 +2,7 @@
 
 use ammonia::clean;
 use pulldown_cmark::{Parser, html};
+use rand::Rng;
 
 use crate::{
     ADMIN_ROUTE,
@@ -35,6 +36,45 @@ mod tag;
  * ********************************************************************************************** */
 
 pub const PAGE_SIZE: u32 = 8;
+
+const TOTAL_TAGLINE_WEIGHT: u32 = 100;
+
+const TAGLINES: &[(&str, u32)] = &[
+    // Hyperbole
+    ("150% hyperbole", 7),
+    ("It's fine. Statistically.", 6),
+    ("The alot is better than you at everything", 6),
+    // Nostalgia
+    ("Bump", 6),
+    ("Loading... please wait", 6),
+    ("Please sign my guestbook", 6),
+    ("Powered by phpBB® Forum Software © phpBB Group", 6),
+    ("Signature exceeds maximum length", 7),
+    // Programming
+    ("Rewrite it in Rust", 6),
+    ("\"This isn't in scope.\" — Mangement", 6),
+    ("TODO: Write a better tagline", 6),
+    // UwU
+    ("Can't stop the psyop", 7),
+    ("My coffee maker has two-factor authentication", 6),
+    ("Security through sleep deprivation", 6),
+    ("Threat model: vibes", 7),
+    ("Yuma said it was \"probably fine.\"", 6),
+];
+
+const fn total_tagline_weight(taglines: &[(&str, u32)]) -> u32 {
+    let mut total = 0;
+    let mut index = 0;
+
+    while index < taglines.len() {
+        total += taglines[index].1;
+        index += 1;
+    }
+
+    total
+}
+
+const _: () = assert!(TOTAL_TAGLINE_WEIGHT == total_tagline_weight(TAGLINES));
 
 /* ********************************************************************************************** *
  *                                           Post view                                            *
@@ -95,11 +135,22 @@ impl From<Tag> for TagView {
  *                                           Functions                                            *
  * ********************************************************************************************** */
 
-pub fn render_markdown(text: &str) -> String {
-    let parser = Parser::new(text);
-    let mut output = String::new();
-    html::push_html(&mut output, parser);
-    clean(&output)
+pub fn random_tagline() -> &'static str {
+    let Some((last, candidates)) = TAGLINES.split_last() else {
+        return "";
+    };
+
+    let mut roll = rand::rng().random_range(0..TOTAL_TAGLINE_WEIGHT);
+
+    for &(tagline, weight) in candidates {
+        if roll < weight {
+            return tagline;
+        }
+
+        roll -= weight;
+    }
+
+    last.0
 }
 
 pub fn redirect_target(next: Option<&str>) -> &str {
@@ -107,6 +158,13 @@ pub fn redirect_target(next: Option<&str>) -> &str {
         Some(path) if path.starts_with('/') && !path.starts_with("//") => path,
         _ => ADMIN_ROUTE,
     }
+}
+
+pub fn render_markdown(text: &str) -> String {
+    let parser = Parser::new(text);
+    let mut output = String::new();
+    html::push_html(&mut output, parser);
+    clean(&output)
 }
 
 pub fn slugify(text: &str) -> String {

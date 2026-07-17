@@ -36,14 +36,13 @@
   @apply border;
   @apply border-ctp-sapphire/20;
   @apply p-6;
-  @apply rounded-lg;
+  @apply rounded-md;
   @apply shadow-ctp-sapphire;
   @apply shadow-lg/10;
 }
 
 .admin-link-card {
   @apply hover:bg-ctp-surface1;
-  @apply text-ctp-text;
   @apply transition-colors;
 }
 
@@ -82,7 +81,7 @@
   @apply border;
   @apply border-ctp-surface2;
   @apply p-3;
-  @apply rounded-lg;
+  @apply rounded-md;
   @apply text-ctp-text;
   @apply transition-colors;
 }
@@ -134,7 +133,7 @@
   @apply bg-ctp-mantle;
   @apply min-h-40;
   @apply p-4;
-  @apply rounded-lg;
+  @apply rounded-md;
 }
 
 .admin-markdown-preview > :last-child {
@@ -187,7 +186,7 @@
   @apply bg-ctp-mantle;
   @apply border;
   @apply border-ctp-surface2;
-  @apply rounded-lg;
+  @apply rounded-md;
 }
 
 .admin-tag-chip {
@@ -242,7 +241,7 @@
   @apply border;
   @apply border-ctp-surface2;
   @apply p-4;
-  @apply rounded-lg;
+  @apply rounded-md;
 }
 
 .admin-tag-row-fields {
@@ -261,7 +260,7 @@
   @apply border-ctp-surface2;
   @apply px-3;
   @apply py-3;
-  @apply rounded-lg;
+  @apply rounded-md;
   @apply text-ctp-subtext1;
 }
 
@@ -281,5 +280,3 @@
   @apply text-sm;
   @apply mt-1;
 }
-
-
