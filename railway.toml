@@ -1,14 +1,14 @@
 [build]
 builder = "RAILPACK"
-buildCommand = "cargo build --release"
+buildCommand = "cargo build --release --locked"
 watchPatterns = [
-  "src/**",
-  "templates/**",
-  "migrations/**",
-  "Cargo.toml",
-  "Cargo.lock",
-  "build.rs",
-  "rust-toolchain.toml",
+    "src/**",
+    "templates/**",
+    "migrations/**",
+    "Cargo.toml",
+    "Cargo.lock",
+    "build.rs",
+    "rust-toolchain.toml",
 ]
 
 [deploy]
