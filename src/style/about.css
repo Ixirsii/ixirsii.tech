@@ -1,5 +1,28 @@
 /* ********************************* About ********************************** */
 
+.quote {
+  @apply mb-6;
+}
+
+.quote blockquote {
+  @apply mb-2;
+}
+
+.quote blockquote p + p {
+  @apply mt-2;
+}
+
+.quote figcaption {
+  @apply pr-6;
+  @apply text-ctp-subtext0;
+  @apply text-right;
+  @apply text-sm;
+}
+
+.quote cite {
+  @apply italic;
+}
+
 .about {
   @apply md:divide-ctp-sapphire;
   @apply md:divide-dashed;
