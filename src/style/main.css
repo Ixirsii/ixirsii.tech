@@ -249,6 +249,7 @@ nav a {
 main {
   @apply max-w-5xl;
   @apply mx-auto;
+  @apply pb-8;
   @apply w-full;
 }
 
