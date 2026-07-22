@@ -117,7 +117,11 @@ export default function About(): ReactNode {
               />
               <span>Instagram</span>
             </Link>
-            <Link href="https://mastodon.social/@ixirsii" target="_blank">
+            <Link
+              href="https://mastodon.social/@ixirsii"
+              rel="me"
+              target="_blank"
+            >
               <Image
                 src="/images/Mastodon Logo.svg"
                 alt="Mastodon"
