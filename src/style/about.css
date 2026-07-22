@@ -45,56 +45,65 @@
   @apply mb-0;
 }
 
-.about {
-  @apply md:divide-ctp-sapphire;
-  @apply md:divide-dashed;
-  @apply md:divide-x;
-  @apply gap-4;
+.about-link-groups {
+  @apply gap-6;
   @apply grid;
   @apply grid-cols-1;
   @apply md:grid-cols-2;
 }
 
+.about-link-group {
+  @apply min-w-0;
+}
+
+.about-link-group-wide {
+  @apply md:col-span-2;
+}
+
 .about-links {
-  @apply flex;
-  @apply flex-col;
-  @apply gap-2;
-  @apply md:items-end;
+  @apply gap-3;
+  @apply grid;
+  @apply grid-cols-2;
+}
+
+.about-link-group-wide .about-links {
+  @apply md:grid-cols-3;
 }
 
 .about-links a {
-  @apply flex;
-  @apply gap-2;
-}
-
-.about-projects {
-  @apply flex;
-  @apply flex-col;
-  @apply gap-4;
-}
-
-.project {
   @apply bg-ctp-surface0;
-  @apply hover:bg-ctp-surface1;
-  @apply gap-x-3;
-  @apply gap-y-1;
+  @apply gap-x-2;
   @apply grid;
-  @apply grid-cols-[4rem_1fr];
-  @apply items-center;
+  @apply grid-cols-[1.5rem_minmax(0,1fr)];
+  @apply hover:bg-ctp-surface1;
   @apply hover:no-underline;
-  @apply p-3;
+  @apply items-center;
+  @apply p-2;
   @apply rounded-md;
+  @apply sm:gap-x-3;
+  @apply sm:p-3;
   @apply text-ctp-text;
 }
 
-.project > :first-child {
+.about-links svg {
+  @apply col-start-1;
   @apply row-span-2;
+  @apply row-start-1;
 }
 
-.project h3 {
-  @apply mb-0;
+.about-link-service,
+.about-link-handle {
+  @apply col-start-2;
 }
 
-.project span {
+.about-link-service {
+  @apply font-semibold;
+  @apply row-start-1;
+}
+
+.about-link-handle {
+  @apply row-start-2;
   @apply text-ctp-subtext0;
+  @apply text-sm;
+  overflow-wrap: anywhere;
 }
