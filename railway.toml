@@ -8,6 +8,7 @@ watchPatterns = [
     "Cargo.toml",
     "Cargo.lock",
     "build.rs",
+    "railpack.json",
     "rust-toolchain.toml",
 ]
 

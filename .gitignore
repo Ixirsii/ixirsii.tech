@@ -13,9 +13,6 @@
 debug
 target
 
-# Dependencies
-.tailwindcss/
-
 # Env
 .env
 
