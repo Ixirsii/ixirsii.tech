@@ -260,10 +260,6 @@ main {
   }
 }
 
-article {
-  @apply mb-6;
-}
-
 blockquote {
   @apply bg-ctp-surface0;
   @apply border-ctp-sapphire;
@@ -426,6 +422,9 @@ select {
 
 .card {
   @apply bg-ctp-surface0;
+  @apply flex;
+  @apply flex-col;
+  @apply p-6;
   @apply rounded-md;
 }
 

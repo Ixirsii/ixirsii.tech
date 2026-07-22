@@ -17,7 +17,6 @@
 .login-card {
   @apply border;
   @apply border-ctp-sapphire/30;
-  @apply p-6;
   @apply shadow-ctp-sapphire;
   @apply shadow-lg/20;
 }

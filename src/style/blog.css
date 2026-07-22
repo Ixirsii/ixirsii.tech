@@ -7,3 +7,10 @@
   @apply text-ctp-subtext0;
   @apply text-sm;
 }
+
+.home-post + .home-post {
+  @apply border-ctp-surface1;
+  @apply border-t;
+  @apply mt-8;
+  @apply pt-8;
+}

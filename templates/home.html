@@ -1,6 +1,6 @@
 {% extends "base.html" %} {% block content %}
 {% for post in posts %}
-  <article>
+  <article class="home-post">
     <h2><a href="/blog/{{ post.slug }}">{{ post.title }}</a></h2>
 
     {{ post.body|safe }}
