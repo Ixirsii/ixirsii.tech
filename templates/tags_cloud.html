@@ -1,7 +1,7 @@
 {% for tag in tags %}
-  <a class="{{ tag.class }}" href="/tags/{{ tag.slug }}">
+  <a class="tag {{ tag.class }}" href="/tags/{{ tag.slug }}">
     {{ tag.name }} ({{ tag.count }})
   </a>
 {% else %}
-  <p class="text-ctp-subtext0">No matching tags.</p>
+  <p class="text-muted">No matching tags.</p>
 {% endfor %}

@@ -14,7 +14,7 @@
 
 .quote figcaption {
   @apply pr-6;
-  @apply text-ctp-subtext0;
+  @apply text-muted;
   @apply text-right;
   @apply text-sm;
 }
@@ -37,7 +37,7 @@
 .hall-of-fame-callout svg {
   @apply h-6;
   @apply shrink-0;
-  @apply text-ctp-sapphire;
+  @apply text-accent;
   @apply w-6;
 }
 
@@ -103,7 +103,7 @@
 
 .about-link-handle {
   @apply row-start-2;
-  @apply text-ctp-subtext0;
+  @apply text-muted;
   @apply text-sm;
   overflow-wrap: anywhere;
 }

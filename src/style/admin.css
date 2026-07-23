@@ -69,7 +69,7 @@
 .admin-form-field label,
 .admin-tag-fieldset legend {
   @apply font-mono;
-  @apply text-ctp-subtext1;
+  @apply text-muted;
   @apply text-sm;
 }
 
@@ -95,7 +95,7 @@
 .admin-form-field input:focus-visible,
 .admin-form-field select:focus-visible,
 .admin-form-field textarea:focus-visible {
-  @apply border-ctp-sapphire;
+  @apply border-focus;
   @apply outline-none;
 }
 
@@ -170,7 +170,7 @@
 
 .admin-slug {
   @apply font-mono;
-  @apply text-ctp-subtext0;
+  @apply text-muted;
   @apply text-sm;
 }
 
@@ -217,23 +217,23 @@
 .status-published {
   @apply bg-ctp-green/10;
   @apply border-ctp-green/40;
-  @apply text-ctp-green;
+  @apply text-status-success;
 }
 
 .status-scheduled {
-  @apply bg-ctp-peach/10;
+  @apply bg-ctp-peach/5;
   @apply border-ctp-peach/40;
-  @apply text-ctp-peach;
+  @apply text-status-warning;
 }
 
 .status-unscheduled {
   @apply bg-ctp-overlay0/10;
   @apply border-ctp-overlay0/40;
-  @apply text-ctp-subtext0;
+  @apply text-muted;
 }
 
 .admin-empty {
-  @apply text-ctp-subtext0;
+  @apply text-muted;
 }
 
 .admin-tag-row {
@@ -261,7 +261,7 @@
   @apply px-3;
   @apply py-3;
   @apply rounded-md;
-  @apply text-ctp-subtext1;
+  @apply text-muted;
 }
 
 .admin-inline-delete {
@@ -271,11 +271,11 @@
 .admin-form-field-error input,
 .admin-form-field-error textarea,
 .admin-form-field-error select {
-  @apply border-ctp-red;
+  @apply border-status-danger;
 }
 
 .admin-form-field-error-message {
-  @apply text-ctp-red;
+  @apply text-status-danger;
   @apply font-mono;
   @apply text-sm;
   @apply mt-1;

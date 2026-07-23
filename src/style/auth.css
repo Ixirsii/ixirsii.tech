@@ -1,13 +1,13 @@
 /* ********************************** Auth ********************************** */
 
 .admin-security-alert {
-  @apply bg-ctp-peach/10;
+  @apply bg-ctp-peach/5;
   @apply border;
   @apply border-ctp-peach/40;
   @apply mb-6;
   @apply p-3;
   @apply rounded-md;
-  @apply text-ctp-peach;
+  @apply text-status-warning;
 }
 
 .admin-security-alert strong {
@@ -40,7 +40,7 @@
   @apply mb-6;
   @apply p-3;
   @apply rounded-md;
-  @apply text-ctp-red;
+  @apply text-status-danger;
 }
 
 .login-field {
@@ -60,17 +60,17 @@
 }
 
 .login-field input::placeholder {
-  color: var(--ctp-overlay1);
+  color: var(--semantic-muted);
 }
 
 .login-field input:focus-visible {
-  @apply border-ctp-sapphire;
+  @apply border-focus;
   @apply outline-none;
 }
 
 .login-field label {
   @apply font-mono;
-  @apply text-ctp-subtext1;
+  @apply text-muted;
   @apply text-sm;
 }
 
@@ -82,14 +82,14 @@
 
 .login-hint {
   @apply font-mono;
-  @apply text-ctp-subtext0;
+  @apply text-muted;
   @apply text-sm;
 }
 
 .login-kicker {
   @apply font-mono;
   @apply mb-2;
-  @apply text-ctp-sapphire;
+  @apply text-accent;
   @apply text-sm;
   @apply tracking-wide;
   text-transform: uppercase;

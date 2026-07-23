@@ -13,14 +13,14 @@
 }
 
 .search:focus-within {
-  @apply border-ctp-sapphire;
+  @apply border-focus;
 }
 
 .search label {
   @apply flex;
   @apply h-fit;
   @apply p-2;
-  @apply text-ctp-subtext0;
+  @apply text-muted;
 }
 
 .search input {
@@ -33,7 +33,7 @@
 }
 
 .search input::placeholder {
-  color: var(--ctp-overlay1);
+  color: var(--semantic-muted);
 }
 
 .search input:focus-visible {
@@ -45,4 +45,9 @@
   @apply flex-wrap;
   @apply gap-2;
   @apply items-center;
+}
+
+.tag {
+  @apply border-b-2;
+  @apply pb-0.5;
 }

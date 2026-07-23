@@ -18,19 +18,20 @@ use crate::{
  * ********************************************************************************************** */
 
 const TAG_CLOUD_COLORS: [&str; 12] = [
-    "text-ctp-pink",
-    "text-ctp-mauve",
-    "text-ctp-red",
-    "text-ctp-maroon",
-    "text-ctp-peach",
-    "text-ctp-yellow",
-    "text-ctp-green",
-    "text-ctp-teal",
-    "text-ctp-sky",
-    "text-ctp-sapphire",
-    "text-ctp-blue",
-    "text-ctp-lavender",
+    "border-ctp-pink",
+    "border-ctp-mauve",
+    "border-ctp-red",
+    "border-ctp-maroon",
+    "border-ctp-peach",
+    "border-ctp-yellow",
+    "border-ctp-green",
+    "border-ctp-teal",
+    "border-ctp-sky",
+    "border-ctp-sapphire",
+    "border-ctp-blue",
+    "border-ctp-lavender",
 ];
+const TAG_CLOUD_COLOR_COUNT: u64 = 12;
 
 /* ********************************************************************************************** *
  *                                             Types                                              *
@@ -170,10 +171,10 @@ async fn get_tag_cloud(
 
     Ok(tags
         .into_iter()
-        .enumerate()
-        .map(|(i, tag)| {
+        .map(|tag| {
             let size = get_tag_size(tag.count, max_count);
-            let color = TAG_CLOUD_COLORS[i % TAG_CLOUD_COLORS.len()];
+            let color_index = usize::try_from(tag.id % TAG_CLOUD_COLOR_COUNT).unwrap_or_default();
+            let color = TAG_CLOUD_COLORS[color_index];
             let class = format!("{size} {color}");
             TagCloudEntry {
                 name: tag.name,

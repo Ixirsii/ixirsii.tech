@@ -39,6 +39,13 @@
   --color-ctp-base: var(--ctp-base);
   --color-ctp-mantle: var(--ctp-mantle);
   --color-ctp-crust: var(--ctp-crust);
+  --color-link: var(--semantic-link);
+  --color-focus: var(--semantic-focus);
+  --color-muted: var(--semantic-muted);
+  --color-accent: var(--semantic-accent);
+  --color-status-success: var(--semantic-status-success);
+  --color-status-warning: var(--semantic-status-warning);
+  --color-status-danger: var(--semantic-status-danger);
 }
 
 @layer base {
@@ -69,6 +76,13 @@
     --ctp-base: oklch(0.2429 0.0304 283.911);
     --ctp-mantle: oklch(0.2155 0.0254 284.0647);
     --ctp-crust: oklch(0.1828 0.0204 284.2038);
+    --semantic-link: var(--ctp-sapphire);
+    --semantic-focus: var(--ctp-sapphire);
+    --semantic-muted: var(--ctp-subtext1);
+    --semantic-accent: var(--ctp-sapphire);
+    --semantic-status-success: var(--ctp-green);
+    --semantic-status-warning: var(--ctp-peach);
+    --semantic-status-danger: oklch(0.7873 0.1082 2.889);
   }
 
   [data-theme="latte"] {
@@ -98,6 +112,13 @@
     --ctp-base: oklch(0.9578 0.0058 264.5322);
     --ctp-mantle: oklch(0.9335 0.0087 264.5206);
     --ctp-crust: oklch(0.906 0.0117 264.5071);
+    --semantic-link: oklch(0.4343 0.0714 212.4482);
+    --semantic-focus: oklch(0.4343 0.0714 212.4482);
+    --semantic-muted: var(--ctp-text);
+    --semantic-accent: oklch(0.4343 0.0714 212.4482);
+    --semantic-status-success: oklch(0.4173 0.1179 140.5665);
+    --semantic-status-warning: oklch(0.4627 0.1364 42.5291);
+    --semantic-status-danger: oklch(0.3694 0.1445 19.8968);
   }
 
   [data-theme="frappe"] {
@@ -127,6 +148,13 @@
     --ctp-base: oklch(0.3291 0.0324 274.758);
     --ctp-mantle: oklch(0.2973 0.0294 276.2144);
     --ctp-crust: oklch(0.272 0.0264 275.1154);
+    --semantic-link: var(--ctp-sapphire);
+    --semantic-focus: var(--ctp-sapphire);
+    --semantic-muted: var(--ctp-subtext1);
+    --semantic-accent: var(--ctp-sapphire);
+    --semantic-status-success: oklch(0.8349 0.0895 133.2391);
+    --semantic-status-warning: oklch(0.8293 0.0759 44.3932);
+    --semantic-status-danger: oklch(0.8242 0.0689 17.5298);
   }
 
   [data-theme="macchiato"] {
@@ -156,6 +184,13 @@
     --ctp-base: oklch(0.2788 0.0353 276.9368);
     --ctp-mantle: oklch(0.2493 0.0305 278.435);
     --ctp-crust: oklch(0.2188 0.0255 280.6572);
+    --semantic-link: var(--ctp-sapphire);
+    --semantic-focus: var(--ctp-sapphire);
+    --semantic-muted: var(--ctp-subtext1);
+    --semantic-accent: var(--ctp-sapphire);
+    --semantic-status-success: var(--ctp-green);
+    --semantic-status-warning: var(--ctp-peach);
+    --semantic-status-danger: oklch(0.8343 0.0715 9.9829);
   }
 }
 
@@ -208,7 +243,7 @@
 
   .tagline {
     @apply mb-0;
-    @apply text-ctp-subtext0;
+    @apply text-muted;
     @apply text-sm;
     @apply whitespace-normal;
     @apply md:whitespace-nowrap;
@@ -261,7 +296,7 @@
 @layer base {
   main a {
     @apply hover:underline;
-    @apply text-ctp-sapphire;
+    @apply text-link;
   }
 
   blockquote {
