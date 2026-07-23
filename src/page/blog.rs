@@ -85,7 +85,7 @@ pub async fn blog_post(
     };
 
     let page = BlogPostPage {
-        title: &format!("{0}", post.title),
+        title: &post.title.clone(),
         show_admin_link,
         post: &PostView::from(post),
     };
