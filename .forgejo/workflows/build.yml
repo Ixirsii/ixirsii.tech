@@ -1,0 +1,31 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  rust:
+    name: Rust build
+    runs-on: node24
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: https://data.forgejo.org/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Install Rust
+        run: |
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain none
+          . "$HOME/.cargo/env"
+          rustup show active-toolchain
+          echo "$HOME/.cargo/bin" >> "$FORGEJO_PATH"
+
+      - name: Install Tailwind CSS
+        run: npm install --global @tailwindcss/cli@4.3.3
+
+      - name: Build
+        run: cargo build --locked
