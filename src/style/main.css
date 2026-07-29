@@ -194,116 +194,15 @@
   }
 }
 
-/* ********************************** Body ********************************** */
+/* ************************************************************************** *
+ *                                 Base layer                                 *
+ * ************************************************************************** */
 
 @layer base {
   body {
     @apply bg-ctp-base;
     @apply min-h-screen;
     @apply text-ctp-text;
-  }
-}
-
-/* ********************************* Header ********************************* */
-
-@layer components {
-  header {
-    @apply bg-ctp-mantle;
-    @apply mb-8;
-    @apply shadow-ctp-sapphire;
-    @apply shadow-lg/30;
-  }
-
-  .header-inner {
-    @apply flex;
-    @apply flex-col;
-    @apply md:flex-row;
-    @apply gap-4;
-    @apply items-center;
-    @apply md:justify-between;
-    @apply max-w-5xl;
-    @apply mx-auto;
-    @apply w-full;
-  }
-
-  header a {
-    @apply text-center;
-  }
-
-  header h1 {
-    @apply mb-0;
-  }
-
-  .site-title {
-    @apply my-2;
-    @apply shrink-0;
-    @apply w-full;
-    @apply md:w-96;
-  }
-
-  .tagline {
-    @apply mb-0;
-    @apply min-h-10;
-    @apply text-muted;
-    @apply text-sm;
-    @apply whitespace-normal;
-    @apply md:whitespace-nowrap;
-  }
-
-  .tagline-note {
-    @apply italic;
-    @apply text-muted;
-    @apply text-xs;
-  }
-
-  nav {
-    @apply flex;
-    @apply flex-col;
-    @apply md:flex-row;
-    @apply font-semibold;
-    @apply md:grow;
-    @apply items-center;
-    @apply md:items-stretch;
-    @apply md:self-stretch;
-    @apply w-full;
-  }
-
-  nav a {
-    @apply hover:bg-ctp-surface0;
-    @apply flex;
-    @apply md:flex-1;
-    @apply md:flex-col;
-    @apply justify-center;
-    @apply leading-8;
-    @apply rounded-md;
-  }
-
-  .settings {
-    @apply flex;
-    @apply flex-row;
-    @apply gap-4;
-  }
-
-  .settings a {
-    @apply flex;
-    @apply flex-col;
-    @apply justify-center;
-  }
-
-/* ********************************** Main ********************************** */
-
-  main {
-    @apply max-w-5xl;
-    @apply mx-auto;
-    @apply pb-8;
-    @apply w-full;
-  }
-}
-
-@layer base {
-  main a {
-    @apply hover:underline;
-    @apply text-link;
   }
 
   blockquote {
@@ -328,6 +227,72 @@
     @apply transition-colors;
   }
 
+  :not(pre) code {
+    @apply bg-ctp-mantle;
+    @apply font-mono;
+    @apply px-1;
+    @apply py-0.5;
+    @apply rounded;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply text-inherit;
+  }
+
+  h1 {
+    @apply font-extrabold;
+    @apply mb-6;
+    @apply text-4xl;
+  }
+
+  h2 {
+    @apply font-extrabold;
+    @apply mb-4;
+    @apply text-2xl;
+  }
+
+  h3 {
+    @apply font-bold;
+    @apply mb-2;
+    @apply text-xl;
+  }
+
+  h4 {
+    @apply font-bold;
+    @apply mb-2;
+    @apply text-lg;
+  }
+
+  h5 {
+    @apply font-semibold;
+    @apply mb-1;
+    @apply text-base;
+  }
+
+  h6 {
+    @apply mb-1;
+    @apply text-sm;
+  }
+
+  hr {
+    @apply border-ctp-sapphire;
+    @apply my-4;
+  }
+
+  main a {
+    @apply hover:underline;
+    @apply text-link;
+  }
+
+  p {
+    @apply mb-4;
+  }
+
   pre {
     @apply bg-ctp-mantle;
     @apply font-mono;
@@ -336,14 +301,14 @@
     @apply rounded-md;
   }
 
-  :not(pre) code {
-    @apply bg-ctp-mantle;
-    @apply font-mono;
-    @apply px-1;
-    @apply py-0.5;
-    @apply rounded;
+  select {
+    @apply cursor-pointer;
   }
 }
+
+/* ************************************************************************** *
+ *                              Component layer                               *
+ * ************************************************************************** */
 
 @layer components {
   details {
@@ -401,68 +366,51 @@
   details:open .expand-icon {
     @apply -rotate-90;
   }
-}
 
-@layer base {
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply text-inherit;
+  header {
+    @apply bg-ctp-mantle;
+    @apply mb-8;
+    @apply shadow-ctp-sapphire;
+    @apply shadow-lg/30;
   }
 
-  h1 {
-    @apply font-extrabold;
-    @apply mb-6;
-    @apply text-4xl;
+  header a {
+    @apply text-center;
   }
 
-  h2 {
-    @apply font-extrabold;
-    @apply mb-4;
-    @apply text-2xl;
+  header h1 {
+    @apply mb-0;
   }
 
-  h3 {
-    @apply font-bold;
-    @apply mb-2;
-    @apply text-xl;
+  main {
+    @apply max-w-5xl;
+    @apply mx-auto;
+    @apply pb-8;
+    @apply w-full;
   }
 
-  h4 {
-    @apply font-bold;
-    @apply mb-2;
-    @apply text-lg;
-  }
-
-  h5 {
+  nav {
+    @apply flex;
+    @apply flex-col;
+    @apply md:flex-row;
     @apply font-semibold;
-    @apply mb-1;
-    @apply text-base;
+    @apply md:grow;
+    @apply items-center;
+    @apply md:items-stretch;
+    @apply md:self-stretch;
+    @apply w-full;
   }
 
-  h6 {
-    @apply mb-1;
-    @apply text-sm;
+  nav a {
+    @apply hover:bg-ctp-surface0;
+    @apply flex;
+    @apply md:flex-1;
+    @apply md:flex-col;
+    @apply justify-center;
+    @apply leading-8;
+    @apply rounded-md;
   }
 
-  hr {
-    @apply border-ctp-sapphire;
-    @apply my-4;
-  }
-
-  p {
-    @apply mb-4;
-  }
-
-  select {
-    @apply cursor-pointer;
-  }
-}
-
-@layer components {
   .button {
     @apply bg-ctp-surface0;
     @apply hover:bg-ctp-surface2;
@@ -480,6 +428,30 @@
     @apply rounded-md;
   }
 
+  .construction-banner {
+    @apply bg-ctp-peach/10;
+    @apply border-b;
+    @apply border-ctp-peach/30;
+    @apply font-mono;
+    @apply px-4;
+    @apply py-1.5;
+    @apply text-center;
+    @apply text-status-warning;
+    @apply text-xs;
+  }
+
+  .header-inner {
+    @apply flex;
+    @apply flex-col;
+    @apply md:flex-row;
+    @apply gap-4;
+    @apply items-center;
+    @apply md:justify-between;
+    @apply max-w-5xl;
+    @apply mx-auto;
+    @apply w-full;
+  }
+
   .loading {
     @apply flex;
     @apply grow;
@@ -493,5 +465,39 @@
     @apply h-8;
     @apply w-8;
     @apply text-ctp-overlay0;
+  }
+
+  .settings {
+    @apply flex;
+    @apply flex-row;
+    @apply gap-4;
+  }
+
+  .settings a {
+    @apply flex;
+    @apply flex-col;
+    @apply justify-center;
+  }
+
+  .site-title {
+    @apply my-2;
+    @apply shrink-0;
+    @apply w-full;
+    @apply md:w-96;
+  }
+
+  .tagline {
+    @apply mb-0;
+    @apply min-h-10;
+    @apply text-muted;
+    @apply text-sm;
+    @apply whitespace-normal;
+    @apply md:whitespace-nowrap;
+  }
+
+  .tagline-note {
+    @apply italic;
+    @apply text-muted;
+    @apply text-xs;
   }
 }
