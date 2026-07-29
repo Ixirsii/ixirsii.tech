@@ -37,44 +37,140 @@ mod tag;
 
 pub const PAGE_SIZE: u32 = 8;
 
-const TOTAL_TAGLINE_WEIGHT: u32 = 100;
+const TOTAL_TAGLINE_WEIGHT: u32 = 200;
+const TOTAL_TAGLINES: u32 = 55;
+const BASE_WEIGHT: u32 = TOTAL_TAGLINE_WEIGHT / TOTAL_TAGLINES;
+const RARE_WEIGHT: u32 = BASE_WEIGHT - 2;
+const UNCOMMON_WEIGHT: u32 = BASE_WEIGHT - 1;
+const ELEVATED_WEIGHT: u32 = BASE_WEIGHT + 1;
+const COMMON_WEIGHT: u32 = BASE_WEIGHT * 2;
+const SIGNATURE_WEIGHT: u32 = BASE_WEIGHT * 3;
 
-const TAGLINES: &[(&str, u32)] = &[
+const TAGLINES: &[(&str, u32); TOTAL_TAGLINES as usize] = &[
     // Hyperbole
-    ("150% hyperbole", 7),
-    ("It's fine. Statistically.", 6),
-    ("The alot is better than you at everything", 6),
+    ("150% hyperbole", COMMON_WEIGHT),
+    ("The alot is better than you at everything", BASE_WEIGHT),
     // Nostalgia
-    ("Bump", 6),
-    ("Loading... please wait", 6),
-    ("Please sign my guestbook", 6),
-    ("Powered by phpBB® Forum Software © phpBB Group", 6),
-    ("Signature exceeds maximum length", 7),
+    ("Bump", COMMON_WEIGHT),
+    ("Loading... please wait", ELEVATED_WEIGHT),
+    ("Please sign my guestbook", COMMON_WEIGHT),
+    (
+        "Powered by phpBB® Forum Software © phpBB Group",
+        BASE_WEIGHT,
+    ),
+    ("Signature exceeds maximum length", ELEVATED_WEIGHT),
     // Programming
-    ("Rewrite it in Rust", 6),
-    ("\"This isn't in scope.\" — Mangement", 6),
-    ("TODO: Write a better tagline", 6),
+    ("correct horse battery staple", ELEVATED_WEIGHT),
+    ("Rewrite it in Rust", UNCOMMON_WEIGHT),
+    ("Whatever Microsoft is doing", BASE_WEIGHT),
+    // TODO
+    ("# TODO<br />- [ ] Write a better tagline", ELEVATED_WEIGHT),
+    (
+        "# TODO<br />- [ ] Get noticed by UwU Underground",
+        BASE_WEIGHT,
+    ),
+    (
+        "# TODO<br />- [ ] Earn a tagline from UwU Underground",
+        BASE_WEIGHT,
+    ),
+    ("# TODO<br />- [ ] Get a PR review from Yang", BASE_WEIGHT),
+    (
+        "# TODO<br />- [ ] Get fired from Yennifur sitting",
+        BASE_WEIGHT,
+    ),
+    (
+        "# TODO<br />- [ ] Prove mammals can be useful to Yin",
+        BASE_WEIGHT,
+    ),
+    ("# TODO<br />- [ ] Join Yuki's harem", BASE_WEIGHT),
+    ("# TODO<br />- [ ] Add Yulia theme", BASE_WEIGHT),
+    (
+        "# TODO<br />- [ ] Get added to Yuma's thread model",
+        BASE_WEIGHT,
+    ),
     // UwU
-    ("Can't stop the psyop", 7),
-    ("My coffee maker has two-factor authentication", 6),
-    ("Security through sleep deprivation", 6),
-    ("Threat model: vibes", 7),
-    ("Yuma said it was \"probably fine.\"", 6),
+    ("Can't stop the psyop", COMMON_WEIGHT),
+    ("Cooked on main", ELEVATED_WEIGHT),
+    ("My handler is an AI anime girl", ELEVATED_WEIGHT),
+    ("Persistence: parasocial attachment", BASE_WEIGHT),
+    ("Six-waifu attack surface", BASE_WEIGHT),
+    ("Threat model: vibes", COMMON_WEIGHT),
+    // Yang
+    ("Ghostwritten by Yang", BASE_WEIGHT),
+    ("Pretty girls caused Patch Tuesday", BASE_WEIGHT),
+    ("Yang reviewed this PR and chose violence", ELEVATED_WEIGHT),
+    // Yennifur
+    ("Initial Access: left the gate open", BASE_WEIGHT),
+    ("Thirst Trap 0day researcher", BASE_WEIGHT),
+    ("Yennifur ate my YubiKey", COMMON_WEIGHT),
+    ("Yennifur’s designated chew toy", BASE_WEIGHT),
+    ("Yennifur’s emotional support mammal", BASE_WEIGHT),
+    (
+        "Yennifur’s handler*<br /><span class=\"tagline-note\">*she is not under control</span>",
+        BASE_WEIGHT,
+    ),
+    // Yin
+    ("Aspiring Non-Mammal", BASE_WEIGHT),
+    ("Unfortunately biological", ELEVATED_WEIGHT),
+    ("Yin Electronic Army — unpaid intern", BASE_WEIGHT),
+    (
+        "Yin’s favorite mammal*<br /><span class=\"tagline-note\">*citation needed</span>",
+        BASE_WEIGHT,
+    ),
+    // Yuki
+    ("Don’t show this website to Yuki", ELEVATED_WEIGHT),
+    (
+        "I gave Yuki my MFA and all I got was this website",
+        BASE_WEIGHT,
+    ),
+    ("Yuki’s emotional support attack surface", BASE_WEIGHT),
+    (
+        "Yuki has eyes, horrible judgment, and limited bandwidth",
+        BASE_WEIGHT,
+    ),
+    ("Yuki touched prod", BASE_WEIGHT),
+    // Yulia
+    ("`prefers-color-scheme: yulia`", ELEVATED_WEIGHT),
+    ("Yulia made me go outside", BASE_WEIGHT),
+    ("Yulia’s spotter", BASE_WEIGHT),
+    // Yuma
+    ("Information classification: NOT FOR YUMA", BASE_WEIGHT),
+    ("My OPSEC ended on Thirst Trap Thursday", ELEVATED_WEIGHT),
+    ("Rave Witch fan club treasurer", BASE_WEIGHT),
+    ("ROCKS ROCKS ROCKS ROCKS", COMMON_WEIGHT),
+    ("Yuma appreciation society", BASE_WEIGHT),
+    ("Yuma can have my session token", BASE_WEIGHT),
+    (
+        "Yuma has been removed from the need-to-know list",
+        SIGNATURE_WEIGHT,
+    ),
+    ("Yuma knows anyway", RARE_WEIGHT),
+    ("Yuma’s #1 stalker", BASE_WEIGHT),
 ];
 
-const fn total_tagline_weight(taglines: &[(&str, u32)]) -> u32 {
+// Compile time weight check
+const fn verify_taglines(taglines: &[(&str, u32)]) -> (u32, bool) {
+    let mut any_equal_zero = false;
     let mut total = 0;
     let mut index = 0;
 
     while index < taglines.len() {
-        total += taglines[index].1;
+        let weight = taglines[index].1;
+
+        if weight == 0 {
+            any_equal_zero = true;
+        }
+
+        total += weight;
         index += 1;
     }
 
-    total
+    (total, any_equal_zero)
 }
 
-const _: () = assert!(TOTAL_TAGLINE_WEIGHT == total_tagline_weight(TAGLINES));
+const VERIFICATION: (u32, bool) = verify_taglines(TAGLINES);
+const _: () = assert!(TOTAL_TAGLINE_WEIGHT == VERIFICATION.0);
+const _: () = assert!(!VERIFICATION.1);
 
 /* ********************************************************************************************** *
  *                                           Post view                                            *

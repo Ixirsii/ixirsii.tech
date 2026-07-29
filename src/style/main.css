@@ -243,10 +243,17 @@
 
   .tagline {
     @apply mb-0;
+    @apply min-h-10;
     @apply text-muted;
     @apply text-sm;
     @apply whitespace-normal;
     @apply md:whitespace-nowrap;
+  }
+
+  .tagline-note {
+    @apply italic;
+    @apply text-muted;
+    @apply text-xs;
   }
 
   nav {
