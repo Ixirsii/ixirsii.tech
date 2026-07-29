@@ -54,7 +54,7 @@ Startup connects to MySQL and runs embedded SQLx migrations before binding the l
 - **Page handlers**: `src/page/` contains `about.rs`, `admin.rs`, `admin_posts.rs`, `admin_tags.rs`, `blog.rs`, `code.rs`, `error.rs`, `hall_of_fame.rs`, `home.rs`, and `tag.rs`. They are re-exported by `src/page/mod.rs`.
 - **Templates**: Askama templates live in `templates/`. Full pages extend `base.html`; `tags_cloud.html` and `admin_markdown_preview.html` are HTMX fragments.
 - **Database**: `src/database/` is split into posts, tags, post-tag joins, transactions, users, and shared types. All 29 public database operations use tracing instrumentation.
-- **Migrations**: Eight SQLx migrations create posts, tags, post-tag joins, the publication index, and admin users, and seed post/tag demonstration data. Migrations run at process startup and do not seed an admin user.
+- **Migrations**: Six SQLx migrations create posts, tags, post-tag joins, the publication index, and admin users, and seed the initial production post and tags. Migrations run at process startup and do not seed an admin user.
 - **Errors**: `src/types.rs` defines the internal `Error` and `Result<T>` types. `src/page/error.rs` renders styled public 404 and 500 responses.
 - **Observability**: `src/observability.rs` always enables console tracing. It adds an OTLP HTTP/protobuf exporter when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Request spans record method, raw request path, and response status.
 

@@ -1,6 +1,6 @@
 [build]
 builder = "RAILPACK"
-buildCommand = "cargo build --release --locked"
+buildCommand = "cargo build --release --locked && cp target/release/ixirsii-tech ixirsii-tech"
 watchPatterns = [
     "src/**",
     "templates/**",
@@ -9,11 +9,12 @@ watchPatterns = [
     "Cargo.lock",
     "build.rs",
     "railpack.json",
+    "railway.toml",
     "rust-toolchain.toml",
 ]
 
 [deploy]
-startCommand = "./target/release/ixirsii-tech"
+startCommand = "./ixirsii-tech"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
