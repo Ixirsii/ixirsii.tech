@@ -18,18 +18,18 @@ use crate::{
  * ********************************************************************************************** */
 
 const TAG_CLOUD_COLORS: [&str; 12] = [
-    "border-ctp-pink",
-    "border-ctp-mauve",
-    "border-ctp-red",
-    "border-ctp-maroon",
-    "border-ctp-peach",
-    "border-ctp-yellow",
-    "border-ctp-green",
-    "border-ctp-teal",
-    "border-ctp-sky",
-    "border-ctp-sapphire",
-    "border-ctp-blue",
-    "border-ctp-lavender",
+    "text-ctp-pink",
+    "text-ctp-mauve",
+    "text-ctp-red",
+    "text-ctp-maroon",
+    "text-ctp-peach",
+    "text-ctp-yellow",
+    "text-ctp-green",
+    "text-ctp-teal",
+    "text-ctp-sky",
+    "text-ctp-sapphire",
+    "text-ctp-blue",
+    "text-ctp-lavender",
 ];
 const TAG_CLOUD_COLOR_COUNT: u64 = 12;
 

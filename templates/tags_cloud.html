@@ -1,5 +1,5 @@
 {% for tag in tags %}
-  <a class="tag {{ tag.class }}" href="/tags/{{ tag.slug }}">
+  <a class="{{ tag.class }}" href="/tags/{{ tag.slug }}">
     {{ tag.name }} ({{ tag.count }})
   </a>
 {% else %}
