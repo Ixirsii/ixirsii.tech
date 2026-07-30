@@ -25,7 +25,20 @@ dotenvy = "0.15.7"
 include_dir = "0.7"
 ipnet = "2.11"
 mime_guess = "2"
+opentelemetry = { version = "0.28", features = ["trace"] }
+opentelemetry-otlp = { version = "0.28", default-features = false, features = [
+    "trace",
+    "http-proto",
+    "reqwest-blocking-client",
+] }
+opentelemetry_sdk = { version = "0.28", features = ["trace", "rt-tokio"] }
+reqwest = { version = "0.13.4", default-features = false, features = [
+    "blocking",
+    "rustls",
+] }
+rmp-serde = "1.3"
 serde = { version = "1.0", features = ["derive"] }
+sha2 = "0.10"
 sqlx = { version = "0.8.6", features = [
     "mysql",
     "runtime-tokio",
@@ -34,25 +47,17 @@ sqlx = { version = "0.8.6", features = [
     "chrono",
     "time",
 ] }
-rmp-serde = "1.3"
 time = "0.3"
-tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "sync", "time"] }
+tokio = { version = "1.52.3", features = [
+    "macros",
+    "rt-multi-thread",
+    "sync",
+    "time",
+] }
 tower-sessions = "0.14.0"
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-opentelemetry = { version = "0.28", features = ["trace"] }
-opentelemetry_sdk = { version = "0.28", features = ["trace", "rt-tokio"] }
-opentelemetry-otlp = { version = "0.28", default-features = false, features = [
-    "trace",
-    "http-proto",
-    "reqwest-blocking-client",
-] }
-reqwest = { version = "0.12", default-features = false, features = [
-    "blocking",
-    "rustls-tls",
-] }
-sha2 = "0.10"
 tracing-opentelemetry = "0.29"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
 [build-dependencies]
 sha2 = "0.10"
