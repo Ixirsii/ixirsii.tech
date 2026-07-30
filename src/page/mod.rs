@@ -1,6 +1,7 @@
 //! Page route handlers.
 
 use ammonia::clean;
+use axum::http::Uri;
 use pulldown_cmark::{Parser, html};
 use rand::Rng;
 
@@ -250,9 +251,33 @@ pub fn random_tagline() -> &'static str {
 }
 
 pub fn redirect_target(next: Option<&str>) -> &str {
-    match next {
-        Some(path) if path.starts_with('/') && !path.starts_with("//") => path,
-        _ => ADMIN_ROUTE,
+    let Some(target) = next else {
+        return ADMIN_ROUTE;
+    };
+    let Ok(uri) = target.parse::<Uri>() else {
+        return ADMIN_ROUTE;
+    };
+    let path = uri.path();
+    let encoded_backslash = path
+        .as_bytes()
+        .windows(3)
+        .any(|bytes| bytes[0] == b'%' && bytes[1..].eq_ignore_ascii_case(b"5c"));
+    let encoded_separator_after_root = path.as_bytes().get(1..4).is_some_and(|bytes| {
+        bytes[0] == b'%'
+            && (bytes[1..].eq_ignore_ascii_case(b"2f") || bytes[1..].eq_ignore_ascii_case(b"5c"))
+    });
+
+    if uri.scheme().is_none()
+        && uri.authority().is_none()
+        && path.starts_with('/')
+        && !path.starts_with("//")
+        && !target.contains('\\')
+        && !encoded_backslash
+        && !encoded_separator_after_root
+    {
+        target
+    } else {
+        ADMIN_ROUTE
     }
 }
 
@@ -282,4 +307,53 @@ pub fn slugify(text: &str) -> String {
     }
 
     slug
+}
+
+#[cfg(test)]
+mod tests {
+    use super::redirect_target;
+    use crate::ADMIN_ROUTE;
+
+    #[test]
+    fn redirect_target_rejects_external_and_malformed_targets() {
+        for target in [
+            "",
+            "admin",
+            "https://evil.example",
+            "//evil.example",
+            r"/\evil.example",
+            r"/\\evil.example",
+        ] {
+            assert_eq!(redirect_target(Some(target)), ADMIN_ROUTE);
+        }
+
+        assert_eq!(redirect_target(None), ADMIN_ROUTE);
+    }
+
+    #[test]
+    fn redirect_target_rejects_encoded_protocol_relative_variants() {
+        for target in [
+            "%2F%2Fevil.example",
+            "%2f%5cevil.example",
+            "/%2Fevil.example",
+            "/%2fevil.example",
+            "/%5Cevil.example",
+            "/%5cevil.example",
+            "/admin/%5Cevil.example",
+        ] {
+            assert_eq!(redirect_target(Some(target)), ADMIN_ROUTE);
+        }
+    }
+
+    #[test]
+    fn redirect_target_preserves_internal_admin_paths_and_queries() {
+        for target in [
+            "/admin",
+            "/admin/posts",
+            "/admin/posts?page=2&sort=title",
+            "/admin/posts?return=https%3A%2F%2Fexample.test",
+        ] {
+            assert_eq!(redirect_target(Some(target)), target);
+        }
+    }
 }
