@@ -2,9 +2,9 @@ INSERT INTO posts (title, slug, body, preview, published_at) VALUES
   (
     'I hate title case',
     'i-hate-title-case',
-    'Title Case Is Bad And You Should Feel Bad.\n\nSometimes the right hill to die on is a stylistic one.',
-    'A short rant about title case, readability, and why sentence case wins.',
-    NOW() - INTERVAL 30 DAY
+    'Title Case Is Bad And You Should Feel Bad.',
+    'I hate title case',
+    NOW()
   );
 
 INSERT INTO tags (name, slug) VALUES
