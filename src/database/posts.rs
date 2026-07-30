@@ -21,9 +21,9 @@ struct PostWithTagRow {
     pub created_at: NaiveDateTime,
     pub published_at: Option<NaiveDateTime>,
     pub updated_at: Option<NaiveDateTime>,
-    pub tag_id: u64,
-    pub tag_name: String,
-    pub tag_slug: String,
+    pub tag_id: Option<u64>,
+    pub tag_name: Option<String>,
+    pub tag_slug: Option<String>,
 }
 
 /* ********************************************************************************************** *
@@ -367,19 +367,17 @@ fn merge_tags(rows: Vec<PostWithTagRow>) -> Vec<Post> {
                 slug: row.slug,
                 body: row.body,
                 preview: row.preview,
-                published_at: row.published_at,
                 created_at: row.created_at,
+                published_at: row.published_at,
                 updated_at: row.updated_at,
                 tags: Vec::new(),
             });
         }
 
-        if let Some(post) = posts.last_mut() {
-            post.tags.push(Tag {
-                id: row.tag_id,
-                name: row.tag_name,
-                slug: row.tag_slug,
-            });
+        if let (Some(post), Some(id), Some(name), Some(slug)) =
+            (posts.last_mut(), row.tag_id, row.tag_name, row.tag_slug)
+        {
+            post.tags.push(Tag { id, name, slug });
         }
     }
 
@@ -402,20 +400,21 @@ fn merge_tags_to_option(rows: Vec<PostWithTagRow>) -> Option<Post> {
                  tag_name,
                  tag_slug,
              }| {
+                let tags = match (tag_id, tag_name, tag_slug) {
+                    (Some(id), Some(name), Some(slug)) => vec![Tag { id, name, slug }],
+                    _ => Vec::new(),
+                };
+
                 Post {
                     id,
                     title,
                     slug,
                     body,
                     preview,
-                    published_at,
                     created_at,
+                    published_at,
                     updated_at,
-                    tags: vec![Tag {
-                        id: tag_id,
-                        name: tag_name,
-                        slug: tag_slug,
-                    }],
+                    tags,
                 }
             },
         )
