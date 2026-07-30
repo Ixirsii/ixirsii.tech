@@ -1,11 +1,11 @@
 //! Main executable.
 
-use std::{net::SocketAddr, sync::Arc};
+use std::{future::Future, net::SocketAddr, sync::Arc, time::Duration};
 
 use axum::{
     Router,
     body::Body,
-    extract::Path,
+    extract::{Path, State},
     http::{HeaderValue, StatusCode, header},
     middleware,
     response::{IntoResponse, Response},
@@ -40,6 +40,7 @@ pub mod static_assets {
 
 pub const ADMIN_ROUTE: &str = "/admin";
 pub const LOGIN_ROUTE: &str = "/login";
+const HEALTH_CHECK_TIMEOUT: Duration = Duration::from_secs(2);
 static STATIC_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/static");
 
 /* ********************************************************************************************** *
@@ -181,8 +182,26 @@ fn get_routes(
         .layer(middleware::from_fn(observability::trace_request))
 }
 
-async fn health_check() -> StatusCode {
-    StatusCode::OK
+async fn health_check(State(state): State<AppState>) -> StatusCode {
+    health_check_status(
+        async move {
+            let mut connection = state.db_pool.acquire().await?;
+            sqlx::query("SELECT 1").execute(&mut *connection).await?;
+            Ok::<(), sqlx::Error>(())
+        },
+        HEALTH_CHECK_TIMEOUT,
+    )
+    .await
+}
+
+async fn health_check_status<F, E>(check: F, timeout: Duration) -> StatusCode
+where
+    F: Future<Output = core::result::Result<(), E>>,
+{
+    match tokio::time::timeout(timeout, check).await {
+        Ok(Ok(())) => StatusCode::OK,
+        Ok(Err(_)) | Err(_) => StatusCode::SERVICE_UNAVAILABLE,
+    }
 }
 
 async fn well_known_asset(Path(path): Path<String>) -> Response {
@@ -234,4 +253,40 @@ async fn static_asset(Path(path): Path<String>) -> Response {
     );
 
     response
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{future, time::Duration};
+
+    use axum::http::StatusCode;
+
+    use super::health_check_status;
+
+    #[tokio::test]
+    async fn healthy_database_returns_ok() {
+        let status =
+            health_check_status(future::ready(Ok::<(), ()>(())), Duration::from_secs(1)).await;
+
+        assert_eq!(status, StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn unavailable_database_returns_service_unavailable() {
+        let status =
+            health_check_status(future::ready(Err::<(), ()>(())), Duration::from_secs(1)).await;
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[tokio::test]
+    async fn timed_out_database_returns_service_unavailable() {
+        let status = health_check_status(
+            future::pending::<core::result::Result<(), ()>>(),
+            Duration::from_millis(1),
+        )
+        .await;
+
+        assert_eq!(status, StatusCode::SERVICE_UNAVAILABLE);
+    }
 }
