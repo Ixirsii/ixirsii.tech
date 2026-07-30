@@ -1,7 +1,0 @@
-Contact: mailto:security@ixirsii.tech
-Expires: 2027-06-12T05:00:00.000Z
-Acknowledgments: https://ixirsii.tech/hall-of-fame
-Preferred-Languages: en
-Canonical: https://ixirsii.tech/.well-known/security.txt
-Canonical: https://ixirsii.com/.well-known/security.txt
-Canonical: https://ryanporterfield.com/.well-known/security.txt

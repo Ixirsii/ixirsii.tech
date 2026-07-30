@@ -131,7 +131,7 @@ const TAGLINES: &[(&str, u32); TOTAL_TAGLINES as usize] = &[
     ),
     ("Yuki touched prod", BASE_WEIGHT),
     // Yulia
-    ("`prefers-color-scheme: yulia`", ELEVATED_WEIGHT),
+    ("<code>prefers-color-scheme: yulia</code>", ELEVATED_WEIGHT),
     ("Yulia made me go outside", BASE_WEIGHT),
     ("Yulia’s spotter", BASE_WEIGHT),
     // Yuma
