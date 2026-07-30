@@ -16,8 +16,8 @@ use crate::{
     AdminAuthSession, AppState,
     csrf::{CsrfForm, csrf_token, rotate_csrf_token, verify_csrf_token},
     database::{
-        self, Post, PostSort, PostStatusFilter, Tag, create_post_with_tags, get_post_by_id,
-        list_posts, list_tags_for_post, list_tags_with_count, slug_exists,
+        self, Post, PostSort, PostStatusFilter, Tag, count_posts, create_post_with_tags,
+        get_post_by_id, list_posts, list_tags_for_post, list_tags_with_count, slug_exists,
         slug_exists_for_other_post, update_post_with_tags,
     },
     page::{PAGE_SIZE, render_markdown, slugify},
@@ -38,6 +38,8 @@ struct AdminPostsIndexPage {
     posts: Vec<AdminPostListItemView>,
     selected_filter: &'static str,
     selected_sort: &'static str,
+    current_page: u32,
+    total_pages: u32,
 }
 
 #[derive(Template)]
@@ -136,6 +138,7 @@ pub struct PostFormInput {
 pub struct AdminPostsQuery {
     filter: Option<String>,
     sort: Option<String>,
+    page: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -163,7 +166,13 @@ pub async fn admin_posts_index(
 ) -> Result<Html<String>, StatusCode> {
     let filter = parse_filter(params.filter.as_deref());
     let sort = parse_sort(params.sort.as_deref());
-    let post_rows = list_posts(&(*state.db_pool), &filter, 1, PAGE_SIZE, &sort)
+    let requested_page = parse_page(params.page.as_deref());
+    let total_posts = count_posts(&(*state.db_pool), &filter)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let total_pages = total_posts.div_ceil(PAGE_SIZE);
+    let current_page = requested_page.min(total_pages.max(1));
+    let post_rows = list_posts(&(*state.db_pool), &filter, current_page, PAGE_SIZE, &sort)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let page = AdminPostsIndexPage {
@@ -175,6 +184,8 @@ pub async fn admin_posts_index(
         posts: build_admin_post_views(post_rows),
         selected_filter: filter_value(&filter),
         selected_sort: sort_value(&sort),
+        current_page,
+        total_pages,
     };
 
     Ok(Html(
@@ -695,6 +706,12 @@ fn parse_sort(sort: Option<&str>) -> PostSort {
         Some("created_at_desc") => PostSort::CreatedAtDesc,
         _ => PostSort::PublishedAtDesc,
     }
+}
+
+fn parse_page(page: Option<&str>) -> u32 {
+    page.and_then(|value| value.parse().ok())
+        .filter(|page| *page > 0)
+        .unwrap_or(1)
 }
 
 const fn sort_value(sort: &PostSort) -> &'static str {

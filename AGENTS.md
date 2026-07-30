@@ -69,7 +69,7 @@ Public routes include Home, About, Blog, Code projects, Hall of Fame, Tags, logi
 - Code project data is hard-coded in `src/page/code.rs`, not stored in MySQL.
 - HTMX is used only for tag filtering and admin Markdown previews.
 
-The protected `/admin` router provides post and tag CRUD, Markdown previews, and logout. It is gated by `login_required!` and the CSRF Origin/Referer middleware. The admin post interface exposes status filtering and sorting, but the current database query prefilters published posts before applying status filters, so scheduled and unscheduled filters do not return their intended rows. The admin post list also shows only the first eight rows and has no pagination.
+The protected `/admin` router provides post and tag CRUD, Markdown previews, and logout. It is gated by `login_required!` and the CSRF Origin/Referer middleware. The admin post interface provides status filtering, sorting, and pagination across all posts.
 
 ## Authentication and CSRF
 

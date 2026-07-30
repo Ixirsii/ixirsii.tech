@@ -103,6 +103,27 @@ pub async fn count_published_posts(executor: impl MySqlExecutor<'_>) -> Result<u
     Ok(total.cast_unsigned())
 }
 
+/// Count posts matching an admin dashboard status filter.
+///
+/// # Errors
+/// Returns [`crate::Error::Database`] on failure to read from database.
+#[instrument(skip(executor))]
+pub async fn count_posts(
+    executor: impl MySqlExecutor<'_>,
+    filter: &PostStatusFilter,
+) -> Result<u32> {
+    let where_clause = filter.get_sql_clause();
+    let sql = format!("SELECT COUNT(*) FROM posts p {where_clause}");
+    let total: i32 = query_scalar(&sql)
+        .fetch_one(executor)
+        .await
+        .inspect_err(|error| {
+            error!(%error, operation = "select", table = "posts", "database query failed");
+        })?;
+
+    Ok(total.cast_unsigned())
+}
+
 /// Get post (published or unpublished) by id.
 ///
 /// # Errors
@@ -181,16 +202,16 @@ pub async fn list_posts(
         "SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at,\
                 p.updated_at, t.id AS tag_id, t.name AS tag_name, t.slug AS tag_slug
          FROM (
-             SELECT id, title, slug, body, preview, published_at, created_at, updated_at
-             FROM posts
-             WHERE published_at IS NOT NULL AND published_at <= NOW()
-             ORDER BY published_at DESC
+             SELECT p.id, p.title, p.slug, p.body, p.preview, p.published_at, p.created_at,
+                    p.updated_at
+             FROM posts p
+             {where_clause}
+             ORDER BY {order_clause}, p.id
              LIMIT ? OFFSET ?
-         ) p
-         LEFT JOIN post_tags pt ON pt.post_id = p.id
-         LEFT JOIN tags t ON t.id = pt.tag_id
-         {where_clause}
-         ORDER BY {order_clause}, p.id"
+          ) p
+          LEFT JOIN post_tags pt ON pt.post_id = p.id
+          LEFT JOIN tags t ON t.id = pt.tag_id
+          ORDER BY {order_clause}, p.id, t.name"
     );
 
     let rows = query_as::<_, PostWithTagRow>(&sql)
