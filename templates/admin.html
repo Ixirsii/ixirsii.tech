@@ -1,0 +1,28 @@
+{% extends "base.html" %} {% block content %}
+<section class="admin-shell">
+  <div class="admin-header">
+    <div>
+      <p class="login-kicker">Dashboard</p>
+      <h1>Admin</h1>
+      <p>Signed in as <strong>{{ username }}</strong>. Choose an area to manage.</p>
+    </div>
+
+    <form action="/admin/logout" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <button type="submit">Logout</button>
+    </form>
+  </div>
+
+  <div class="admin-grid">
+    <a class="admin-panel admin-link-card" href="/admin/posts">
+      <h2>Posts</h2>
+      <p>Create, edit, schedule, and delete blog posts.</p>
+    </a>
+
+    <a class="admin-panel admin-link-card" href="/admin/tags">
+      <h2>Tags</h2>
+      <p>Create, rename, and delete tags used across posts.</p>
+    </a>
+  </div>
+</section>
+{% endblock %}

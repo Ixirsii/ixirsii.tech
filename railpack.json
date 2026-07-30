@@ -1,0 +1,6 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "packages": {
+    "github:tailwindlabs/tailwindcss": "4.3.3"
+  }
+}

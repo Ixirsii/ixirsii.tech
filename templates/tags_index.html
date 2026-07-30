@@ -1,0 +1,23 @@
+{% extends "base.html" %} {% block content %}
+<h1>Tags</h1>
+
+<form
+  class="search"
+  role="search"
+  hx-get="/tags/search"
+  hx-target="#tag-cloud"
+  hx-swap="innerHTML"
+  hx-trigger="input changed delay:300ms, search"
+>
+  <label for="tag-filter" aria-label="Search tags">
+    <svg fill="currentColor" width="24" height="24" viewBox="0 0 0.72 0.72" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <path d="M.3.12a.18.18 0 1 0 0 .36.18.18 0 0 0 0-.36M.06.3a.24.24 0 1 1 .43.147l.162.162A.03.03 0 0 1 .61.651L.448.489A.24.24 0 0 1 .06.3"/>
+    </svg>
+  </label>
+  <input id="tag-filter" name="filter" type="search" placeholder="Filter tags" autocomplete="off">
+</form>
+
+<div id="tag-cloud" class="tags">
+  {% include "tags_cloud.html" %}
+</div>
+{% endblock %}

@@ -1,0 +1,109 @@
+/* ********************************* About ********************************** */
+
+.quote {
+  @apply mb-6;
+}
+
+.quote blockquote {
+  @apply mb-2;
+}
+
+.quote blockquote p + p {
+  @apply mt-2;
+}
+
+.quote figcaption {
+  @apply pr-6;
+  @apply text-muted;
+  @apply text-right;
+  @apply text-sm;
+}
+
+.quote cite {
+  @apply italic;
+}
+
+.hall-of-fame-callout {
+  @apply bg-ctp-surface0;
+  @apply border-ctp-sapphire;
+  @apply border-l-2;
+  @apply flex;
+  @apply gap-3;
+  @apply mb-4;
+  @apply p-4;
+  @apply rounded-md;
+}
+
+.hall-of-fame-callout svg {
+  @apply h-6;
+  @apply shrink-0;
+  @apply text-accent;
+  @apply w-6;
+}
+
+.hall-of-fame-callout p {
+  @apply mb-0;
+}
+
+.about-link-groups {
+  @apply gap-6;
+  @apply grid;
+  @apply grid-cols-1;
+  @apply md:grid-cols-2;
+}
+
+.about-link-group {
+  @apply min-w-0;
+}
+
+.about-link-group-wide {
+  @apply md:col-span-2;
+}
+
+.about-links {
+  @apply gap-3;
+  @apply grid;
+  @apply grid-cols-2;
+}
+
+.about-link-group-wide .about-links {
+  @apply md:grid-cols-3;
+}
+
+.about-links a {
+  @apply bg-ctp-surface0;
+  @apply gap-x-2;
+  @apply grid;
+  @apply grid-cols-[1.5rem_minmax(0,1fr)];
+  @apply hover:bg-ctp-surface1;
+  @apply hover:no-underline;
+  @apply items-center;
+  @apply p-2;
+  @apply rounded-md;
+  @apply sm:gap-x-3;
+  @apply sm:p-3;
+  @apply text-ctp-text;
+}
+
+.about-links svg {
+  @apply col-start-1;
+  @apply row-span-2;
+  @apply row-start-1;
+}
+
+.about-link-service,
+.about-link-handle {
+  @apply col-start-2;
+}
+
+.about-link-service {
+  @apply font-semibold;
+  @apply row-start-1;
+}
+
+.about-link-handle {
+  @apply row-start-2;
+  @apply text-muted;
+  @apply text-sm;
+  overflow-wrap: anywhere;
+}

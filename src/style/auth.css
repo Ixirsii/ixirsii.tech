@@ -1,0 +1,109 @@
+/* ********************************** Auth ********************************** */
+
+.admin-security-alert {
+  @apply bg-ctp-peach/5;
+  @apply border;
+  @apply border-ctp-peach/40;
+  @apply mb-6;
+  @apply p-3;
+  @apply rounded-md;
+  @apply text-status-warning;
+}
+
+.admin-security-alert strong {
+  @apply font-mono;
+}
+
+.login-card {
+  @apply border;
+  @apply border-ctp-sapphire/30;
+  @apply shadow-ctp-sapphire;
+  @apply shadow-lg/20;
+}
+
+.login-card h1 {
+  @apply mb-3;
+}
+
+.login-copy {
+  @apply mb-6;
+}
+
+.login-copy p:last-child {
+  @apply mb-0;
+}
+
+.login-error {
+  @apply bg-ctp-red/10;
+  @apply border;
+  @apply border-ctp-red/40;
+  @apply mb-6;
+  @apply p-3;
+  @apply rounded-md;
+  @apply text-status-danger;
+}
+
+.login-field {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-2;
+}
+
+.login-field input {
+  @apply bg-ctp-mantle;
+  @apply border;
+  @apply border-ctp-surface2;
+  @apply p-3;
+  @apply rounded-md;
+  @apply text-ctp-text;
+  @apply transition-colors;
+}
+
+.login-field input::placeholder {
+  color: var(--semantic-muted);
+}
+
+.login-field input:focus-visible {
+  @apply border-focus;
+  @apply outline-none;
+}
+
+.login-field label {
+  @apply font-mono;
+  @apply text-muted;
+  @apply text-sm;
+}
+
+.login-form {
+  @apply flex;
+  @apply flex-col;
+  @apply gap-4;
+}
+
+.login-hint {
+  @apply font-mono;
+  @apply text-muted;
+  @apply text-sm;
+}
+
+.login-kicker {
+  @apply font-mono;
+  @apply mb-2;
+  @apply text-accent;
+  @apply text-sm;
+  @apply tracking-wide;
+  text-transform: uppercase;
+}
+
+.login-submit {
+  @apply bg-ctp-sapphire/20;
+  @apply border;
+  @apply border-ctp-sapphire/40;
+  @apply mt-2;
+  @apply text-ctp-text;
+  @apply w-full;
+}
+
+.login-submit:hover {
+  @apply bg-ctp-sapphire/30;
+}

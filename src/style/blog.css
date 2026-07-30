@@ -1,0 +1,16 @@
+/* ********************************** Blog ********************************** */
+
+.metadata {
+  @apply gap-x-2;
+  @apply grid;
+  @apply grid-cols-[max-content_1fr];
+  @apply text-muted;
+  @apply text-sm;
+}
+
+.home-post + .home-post {
+  @apply border-ctp-surface1;
+  @apply border-t;
+  @apply mt-8;
+  @apply pt-8;
+}

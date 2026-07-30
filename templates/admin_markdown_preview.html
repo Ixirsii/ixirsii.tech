@@ -1,0 +1,5 @@
+{% if html.len() == 0 %}
+  <p class="admin-empty">{{ empty_message }}</p>
+{% else %}
+  {{ html|safe }}
+{% endif %}

@@ -1,0 +1,48 @@
+/* ********************************** Tags ********************************** */
+
+.search {
+  @apply bg-ctp-surface1;
+  @apply border;
+  @apply border-ctp-surface2;
+  @apply flex;
+  @apply flex-row;
+  @apply items-center;
+  @apply mb-6;
+  @apply rounded-md;
+  @apply transition-colors;
+}
+
+.search:focus-within {
+  @apply border-focus;
+}
+
+.search label {
+  @apply flex;
+  @apply h-fit;
+  @apply p-2;
+  @apply text-muted;
+}
+
+.search input {
+  @apply bg-ctp-surface0;
+  @apply grow;
+  @apply min-w-0;
+  @apply p-2;
+  @apply rounded-r-md;
+  @apply text-ctp-text;
+}
+
+.search input::placeholder {
+  color: var(--semantic-muted);
+}
+
+.search input:focus-visible {
+  @apply outline-none;
+}
+
+.tags {
+  @apply flex;
+  @apply flex-wrap;
+  @apply gap-2;
+  @apply items-center;
+}
