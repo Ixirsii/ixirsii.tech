@@ -50,7 +50,7 @@ The repository currently has no admin-user creation binary or registration flow.
 | `RUST_LOG` | No | `info` | Tracing filter |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | No | Disabled | OTLP HTTP/protobuf trace endpoint |
 
-Startup connects to MySQL and runs embedded SQLx migrations before binding the listener. The `/health` endpoint is only available after startup succeeds and returns `200 OK` without querying the database.
+Startup connects to MySQL and runs embedded SQLx migrations, including the `tower_sessions` table, before binding the listener. The `/health` endpoint is only available after startup succeeds and returns `200 OK` without querying the database.
 
 ## Architecture
 
@@ -61,7 +61,7 @@ Startup connects to MySQL and runs embedded SQLx migrations before binding the l
 - **Page handlers**: `src/page/` contains `about.rs`, `admin.rs`, `admin_posts.rs`, `admin_tags.rs`, `blog.rs`, `code.rs`, `error.rs`, `hall_of_fame.rs`, `home.rs`, and `tag.rs`. They are re-exported by `src/page/mod.rs`.
 - **Templates**: Askama templates live in `templates/`. Full pages extend `base.html`; `tags_cloud.html` and `admin_markdown_preview.html` are HTMX fragments.
 - **Database**: `src/database/` is split into posts, tags, post-tag joins, transactions, users, and shared types. All 29 public database operations use tracing instrumentation.
-- **Migrations**: Six SQLx migrations create posts, tags, post-tag joins, the publication index, and admin users, and seed the initial production post and tags. Migrations run at process startup and do not seed an admin user.
+- **Migrations**: Seven embedded SQLx migrations create posts, tags, post-tag joins, the publication index, admin users, and the session store, and seed the initial production post and tags. Migrations do not seed an admin user.
 - **Errors**: `src/types.rs` defines the internal `Error` and `Result<T>` types. `src/page/error.rs` renders styled public 404 and 500 responses.
 - **Observability**: `src/observability.rs` always enables console tracing. It adds an OTLP HTTP/protobuf exporter when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Request spans record method, raw request path, and response status.
 
@@ -85,7 +85,10 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 - Login limits are process-local and reset on restart; each application replica maintains independent account and client limits.
 - `X-Forwarded-For` is used only when the TCP peer matches `AUTH_TRUSTED_PROXY_CIDRS`; otherwise forwarded headers are ignored.
 - Unknown usernames are checked against a fixed Argon2id dummy hash, and concurrent password checks are bounded.
-- Sessions use `tower-sessions` `MemoryStore`, `SameSite=Lax`, and secure cookies outside debug builds. Sessions do not survive restarts or work across multiple application replicas.
+- Sessions use a shared MySQL store, `SameSite=Lax`, and secure cookies outside debug builds. They survive application restarts and work across replicas connected to the same database.
+- Login and admin activity refreshes a 30-minute idle lifetime capped at a hard 12-hour maximum from successful login. Public-page activity does not extend an admin session.
+- Each replica deletes expired session rows every five minutes. Cleanup is idempotent across replicas and retries after database errors.
+- Login and admin responses use `Cache-Control: no-store, private`.
 - Admin POST handlers verify a token stored in the session. Tokens rotate after successful login and successful post/tag mutations.
 - Token verification uses ordinary string equality and does not use per-form tokens.
 - Admin state-changing requests additionally check `Origin` or `Referer` against `CSRF_ALLOWED_ORIGINS`. This middleware check is skipped when no origins are configured. Login is outside that middleware and relies on its form token.

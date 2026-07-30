@@ -17,7 +17,7 @@ use dotenvy::{dotenv, var};
 use include_dir::{Dir, include_dir};
 use sqlx::{MySqlPool, mysql::MySqlPoolOptions};
 use tokio::net::TcpListener;
-use tower_sessions::{MemoryStore, SessionManagerLayer, cookie::SameSite};
+use tower_sessions::{SessionManagerLayer, cookie::SameSite};
 use tracing::{error, info, instrument, warn};
 
 pub use types::*;
@@ -27,6 +27,7 @@ mod csrf;
 mod database;
 mod observability;
 mod page;
+mod session;
 mod types;
 
 pub mod static_assets {
@@ -54,17 +55,22 @@ async fn main() -> Result<()> {
     let auth_security = Arc::new(auth::AuthSecurity::new(auth::AuthConfig::from_env()?));
     let db_pool: MySqlPool = get_db_pool().await?;
     sqlx::migrate!().run(&db_pool).await?;
+    let session_store = session::MySqlSessionStore::new(db_pool.clone());
+    let cleanup_task = session::spawn_cleanup(session_store.clone());
 
     let port = var("PORT").unwrap_or_else(|_| "3000".to_string());
     let addr = format!("0.0.0.0:{port}");
     let listener = TcpListener::bind(&addr).await?;
     info!("Listening on {addr}");
 
-    serve(
+    let serve_result = serve(
         listener,
-        get_routes(db_pool, auth_security).into_make_service_with_connect_info::<SocketAddr>(),
+        get_routes(db_pool, auth_security, session_store)
+            .into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .await?;
+    .await;
+    cleanup_task.abort();
+    serve_result?;
 
     Ok(())
 }
@@ -94,7 +100,11 @@ async fn get_db_pool() -> Result<MySqlPool> {
     }
 }
 
-fn get_routes(db_pool: MySqlPool, auth_security: Arc<auth::AuthSecurity>) -> Router {
+fn get_routes(
+    db_pool: MySqlPool,
+    auth_security: Arc<auth::AuthSecurity>,
+    session_store: session::MySqlSessionStore,
+) -> Router {
     let admin_routes = Router::new()
         .route("/", get(page::admin_dashboard))
         .route(
@@ -111,7 +121,8 @@ fn get_routes(db_pool: MySqlPool, auth_security: Arc<auth::AuthSecurity>) -> Rou
         .route("/tags/{id}", post(page::edit_tag))
         .route("/tags/{id}/delete", post(page::delete_tag))
         .route("/logout", post(page::logout))
-        .route_layer(login_required!(AppState, login_url = LOGIN_ROUTE));
+        .route_layer(login_required!(AppState, login_url = LOGIN_ROUTE))
+        .layer(middleware::from_fn(session::admin_session_lifetime));
     let allowed_origins: Vec<String> = match var("CSRF_ALLOWED_ORIGINS") {
         Ok(val) if !val.is_empty() => val
             .split(',')
@@ -128,9 +139,10 @@ fn get_routes(db_pool: MySqlPool, auth_security: Arc<auth::AuthSecurity>) -> Rou
         db_pool: Arc::new(db_pool),
         allowed_origins,
     };
-    let session_layer = SessionManagerLayer::new(MemoryStore::default())
+    let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(!cfg!(debug_assertions))
-        .with_same_site(SameSite::Lax);
+        .with_same_site(SameSite::Lax)
+        .with_expiry(session::idle_expiry());
     let auth_layer = AuthManagerLayerBuilder::new(app_state.clone(), session_layer).build();
 
     let admin_routes = admin_routes.layer(middleware::from_fn_with_state(
@@ -138,8 +150,12 @@ fn get_routes(db_pool: MySqlPool, auth_security: Arc<auth::AuthSecurity>) -> Rou
         csrf::csrf_origin_check,
     ));
 
+    let login_routes = Router::new()
+        .route(LOGIN_ROUTE, get(page::login_page).post(page::login_submit))
+        .layer(middleware::from_fn(session::admin_session_lifetime));
     let app_routes = Router::new()
         .nest(ADMIN_ROUTE, admin_routes)
+        .merge(login_routes)
         .route("/", get(page::home))
         .route("/about", get(page::about_page))
         .route("/blog", get(page::blog_index))
@@ -150,13 +166,13 @@ fn get_routes(db_pool: MySqlPool, auth_security: Arc<auth::AuthSecurity>) -> Rou
         .route("/code/randstring", get(page::code_randstring))
         .route("/hall-of-fame", get(page::hall_of_fame_page))
         .route("/health", get(health_check))
-        .route(LOGIN_ROUTE, get(page::login_page).post(page::login_submit))
         .route("/tags", get(page::tag_index))
         .route("/tags/search", get(page::tag_search))
         .route("/tags/{slug}", get(page::tag_posts))
         .fallback(page::not_found)
         .with_state(app_state)
-        .layer(auth_layer);
+        .layer(auth_layer)
+        .layer(middleware::from_fn(session::private_no_store));
 
     Router::new()
         .route("/.well-known/{*path}", get(well_known_asset))

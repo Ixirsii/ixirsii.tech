@@ -126,6 +126,9 @@ pub async fn login_submit(
         .login(&user)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    crate::session::mark_admin_login(&auth_session.session)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
     rotate_csrf_token(&auth_session.session)
         .await
