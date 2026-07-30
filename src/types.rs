@@ -4,11 +4,13 @@ use std::{
     sync::Arc,
 };
 
-use argon2::{Argon2, PasswordHash, PasswordVerifier, password_hash};
 use axum_login::{AuthSession, AuthnBackend};
 use sqlx::{Error as SqlxError, MySqlPool, migrate::MigrateError};
 
-use crate::database::{User, get_admin_user_by_id, get_admin_user_by_username};
+use crate::{
+    auth::{AuthSecurity, ClientIdentity},
+    database::{User, get_admin_user_by_id, get_admin_user_by_username},
+};
 
 /* ********************************************************************************************** *
  *                                       Admin auth session                                       *
@@ -23,8 +25,9 @@ pub type AdminAuthSession = AuthSession<AppState>;
 /// Shared application state.
 #[derive(Clone)]
 pub struct AppState {
-    pub db_pool: Arc<MySqlPool>,
-    pub allowed_origins: Vec<String>,
+    pub(crate) auth_security: Arc<AuthSecurity>,
+    pub(crate) db_pool: Arc<MySqlPool>,
+    pub(crate) allowed_origins: Vec<String>,
 }
 
 impl AuthnBackend for AppState {
@@ -33,18 +36,37 @@ impl AuthnBackend for AppState {
     type Error = Error;
 
     async fn authenticate(&self, credentials: Self::Credentials) -> Result<Option<Self::User>> {
-        let Some(user) =
-            get_admin_user_by_username(&(*self.db_pool), &credentials.username).await?
-        else {
+        let Credentials {
+            client,
+            password,
+            username,
+        } = credentials;
+
+        if !self.auth_security.allow_client(client).await {
+            return Ok(None);
+        }
+        let Some(verification_permit) = self.auth_security.verification_permit() else {
             return Ok(None);
         };
 
-        let password_hash = PasswordHash::new(&user.password_hash)?;
+        let user = get_admin_user_by_username(&(*self.db_pool), &username).await?;
+        if !self
+            .auth_security
+            .allow_account(user.as_ref().map(|user| user.id), &username)
+            .await
+        {
+            return Ok(None);
+        }
+        let password_hash = user.as_ref().map(|user| user.password_hash.clone());
 
-        match Argon2::default().verify_password(credentials.password.as_bytes(), &password_hash) {
-            Ok(()) => Ok(Some(user)),
-            Err(password_hash::Error::Password) => Ok(None),
-            Err(error) => Err(Self::Error::from(error)),
+        if self
+            .auth_security
+            .verify_password(password, password_hash, verification_permit)
+            .await
+        {
+            Ok(user)
+        } else {
+            Ok(None)
         }
     }
 
@@ -57,10 +79,10 @@ impl AuthnBackend for AppState {
  *                                          Credentials                                           *
  * ********************************************************************************************** */
 
-#[derive(Clone, Debug)]
 pub struct Credentials {
-    pub username: String,
-    pub password: String,
+    pub(crate) client: ClientIdentity,
+    pub(crate) username: String,
+    pub(crate) password: String,
 }
 
 /* ********************************************************************************************** *
@@ -74,14 +96,14 @@ pub enum Error {
     System(String),
     /// An error reading environment variables.
     Environment(dotenvy::Error),
+    /// Invalid application configuration.
+    Configuration(String),
     /// A database query or connection error.
     Database(SqlxError),
     /// An error running database migrations.
     DatabaseMigration(MigrateError),
     /// An error listening on the specified TCP port.
     Network(std::io::Error),
-    /// Password hash error.
-    Password(password_hash::Error),
 }
 
 impl Display for Error {
@@ -89,10 +111,10 @@ impl Display for Error {
         match self {
             Self::System(error) => write!(f, "system error: {error}"),
             Self::Environment(error) => write!(f, "environment error: {error}"),
+            Self::Configuration(error) => write!(f, "configuration error: {error}"),
             Self::Database(error) => write!(f, "database error: {error}"),
             Self::DatabaseMigration(error) => write!(f, "database migration error: {error}"),
             Self::Network(error) => write!(f, "network error: {error}"),
-            Self::Password(error) => write!(f, "password error: {error}"),
         }
     }
 }
@@ -100,7 +122,7 @@ impl Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::System(_) | Self::Password(_) => None,
+            Self::System(_) | Self::Configuration(_) => None,
             Self::Environment(error) => Some(error),
             Self::Database(error) => Some(error),
             Self::DatabaseMigration(error) => Some(error),
@@ -124,12 +146,6 @@ impl From<std::io::Error> for Error {
 impl From<SqlxError> for Error {
     fn from(error: SqlxError) -> Self {
         Self::Database(error)
-    }
-}
-
-impl From<password_hash::Error> for Error {
-    fn from(error: password_hash::Error) -> Self {
-        Self::Password(error)
     }
 }
 

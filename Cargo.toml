@@ -22,6 +22,7 @@ axum-htmx = "0.8.1"
 axum-login = "0.18.0"
 dotenvy = "0.15.7"
 include_dir = "0.7"
+ipnet = "2.11"
 mime_guess = "2"
 serde = { version = "1.0", features = ["derive"] }
 sqlx = { version = "0.8.6", features = [
@@ -31,7 +32,7 @@ sqlx = { version = "0.8.6", features = [
     "migrate",
     "chrono",
 ] }
-tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "sync"] }
 tower-sessions = { version = "0.14.0", features = ["memory-store"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
@@ -46,6 +47,7 @@ reqwest = { version = "0.12", default-features = false, features = [
     "blocking",
     "rustls-tls",
 ] }
+sha2 = "0.10"
 tracing-opentelemetry = "0.29"
 
 [build-dependencies]

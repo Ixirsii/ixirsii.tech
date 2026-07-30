@@ -26,7 +26,7 @@ tailwindcss -i src/style/main.css -o src/static/main.css --minify
 
 The build script also fingerprints every file under `src/static/` with SHA-256 and generates `OUT_DIR/static_assets.rs`. It watches every top-level `.css` file in `src/style/` and every static asset. A missing `tailwindcss` executable causes these Cargo commands to fail during the build script.
 
-No tests currently exist: there is no `tests/` directory or Rust test module. Do not introduce a test structure without confirming the intended approach.
+Unit tests are colocated with the Rust modules they exercise; there is no separate `tests/` directory or integration-test harness.
 
 The repository currently has no admin-user creation binary or registration flow. `admin_users` must be provisioned outside the application until a supported provisioning command is added.
 
@@ -40,6 +40,13 @@ The repository currently has no admin-user creation binary or registration flow.
 | `DATABASE_MAX_CONNECTIONS` | No | `5` | SQLx pool size; invalid values also fall back to 5 |
 | `PORT` | No | `3000` | Listen port; the host is fixed to `0.0.0.0` |
 | `CSRF_ALLOWED_ORIGINS` | No | Origin check disabled | Comma-separated allowed origins for admin state-changing requests |
+| `AUTH_TRUSTED_PROXY_CIDRS` | No | Forwarded headers ignored | Comma-separated proxy CIDRs allowed to supply `X-Forwarded-For` |
+| `AUTH_ARGON2_MAX_CONCURRENT` | No | `2` | Maximum concurrent Argon2 password checks |
+| `AUTH_ACCOUNT_ATTEMPTS` | No | `5` | Login attempts allowed per account window |
+| `AUTH_ACCOUNT_WINDOW_SECONDS` | No | `300` | Per-account rate-limit window |
+| `AUTH_CLIENT_ATTEMPTS` | No | `20` | Login attempts allowed per trusted client window |
+| `AUTH_CLIENT_WINDOW_SECONDS` | No | `300` | Per-client rate-limit window |
+| `AUTH_RATE_LIMIT_MAX_IDENTITIES` | No | `10000` | Maximum account and client keys retained by each limiter |
 | `RUST_LOG` | No | `info` | Tracing filter |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | No | Disabled | OTLP HTTP/protobuf trace endpoint |
 
@@ -75,6 +82,9 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 
 - Login is at `/login`; logout is a POST to `/admin/logout`.
 - Password verification uses Argon2 hashes stored in `admin_users`.
+- Login limits are process-local and reset on restart; each application replica maintains independent account and client limits.
+- `X-Forwarded-For` is used only when the TCP peer matches `AUTH_TRUSTED_PROXY_CIDRS`; otherwise forwarded headers are ignored.
+- Unknown usernames are checked against a fixed Argon2id dummy hash, and concurrent password checks are bounded.
 - Sessions use `tower-sessions` `MemoryStore`, `SameSite=Lax`, and secure cookies outside debug builds. Sessions do not survive restarts or work across multiple application replicas.
 - Admin POST handlers verify a token stored in the session. Tokens rotate after successful login and successful post/tag mutations.
 - Token verification uses ordinary string equality and does not use per-form tokens.

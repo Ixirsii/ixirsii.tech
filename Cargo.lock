@@ -1155,6 +1155,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "include_dir",
+ "ipnet",
  "mime_guess",
  "opentelemetry",
  "opentelemetry-otlp",

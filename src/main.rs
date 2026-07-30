@@ -1,6 +1,6 @@
 //! Main executable.
 
-use std::sync::Arc;
+use std::{net::SocketAddr, sync::Arc};
 
 use axum::{
     Router,
@@ -22,6 +22,7 @@ use tracing::{error, info, instrument, warn};
 
 pub use types::*;
 
+mod auth;
 mod csrf;
 mod database;
 mod observability;
@@ -50,6 +51,7 @@ async fn main() -> Result<()> {
     dotenv().ok();
     observability::init_tracing();
 
+    let auth_security = Arc::new(auth::AuthSecurity::new(auth::AuthConfig::from_env()?));
     let db_pool: MySqlPool = get_db_pool().await?;
     sqlx::migrate!().run(&db_pool).await?;
 
@@ -58,7 +60,11 @@ async fn main() -> Result<()> {
     let listener = TcpListener::bind(&addr).await?;
     info!("Listening on {addr}");
 
-    serve(listener, get_routes(db_pool)).await?;
+    serve(
+        listener,
+        get_routes(db_pool, auth_security).into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .await?;
 
     Ok(())
 }
@@ -88,7 +94,7 @@ async fn get_db_pool() -> Result<MySqlPool> {
     }
 }
 
-fn get_routes(db_pool: MySqlPool) -> Router {
+fn get_routes(db_pool: MySqlPool, auth_security: Arc<auth::AuthSecurity>) -> Router {
     let admin_routes = Router::new()
         .route("/", get(page::admin_dashboard))
         .route(
@@ -118,6 +124,7 @@ fn get_routes(db_pool: MySqlPool) -> Router {
         }
     };
     let app_state = AppState {
+        auth_security,
         db_pool: Arc::new(db_pool),
         allowed_origins,
     };

@@ -3,15 +3,15 @@
 use askama::Template;
 use axum::{
     Form,
-    extract::Query,
-    http::StatusCode,
+    extract::{ConnectInfo, Query, State},
+    http::{HeaderMap, StatusCode},
     response::{Html, IntoResponse, Redirect, Response},
 };
 use serde::Deserialize;
 use tower_sessions::Session;
 
 use crate::{
-    AdminAuthSession,
+    AdminAuthSession, AppState,
     csrf::{CsrfForm, csrf_token, rotate_csrf_token, verify_csrf_token},
     page::redirect_target,
 };
@@ -78,6 +78,9 @@ pub async fn login_page(
 /// # Errors
 /// Returns `500 Internal Server Error` if authentication or template rendering fails.
 pub async fn login_submit(
+    ConnectInfo(peer): ConnectInfo<std::net::SocketAddr>,
+    State(app_state): State<AppState>,
+    headers: HeaderMap,
     mut auth_session: AdminAuthSession,
     Form(form): Form<LoginForm>,
 ) -> Result<Response, StatusCode> {
@@ -98,6 +101,7 @@ pub async fn login_submit(
 
     let redirect_to = redirect_target(form.next.as_deref());
     let credentials = crate::Credentials {
+        client: app_state.auth_security.resolve_client(peer.ip(), &headers),
         username: form.username.clone(),
         password: form.password,
     };

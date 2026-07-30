@@ -68,13 +68,13 @@ pub async fn get_admin_user_by_id(
 ///
 /// # Errors
 /// Returns [`crate::Error::Database`] on failure to read from database.
-#[instrument(skip(executor))]
+#[instrument(skip(executor, username))]
 pub async fn get_admin_user_by_username(
     executor: impl MySqlExecutor<'_>,
     username: &str,
 ) -> Result<Option<User>> {
     let user = query_as::<_, User>(
-        "SELECT id, username, password_hash FROM admin_users WHERE username = ?",
+        "SELECT id, username, password_hash FROM admin_users WHERE BINARY username = BINARY ?",
     )
     .bind(username)
     .fetch_optional(executor)
