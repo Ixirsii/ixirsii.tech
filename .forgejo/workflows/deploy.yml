@@ -42,9 +42,9 @@ jobs:
 
   security:
     needs: validate
-    uses: ./.forgejo/workflows/security-trusted.yml
+    uses: ./.forgejo/workflows/security.yml
     secrets:
-      SOCKET_API_KEY: ${{ secrets.SOCKET_API_KEY }}
+      SOCKET_SECURITY_API_KEY: ${{ secrets.SOCKET_SECURITY_API_KEY }}
 
   railway:
     name: Railway
