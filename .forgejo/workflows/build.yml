@@ -8,8 +8,14 @@ on:
   workflow_call:
 
 jobs:
+  security:
+    uses: ./.forgejo/workflows/security.yml
+    secrets:
+      SOCKET_SECURITY_API_KEY: ${{ secrets.SOCKET_SECURITY_API_KEY }}
+
   rust:
     name: Rust build
+    needs: security
     runs-on: ci-rust
     timeout-minutes: 20
     steps:
