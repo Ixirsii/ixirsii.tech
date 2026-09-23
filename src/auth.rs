@@ -181,7 +181,7 @@ impl AuthSecurity {
     }
 
     /// Reserves one attempt for a known or unknown account identity.
-    pub async fn allow_account(&self, user_id: Option<u64>, username: &str) -> bool {
+    pub async fn allow_account(&self, user_id: Option<i64>, username: &str) -> bool {
         let identity = user_id.map_or_else(
             || AccountIdentity::Unknown(Sha256::digest(username.as_bytes()).into()),
             AccountIdentity::Known,
@@ -284,7 +284,7 @@ impl AuthSecurity {
 
 #[derive(Eq, Hash, PartialEq)]
 enum AccountIdentity {
-    Known(u64),
+    Known(i64),
     Unknown([u8; 32]),
 }
 

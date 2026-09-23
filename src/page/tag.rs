@@ -31,7 +31,7 @@ const TAG_CLOUD_COLORS: [&str; 12] = [
     "text-ctp-blue",
     "text-ctp-lavender",
 ];
-const TAG_CLOUD_COLOR_COUNT: u64 = 12;
+const TAG_CLOUD_COLOR_COUNT: i64 = 12;
 
 /* ********************************************************************************************** *
  *                                             Types                                              *
@@ -40,7 +40,7 @@ const TAG_CLOUD_COLOR_COUNT: u64 = 12;
 struct TagCloudEntry {
     name: String,
     slug: String,
-    count: i32,
+    count: i64,
     class: String,
 }
 
@@ -186,18 +186,19 @@ async fn get_tag_cloud(
         .collect())
 }
 
-fn get_tag_size(count: i32, max_count: i32) -> &'static str {
+fn get_tag_size(count: i64, max_count: i64) -> &'static str {
     if max_count == 0 {
         return "text-sm";
     }
-    let ratio = f64::from(count) / f64::from(max_count);
-    if ratio >= 0.9 {
+    let scaled_count = i128::from(count) * 10;
+    let max_count = i128::from(max_count);
+    if scaled_count >= max_count * 9 {
         "text-4xl"
-    } else if ratio >= 0.7 {
+    } else if scaled_count >= max_count * 7 {
         "text-2xl"
-    } else if ratio >= 0.5 {
+    } else if scaled_count >= max_count * 5 {
         "text-xl"
-    } else if ratio >= 0.2 {
+    } else if scaled_count >= max_count * 2 {
         "text-base"
     } else {
         "text-sm"

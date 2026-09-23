@@ -35,4 +35,4 @@ jobs:
           echo "$PWD/node_modules/.bin" >> "$FORGEJO_PATH"
 
       - name: Build
-        run: cargo build --locked
+        run: SQLX_OFFLINE=true cargo build --locked

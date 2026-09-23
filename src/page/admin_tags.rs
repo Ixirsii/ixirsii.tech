@@ -36,7 +36,7 @@ impl TagFormErrors {
 }
 
 struct TagEditFormState {
-    id: u64,
+    id: i64,
     name: String,
     slug: String,
     errors: TagFormErrors,
@@ -54,10 +54,10 @@ struct AdminTagsPage {
 }
 
 struct AdminTagView {
-    id: u64,
+    id: i64,
     name: String,
     slug: String,
-    count: i32,
+    count: i64,
     errors: TagFormErrors,
 }
 
@@ -179,7 +179,7 @@ pub async fn create_tag(
 pub async fn edit_tag(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
-    Path(tag_id): Path<u64>,
+    Path(tag_id): Path<i64>,
     Form(form): Form<TagEditForm>,
 ) -> Result<Response, StatusCode> {
     if !verify_csrf_token(&auth_session.session, &form.csrf_token)
@@ -272,7 +272,7 @@ pub async fn edit_tag(
 pub async fn delete_tag(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
-    Path(tag_id): Path<u64>,
+    Path(tag_id): Path<i64>,
     Form(form): Form<CsrfForm>,
 ) -> Result<Redirect, StatusCode> {
     if !verify_csrf_token(&auth_session.session, &form.csrf_token)

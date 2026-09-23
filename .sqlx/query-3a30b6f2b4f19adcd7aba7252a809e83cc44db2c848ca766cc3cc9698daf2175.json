@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(*) AS \"count!\" FROM posts p\n           WHERE $1 = 'all'\n              OR ($1 = 'published' AND p.published_at <= NOW())\n              OR ($1 = 'scheduled' AND p.published_at > NOW())\n              OR ($1 = 'unscheduled' AND p.published_at IS NULL)",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "3a30b6f2b4f19adcd7aba7252a809e83cc44db2c848ca766cc3cc9698daf2175"
+}

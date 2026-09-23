@@ -1,0 +1,49 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n                (SELECT COUNT(*) FROM posts) AS \"posts!\",\n                (SELECT COUNT(*) FROM tags) AS \"tags!\",\n                (SELECT COUNT(*) FROM post_tags) AS \"post_tags!\",\n                (SELECT COUNT(*) FROM admin_users) AS \"admin_users!\",\n                (SELECT COUNT(*) FROM tower_sessions) AS \"sessions!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "posts!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 1,
+        "name": "tags!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 2,
+        "name": "post_tags!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 3,
+        "name": "admin_users!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "sessions!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null,
+      null,
+      null,
+      null,
+      null
+    ]
+  },
+  "hash": "104808a1dbd5af660cabd4b4da99bf265f614b8952f2e15363623f04e6b0a724"
+}

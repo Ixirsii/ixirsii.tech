@@ -44,7 +44,7 @@
         {% endif %}
 
         <div class="admin-form-field{% if errors.published_at.is_some() %} admin-form-field-error{% endif %}">
-          <label for="post-published-at">Publish Date</label>
+          <label for="post-published-at">Publish Date (UTC)</label>
           <input id="post-published-at" name="published_at" type="datetime-local" value="{{ form.published_at }}">
           {% if let Some(msg) = errors.published_at %}
             <p class="admin-form-field-error-message">{{ msg }}</p>

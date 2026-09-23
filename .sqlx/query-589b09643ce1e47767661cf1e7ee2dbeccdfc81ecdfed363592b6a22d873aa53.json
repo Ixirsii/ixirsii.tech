@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM tower_sessions WHERE expiry_date <= CURRENT_TIMESTAMP",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "589b09643ce1e47767661cf1e7ee2dbeccdfc81ecdfed363592b6a22d873aa53"
+}

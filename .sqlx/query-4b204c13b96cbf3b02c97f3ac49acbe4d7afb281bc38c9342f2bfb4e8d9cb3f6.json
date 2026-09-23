@@ -1,0 +1,151 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.id AS \"id!\", p.title AS \"title!\", p.slug AS \"slug!\", p.body AS \"body!\",\n                p.preview, p.published_at, p.created_at AS \"created_at!\", p.updated_at,\n                t.id AS \"tag_id?\", t.name AS \"tag_name?\", t.slug AS \"tag_slug?\"\n         FROM (\n             SELECT id, title, slug, body, preview, published_at, created_at, updated_at\n             FROM posts\n             WHERE $1 = 'all'\n                OR ($1 = 'published' AND published_at <= NOW())\n                OR ($1 = 'scheduled' AND published_at > NOW())\n                OR ($1 = 'unscheduled' AND published_at IS NULL)\n             ORDER BY\n                 CASE WHEN $2 = 'published_desc' THEN published_at END DESC NULLS LAST,\n                 CASE WHEN $2 = 'published_asc' THEN published_at END ASC NULLS FIRST,\n                 CASE WHEN $2 = 'created_desc' THEN created_at END DESC,\n                 CASE WHEN $2 = 'created_asc' THEN created_at END ASC,\n                 id\n             LIMIT $3 OFFSET $4\n         ) p\n         LEFT JOIN post_tags pt ON pt.post_id = p.id\n         LEFT JOIN tags t ON t.id = pt.tag_id\n         ORDER BY\n             CASE WHEN $2 = 'published_desc' THEN p.published_at END DESC NULLS LAST,\n             CASE WHEN $2 = 'published_asc' THEN p.published_at END ASC NULLS FIRST,\n             CASE WHEN $2 = 'created_desc' THEN p.created_at END DESC,\n             CASE WHEN $2 = 'created_asc' THEN p.created_at END ASC,\n             p.id, t.name",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "slug!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "body!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "preview",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "preview"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "tag_id?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tags",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "tag_name?",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tags",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "tag_slug?",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tags",
+            "name": "slug"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "4b204c13b96cbf3b02c97f3ac49acbe4d7afb281bc38c9342f2bfb4e8d9cb3f6"
+}

@@ -15,7 +15,7 @@ use axum::{
 use axum_login::{AuthManagerLayerBuilder, login_required};
 use dotenvy::{dotenv, var};
 use include_dir::{Dir, include_dir};
-use sqlx::{MySqlPool, migrate, mysql::MySqlPoolOptions};
+use sqlx::{PgPool, migrate, postgres::PgPoolOptions};
 use tokio::net::TcpListener;
 use tower_sessions::{SessionManagerLayer, cookie::SameSite};
 use tracing::{error, info, instrument, warn};
@@ -52,9 +52,9 @@ async fn main() -> Result<()> {
     observability::init_tracing();
 
     let auth_security = Arc::new(auth::AuthSecurity::new(auth::AuthConfig::from_env()?));
-    let db_pool: MySqlPool = get_db_pool().await?;
+    let db_pool: PgPool = get_db_pool().await?;
     migrate!().run(&db_pool).await?;
-    let session_store = session::MySqlSessionStore::new(db_pool.clone());
+    let session_store = session::PostgresSessionStore::new(db_pool.clone());
     let cleanup_task = session::spawn_cleanup(session_store.clone());
 
     let port = var("PORT").unwrap_or_else(|_| "3000".to_string());
@@ -78,14 +78,14 @@ async fn main() -> Result<()> {
  *                                       Private functions                                        *
  * ********************************************************************************************** */
 
-async fn get_db_pool() -> Result<MySqlPool> {
+async fn get_db_pool() -> Result<PgPool> {
     let max_connections: u32 = var("DATABASE_MAX_CONNECTIONS")
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(5);
     let database_url: String = var("DATABASE_URL")?;
 
-    match MySqlPoolOptions::new()
+    match PgPoolOptions::new()
         .max_connections(max_connections)
         .connect(&database_url)
         .await
@@ -100,9 +100,9 @@ async fn get_db_pool() -> Result<MySqlPool> {
 }
 
 fn get_routes(
-    db_pool: MySqlPool,
+    db_pool: PgPool,
     auth_security: Arc<auth::AuthSecurity>,
-    session_store: session::MySqlSessionStore,
+    session_store: session::PostgresSessionStore,
 ) -> Router {
     let admin_routes = Router::new()
         .route("/", get(page::admin_dashboard))
@@ -184,7 +184,9 @@ async fn health_check(State(state): State<AppState>) -> StatusCode {
     health_check_status(
         async move {
             let mut connection = state.db_pool.acquire().await?;
-            sqlx::query("SELECT 1").execute(&mut *connection).await?;
+            sqlx::query_scalar!("SELECT 1")
+                .fetch_one(&mut *connection)
+                .await?;
             Ok::<(), sqlx::Error>(())
         },
         HEALTH_CHECK_TIMEOUT,

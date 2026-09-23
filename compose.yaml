@@ -1,0 +1,43 @@
+name: ixirsii-tech-dev
+
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: ixirsii
+      POSTGRES_PASSWORD: ixirsii_dev_only
+      POSTGRES_DB: ixirsii_dev
+    command: ["postgres", "-c", "timezone=UTC"]
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ixirsii -d ixirsii_dev"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+  # Explicit development command only: docker compose run --rm seed
+  # No DATABASE_URL is read or forwarded to this container.
+  seed:
+    image: postgres:18
+    profiles: ["tools"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ixirsii_dev_only
+    volumes:
+      - ./dev/seed.sql:/fixtures/seed.sql:ro
+    entrypoint: ["psql"]
+    command:
+      - "--no-psqlrc"
+      - "--host=postgres"
+      - "--username=ixirsii"
+      - "--dbname=ixirsii_dev"
+      - "--set=ON_ERROR_STOP=1"
+      - "--file=/fixtures/seed.sql"
+
+volumes:
+  postgres_data:

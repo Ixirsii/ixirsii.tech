@@ -4,12 +4,12 @@ use std::collections::HashSet;
 
 use askama::Template;
 use axum::{
-    Form,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{Html, IntoResponse, Redirect, Response},
 };
-use chrono::{Local, NaiveDateTime};
+use axum_extra::extract::Form;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Deserialize;
 
 use crate::{
@@ -64,7 +64,7 @@ struct AdminMarkdownPreview {
 }
 
 struct AdminPostListItemView {
-    id: u64,
+    id: i64,
     title: String,
     slug: String,
     status_label: &'static str,
@@ -80,7 +80,7 @@ struct TagChipView {
 }
 
 struct TagOptionView {
-    id: u64,
+    id: i64,
     name: String,
     slug: String,
     selected: bool,
@@ -129,7 +129,7 @@ pub struct PostFormInput {
     #[serde(default)]
     published_at: String,
     #[serde(default)]
-    tag_ids: Vec<u64>,
+    tag_ids: Vec<i64>,
     #[serde(default)]
     csrf_token: String,
 }
@@ -309,7 +309,7 @@ pub async fn create_post(
 pub async fn edit_post_page(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
-    Path(post_id): Path<u64>,
+    Path(post_id): Path<i64>,
 ) -> Result<Html<String>, StatusCode> {
     let Some(post) = get_post_by_id(&(*state.db_pool), post_id)
         .await
@@ -357,7 +357,7 @@ pub async fn edit_post_page(
 pub async fn update_post(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
-    Path(post_id): Path<u64>,
+    Path(post_id): Path<i64>,
     Form(form): Form<PostFormInput>,
 ) -> Result<Response, StatusCode> {
     if !verify_csrf_token(&auth_session.session, &form.csrf_token)
@@ -455,7 +455,7 @@ pub async fn update_post(
 pub async fn delete_post(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
-    Path(post_id): Path<u64>,
+    Path(post_id): Path<i64>,
     Form(form): Form<CsrfForm>,
 ) -> Result<Redirect, StatusCode> {
     if !verify_csrf_token(&auth_session.session, &form.csrf_token)
@@ -613,7 +613,7 @@ async fn build_post_form_page(
     state: &AppState,
     auth_session: &AdminAuthSession,
     heading: &'static str,
-    post_id: Option<u64>,
+    post_id: Option<i64>,
     is_edit: bool,
     form: PostFormInput,
     errors: PostFormErrors,
@@ -648,8 +648,8 @@ async fn build_post_form_page(
 }
 
 async fn build_tag_options(
-    pool: &sqlx::MySqlPool,
-    selected_ids: &[u64],
+    pool: &sqlx::PgPool,
+    selected_ids: &[i64],
 ) -> Result<Vec<TagOptionView>, StatusCode> {
     let selected: HashSet<_> = selected_ids.iter().copied().collect();
     let tags = list_tags_with_count(pool)
@@ -667,7 +667,7 @@ async fn build_tag_options(
         .collect())
 }
 
-async fn filter_known_tag_ids(state: &AppState, tag_ids: &[u64]) -> Result<Vec<u64>, StatusCode> {
+async fn filter_known_tag_ids(state: &AppState, tag_ids: &[i64]) -> Result<Vec<i64>, StatusCode> {
     let tags = list_tags_with_count(&(*state.db_pool))
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -723,25 +723,23 @@ const fn sort_value(sort: &PostSort) -> &'static str {
     }
 }
 
-fn post_status(published_at: Option<NaiveDateTime>) -> (&'static str, &'static str) {
+fn post_status(published_at: Option<DateTime<Utc>>) -> (&'static str, &'static str) {
     match published_at {
         None => ("Unscheduled", "status-unscheduled"),
-        Some(timestamp) if timestamp > Local::now().naive_local() => {
-            ("Scheduled", "status-scheduled")
-        }
+        Some(timestamp) if timestamp > Utc::now() => ("Scheduled", "status-scheduled"),
         Some(_) => ("Published", "status-published"),
     }
 }
 
-fn format_datetime(datetime: NaiveDateTime) -> String {
-    datetime.format("%B %e, %Y %l:%M %p").to_string()
+fn format_datetime(datetime: DateTime<Utc>) -> String {
+    datetime.format("%B %e, %Y %l:%M %p UTC").to_string()
 }
 
-fn format_optional_datetime(datetime: Option<NaiveDateTime>, fallback: &str) -> String {
+fn format_optional_datetime(datetime: Option<DateTime<Utc>>, fallback: &str) -> String {
     datetime.map_or_else(|| fallback.to_string(), format_datetime)
 }
 
-fn format_datetime_input(datetime: Option<NaiveDateTime>) -> String {
+fn format_datetime_input(datetime: Option<DateTime<Utc>>) -> String {
     datetime
         .map(|value| value.format("%Y-%m-%dT%H:%M").to_string())
         .unwrap_or_default()
@@ -757,7 +755,7 @@ fn optional_text(text: &str) -> Option<&str> {
     }
 }
 
-fn parse_published_at(value: &str) -> Result<Option<NaiveDateTime>, String> {
+fn parse_published_at(value: &str) -> Result<Option<DateTime<Utc>>, String> {
     let trimmed = value.trim();
 
     if trimmed.is_empty() {
@@ -765,7 +763,7 @@ fn parse_published_at(value: &str) -> Result<Option<NaiveDateTime>, String> {
     }
 
     NaiveDateTime::parse_from_str(trimmed, "%Y-%m-%dT%H:%M")
-        .map(Some)
+        .map(|value| Some(value.and_utc()))
         .map_err(|_| String::from("Publish date must use the browser date-time picker value."))
 }
 
@@ -802,4 +800,81 @@ fn render_markdown_preview(
         ),
     )
         .into_response())
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::{
+        body::Body,
+        extract::FromRequest,
+        http::{Request, StatusCode, header::CONTENT_TYPE},
+    };
+
+    use super::{Form, PostFormInput, format_datetime_input, parse_published_at, post_status};
+
+    #[tokio::test]
+    async fn post_form_extracts_multiple_single_and_omitted_tags()
+    -> Result<(), Box<dyn std::error::Error>> {
+        for (tag_fields, expected_ids) in [
+            ("&tag_ids=11&tag_ids=12", vec![11, 12]),
+            ("&tag_ids=11", vec![11]),
+            ("", vec![]),
+        ] {
+            let request = Request::builder()
+                .method("POST")
+                .uri("/admin/posts")
+                .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(Body::from(format!(
+                    "title=Test+Post&body=First%0ASecond&csrf_token=test-token{tag_fields}"
+                )))?;
+            let Form(form) = Form::<PostFormInput>::from_request(request, &()).await?;
+
+            assert_eq!(form.tag_ids, expected_ids);
+            assert_eq!(form.title, "Test Post");
+            assert_eq!(form.body, "First\nSecond");
+            assert_eq!(form.csrf_token, "test-token");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn post_form_rejects_invalid_tag_ids() -> Result<(), Box<dyn std::error::Error>> {
+        for invalid_id in ["not-an-id", "9223372036854775808", ""] {
+            let request = Request::builder()
+                .method("POST")
+                .uri("/admin/posts")
+                .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(Body::from(format!("tag_ids=11&tag_ids={invalid_id}")))?;
+            let Err(rejection) = Form::<PostFormInput>::from_request(request, &()).await else {
+                return Err(format!("accepted invalid tag ID: {invalid_id}").into());
+            };
+            assert_eq!(rejection.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn publication_input_round_trips_as_utc() -> Result<(), String> {
+        let value = parse_published_at("2026-09-23T14:30")?;
+        let timestamp = value.ok_or("expected publication time")?;
+        assert_eq!(timestamp.to_rfc3339(), "2026-09-23T14:30:00+00:00");
+        assert_eq!(format_datetime_input(value), "2026-09-23T14:30");
+        Ok(())
+    }
+
+    #[test]
+    fn publication_input_distinguishes_drafts_and_invalid_dates() -> Result<(), String> {
+        assert_eq!(parse_published_at("  ")?, None);
+        assert!(parse_published_at("2026-02-30T14:30").is_err());
+        assert_eq!(post_status(None).0, "Unscheduled");
+        assert_eq!(
+            post_status(parse_published_at("2000-01-01T00:00")?).0,
+            "Published"
+        );
+        assert_eq!(
+            post_status(parse_published_at("2999-01-01T00:00")?).0,
+            "Scheduled"
+        );
+        Ok(())
+    }
 }

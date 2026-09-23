@@ -5,7 +5,7 @@ use std::{
 };
 
 use axum_login::{AuthSession, AuthnBackend};
-use sqlx::{Error as SqlxError, MySqlPool, migrate::MigrateError};
+use sqlx::{Error as SqlxError, PgPool, migrate::MigrateError};
 
 use crate::{
     auth::{AuthSecurity, ClientIdentity},
@@ -26,7 +26,7 @@ pub type AdminAuthSession = AuthSession<AppState>;
 #[derive(Clone)]
 pub struct AppState {
     pub(crate) auth_security: Arc<AuthSecurity>,
-    pub(crate) db_pool: Arc<MySqlPool>,
+    pub(crate) db_pool: Arc<PgPool>,
     pub(crate) allowed_origins: Vec<String>,
 }
 
@@ -70,7 +70,7 @@ impl AuthnBackend for AppState {
         }
     }
 
-    async fn get_user(&self, user_id: &u64) -> Result<Option<Self::User>> {
+    async fn get_user(&self, user_id: &i64) -> Result<Option<Self::User>> {
         get_admin_user_by_id(&(*self.db_pool), *user_id).await
     }
 }

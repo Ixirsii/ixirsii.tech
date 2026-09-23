@@ -3,8 +3,9 @@
 ## Prerequisites
 
 - Rust 1.95.0, pinned by `rust-toolchain.toml`.
-- MySQL reachable through `DATABASE_URL`.
-- Tailwind CSS CLI on `PATH` as `tailwindcss`. Railway installs Tailwind 4.3.3 through `railpack.json`; local and CI environments must provide it separately.
+- PostgreSQL reachable through `DATABASE_URL` for running the app and database tests. Local development uses PostgreSQL 18 through Docker Compose/OrbStack.
+- Tailwind CSS CLI on `PATH` as `tailwindcss`. Railway installs Tailwind 4.3.3 through `railpack.json`; Forgejo installs it in the build workflow. Local environments must provide it separately.
+- SQLx CLI 0.9.0 for applying migrations and refreshing query metadata.
 
 There is no Node.js project or JavaScript package-manager setup.
 
@@ -17,6 +18,7 @@ There is no Node.js project or JavaScript package-manager setup.
 | `cargo check` | Type-check the application |
 | `cargo clippy` | Lint with the strict configuration in `Cargo.toml` |
 | `cargo fmt` | Format using Rust 2024 edition rules |
+| `cargo test --locked --all-targets` | Run unit and isolated PostgreSQL database tests; requires a local `DATABASE_URL` |
 
 Cargo build, check, run, and Clippy commands execute `build.rs`. It runs:
 
@@ -26,9 +28,31 @@ tailwindcss -i src/style/main.css -o src/static/main.css --minify
 
 The build script also fingerprints every file under `src/static/` with SHA-256 and publishes the first 16 lowercase hexadecimal characters through `cargo:rustc-env`. `src/static_assets.rs` defines the asset table in ordinary Rust using `env!` and `concat!`; no Rust source is generated. Hash variable names use `ASSET_HASH_` followed by the exact relative asset path, including case and punctuation. These values are compiled into the executable and require no runtime environment configuration. The script watches `src/style/`, `templates/`, and `src/static/`, including added and removed files. A missing `tailwindcss` executable causes these Cargo commands to fail during the build script.
 
-Unit tests are colocated with the Rust modules they exercise; there is no separate `tests/` directory or integration-test harness.
+Tests are colocated with the Rust modules they exercise; there is no separate `tests/` directory. Database and session `#[sqlx::test]` cases create isolated databases, apply migrations, and exercise real PostgreSQL. Their runtime `DATABASE_URL` role needs permission to create databases; the Compose development role has it. Fixtures are not required for automated tests.
 
-The repository currently has no admin-user creation binary or registration flow. `admin_users` must be provisioned outside the application until a supported provisioning command is added.
+The repository has no production admin-user creation binary or registration flow. Production `admin_users` must be provisioned outside the application. The separate development fixture command creates a local test admin only.
+
+## Local PostgreSQL and checked queries
+
+```sh
+docker compose up -d --wait postgres
+export DATABASE_URL='postgres://ixirsii:ixirsii_dev_only@127.0.0.1:55432/ixirsii_dev'
+cargo sqlx migrate run
+docker compose run --rm seed
+cargo run
+```
+
+Compose binds PostgreSQL 18 to `127.0.0.1:55432` and stores data in a named volume. The optional seed service connects only to the Compose `postgres` service, ignores `DATABASE_URL`, and checks its development database and role. `dev/seed.sql` is rerunnable without resetting data or overwriting edits. It supplies twelve published posts, tied publication dates, tagged/untagged posts, draft/future posts, unused tags, and the local login `developer` / `local-development-only`. It is never run by migrations or application startup. Preserve existing `.env` files; `.env.example` documents the local settings.
+
+Database queries use SQLx's compile-time validated macros. Commit `.sqlx/` metadata so builds do not need a database. `.cargo/config.toml` defaults `SQLX_OFFLINE=true`; SQLx enables only Chrono for date/time types. Session expiry values are converted from `time::OffsetDateTime` before binding. After changing SQL or migrations, use the local database above:
+
+```sh
+cargo sqlx migrate run
+SQLX_OFFLINE=false cargo sqlx prepare -- --all-targets
+SQLX_OFFLINE=false cargo sqlx prepare --check -- --all-targets
+```
+
+Offline compilation does not make database tests offline: `cargo test` still needs the development database at runtime. Production uses a new PostgreSQL database and its own `DATABASE_URL`; there is no MySQL data-import tool, and the fresh migrations do not upgrade an existing MySQL database.
 
 ## Runtime configuration
 
@@ -36,7 +60,7 @@ The repository currently has no admin-user creation binary or registration flow.
 
 | Variable | Required | Default | Purpose |
 |---|---:|---|---|
-| `DATABASE_URL` | Yes | None | MySQL connection URL |
+| `DATABASE_URL` | Yes | None | PostgreSQL connection URL |
 | `DATABASE_MAX_CONNECTIONS` | No | `5` | SQLx pool size; invalid values also fall back to 5 |
 | `PORT` | No | `3000` | Listen port; the host is fixed to `0.0.0.0` |
 | `CSRF_ALLOWED_ORIGINS` | No | Origin check disabled | Comma-separated allowed origins for admin state-changing requests |
@@ -50,18 +74,18 @@ The repository currently has no admin-user creation binary or registration flow.
 | `RUST_LOG` | No | `info` | Tracing filter |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | No | Disabled | OTLP HTTP/protobuf trace endpoint |
 
-Startup connects to MySQL and runs embedded SQLx migrations, including the `tower_sessions` table, before binding the listener. The `/health` endpoint is only available after startup succeeds and returns `200 OK` without querying the database.
+Startup connects to PostgreSQL and runs embedded schema-only SQLx migrations, including the `tower_sessions` table, before binding the listener. The `/health` endpoint acquires a pool connection and runs `SELECT 1`; failures or timeouts return `503 Service Unavailable`.
 
 ## Architecture
 
-- **Backend**: Rust 2024, Axum 0.8, Askama, SQLx, and MySQL.
+- **Backend**: Rust 2024, Axum 0.8, Askama, SQLx, and PostgreSQL.
 - **Frontend**: Askama templates, vendored HTMX 4.0.0, Tailwind CSS v4, and Catppuccin CSS custom properties.
 - **Entrypoint and routing**: `src/main.rs` initializes tracing and the database, runs migrations, builds public and protected routers, configures sessions, and serves embedded assets.
-- **Application state**: `AppState` in `src/types.rs` contains `Arc<MySqlPool>` and configured CSRF origins. It also implements the `axum-login` authentication backend.
+- **Application state**: `AppState` in `src/types.rs` contains `Arc<PgPool>` and configured CSRF origins. It also implements the `axum-login` authentication backend.
 - **Page handlers**: `src/page/` contains `about.rs`, `admin.rs`, `admin_posts.rs`, `admin_tags.rs`, `blog.rs`, `code.rs`, `error.rs`, `hall_of_fame.rs`, `home.rs`, and `tag.rs`. They are re-exported by `src/page/mod.rs`.
 - **Templates**: Askama templates live in `templates/`. Full pages extend `base.html`; `tags_cloud.html` and `admin_markdown_preview.html` are HTMX fragments.
-- **Database**: `src/database/` is split into posts, tags, post-tag joins, transactions, users, and shared types. All 29 public database operations use tracing instrumentation.
-- **Migrations**: Seven embedded SQLx migrations create posts, tags, post-tag joins, the publication index, admin users, and the session store, and seed the initial production post and tags. Migrations do not seed an admin user.
+- **Database**: `src/database/` is split into posts, tags, post-tag joins, transactions, users, and shared types. Public database operations use tracing instrumentation and SQLx checked query macros. IDs use `i64`; timestamps use PostgreSQL `TIMESTAMPTZ` and Rust `DateTime<Utc>`. Usernames, tag names, and slugs use case-sensitive PostgreSQL comparisons and uniqueness.
+- **Migrations**: Three embedded PostgreSQL migrations create content tables and indexes, admin users, and the session store. They do not seed any content or users. The old MySQL migrations and `seed_initial_content` have been removed.
 - **Errors**: `src/types.rs` defines the internal `Error` and `Result<T>` types. `src/page/error.rs` renders styled public 404 and 500 responses.
 - **Observability**: `src/observability.rs` always enables console tracing. It adds an OTLP HTTP/protobuf exporter when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Request spans record method, raw request path, and response status.
 
@@ -71,9 +95,10 @@ Public routes include Home, About, Blog, Code projects, Hall of Fame, Tags, logi
 
 - `PAGE_SIZE` is 8. Home shows the first eight published posts with full rendered bodies and no pagination.
 - The blog index shows eight previews per page with Previous/Next navigation. Blog detail pages render complete posts.
+- Public post pagination selects posts before joining tags and orders by publication date descending, then ID ascending. Admin publication inputs and displayed dates use UTC.
 - Markdown uses default `pulldown-cmark` parsing followed by `ammonia` sanitization.
 - The tag index uses HTMX search at `/tags/search`; tag sizes and colors are recalculated from the filtered result.
-- Code project data is hard-coded in `src/page/code.rs`, not stored in MySQL.
+- Code project data is hard-coded in `src/page/code.rs`, not stored in PostgreSQL.
 - HTMX is used only for tag filtering and admin Markdown previews.
 - HTMX keeps the last queued request for each search/preview control. Its global `noSwap` configuration leaves fragment targets unchanged on 4xx and 5xx responses, except for explicit 403 overrides on admin Markdown previews so CSRF error messages remain visible.
 
@@ -86,7 +111,7 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 - Login limits are process-local and reset on restart; each application replica maintains independent account and client limits.
 - `X-Forwarded-For` is used only when the TCP peer matches `AUTH_TRUSTED_PROXY_CIDRS`; otherwise forwarded headers are ignored.
 - Unknown usernames are checked against a fixed Argon2id dummy hash, and concurrent password checks are bounded.
-- Sessions use a shared MySQL store, `SameSite=Lax`, and secure cookies outside debug builds. They survive application restarts and work across replicas connected to the same database.
+- Sessions use a shared PostgreSQL store, `SameSite=Lax`, and secure cookies outside debug builds. They survive application restarts and work across replicas connected to the same database.
 - Login and admin activity refreshes a 30-minute idle lifetime capped at a hard 12-hour maximum from successful login. Public-page activity does not extend an admin session.
 - Each replica deletes expired session rows every five minutes. Cleanup is idempotent across replicas and retries after database errors.
 - Login and admin responses use `Cache-Control: no-store, private`.
@@ -109,17 +134,25 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 
 `Cargo.toml` denies unsafe code and enables Clippy `cargo`, `nursery`, and `pedantic` warnings. It denies `expect_used`, `unwrap_used`, `missing_errors_doc`, and `missing_panics_doc`.
 
-Forgejo CI is defined in `.forgejo/workflows/ci.yml`. For pushes and pull requests targeting `main`, it runs Cargo check, Trivy, and Socket CLI. Successful `main` runs deploy to Railway. The workflow currently does not run formatting, Clippy, or tests, and its Cargo container does not explicitly install Tailwind.
+Forgejo CI uses `.forgejo/workflows/build.yml` and `security.yml`. Pull requests and pushes to `main` run Semgrep, Trivy, and Socket checks before the Rust build. The `ci-rust` FreeBSD runner installs Tailwind 4.3.3 and runs `SQLX_OFFLINE=true cargo build --locked`. The workflow currently does not run formatting, Clippy, database tests, or online SQLx metadata validation. Run those locally against the development database after query changes. Validated release tags run the build workflow before deploying through `deploy.yml`; ordinary `main` pushes do not deploy.
 
-Railway uses the Railpack builder configured by `railway.toml` and `railpack.json`. It builds with `cargo build --release --locked`, starts `./target/release/ixirsii-tech`, checks `/health`, and restarts on failure.
+Railway uses the Railpack builder configured by `railway.toml` and `railpack.json`. It builds with `SQLX_OFFLINE=true cargo build --release --locked`, copies the executable to the project root, starts `./ixirsii-tech`, checks `/health`, and restarts on failure.
 
 There are no pre-commit hooks.
+
+## CodeRabbit reviews
+
+- Run CodeRabbit commands individually.
+- If authentication appears missing or storage/network checks fail inside the sandbox, retry `coderabbit auth status --agent` and `coderabbit doctor` with approved escalation before requesting another login.
+- Run reviews using `coderabbit review --agent` with the required storage and network access.
+- Never interpret a sandbox-only authentication failure as proof that the user is logged out.
 
 ## If stuck
 
 - If any Cargo command fails while running `build.rs`, verify that a compatible `tailwindcss` executable is on `PATH`, then inspect `src/style/main.css` and its imports.
 - If CSS or an asset URL is stale, inspect `build.rs`, the generated `src/static/main.css`, and the table in `src/static_assets.rs`.
-- If startup fails before listening, verify `DATABASE_URL`, MySQL connectivity, and the migrations in `migrations/`.
+- If startup fails before listening, verify `DATABASE_URL`, PostgreSQL connectivity, and the migrations in `migrations/`.
+- If SQLx macros report missing or stale offline metadata, migrate the local development database and run `SQLX_OFFLINE=false cargo sqlx prepare -- --all-targets`; commit the resulting `.sqlx/` files.
 - If admin state-changing requests return `403`, verify the session token and `CSRF_ALLOWED_ORIGINS` values, including scheme and port.
-- If login fails, verify that `admin_users` contains the expected username and a valid Argon2 password hash. There is no in-repository seeding command.
+- If login fails, verify that `admin_users` contains the expected case-sensitive username and a valid Argon2 password hash. Local fixtures are available through `docker compose run --rm seed`; there is no production provisioning command.
 - Check `src/main.rs` for the authoritative route and middleware layout.
