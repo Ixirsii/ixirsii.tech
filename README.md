@@ -62,7 +62,7 @@ cargo sqlx migrate run
 SQLX_OFFLINE=false cargo sqlx prepare -- --all-targets
 SQLX_OFFLINE=false cargo sqlx prepare --check -- --all-targets
 cargo fmt --check
-cargo clippy --locked --all-targets
+cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked --all-targets
 ```
 
@@ -92,10 +92,56 @@ the build; fork PRs cannot build because Forgejo withholds that key.
 
 Release tags validate the release, run the same security and build sequence, and
 then deploy to Railway. Scans and builds check out the same triggering commit.
-The `ci-rust` FreeBSD runner installs Tailwind and builds with `SQLX_OFFLINE=true`;
-Railway also uses an offline release build. CI currently does not run the database
-tests or verify metadata against a running PostgreSQL schema, so run the checks
-above before submitting query changes.
+The `ci-rust` FreeBSD runner installs Tailwind and PostgreSQL 18, checks formatting,
+runs Clippy with warnings denied, runs all tests with the locked dependency graph,
+and builds with `SQLX_OFFLINE=true`. Tests use a disposable PostgreSQL cluster
+under `/tmp` running as the `postgres` package user, with only a private Unix
+socket and no TCP listener. The cluster is stopped and removed on exit. Railway
+also uses an offline release build. CI does not refresh or verify SQLx metadata
+online, so run the metadata checks above before submitting query changes.
+
+## Content and browser behavior
+
+Blog and tag indexes show eight posts per page, ordered by publication date and
+ID. Invalid, zero, overflowing, or out-of-range page numbers return 404; page one
+of an empty index remains valid. Article sidebars show metadata and up to four
+published posts ranked by shared tags, then publication date and ID.
+
+The RSS 2.0 feed is at `/feed.xml`, is linked for discovery in every page, and
+contains the newest 20 published posts. Item IDs survive slug changes. Links use
+the canonical `https://ixirsii.tech` origin; the feed uses previews when available
+and sanitized Markdown bodies otherwise. Responses are cached for five minutes.
+The stable `/site.webmanifest` URL revalidates on each use and references immutable,
+fingerprinted icons.
+
+Admin titles/slugs allow 255 characters, previews 512 characters, and tag names/slugs
+127 characters, matching PostgreSQL character limits. Slugs use lowercase ASCII
+letters and numbers separated by single hyphens: `[a-z0-9]+(-[a-z0-9]+)*`.
+Post bodies have an application limit of 65,535 UTF-8 bytes. Server validation is
+authoritative; database uniqueness conflicts return field-level 409 responses.
+
+## Login challenges and browser security
+
+Anonymous login pages use a signed, HttpOnly, SameSite=Strict cookie instead of
+creating rows in `tower_sessions`. The cookie and submitted form challenge must
+match, and the server verifies the signature and a 30-minute expiry. Release
+builds use a Secure `__Host-login-csrf` cookie with Path=/ and no Domain. The
+challenge confers no authentication; successful login still rotates the session
+ID and creates a new session CSRF token, then clears the login challenge cookie.
+Failed login attempts remain subject to the existing rate limits.
+
+Migration `20260923000003` adds a singleton signing-key table. Startup generates
+its 64-byte random key once; all replicas load that same key, so login challenges
+survive restarts and requests can move between replicas. No new environment
+variable is required. Treat this table as secret data alongside the session store;
+rotate its key with a coordinated restart to invalidate outstanding login forms.
+This follows the [signed double-submit cookie approach](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html#signed-double-submit-cookie-recommended).
+
+All routes set `Content-Security-Policy: frame-ancestors 'none'`,
+`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and
+`Referrer-Policy: strict-origin-when-cross-origin`. The framing policy allows the
+existing scripts, styles, and HTMX requests. Login/admin responses remain private
+and uncacheable.
 
 ## Todo
 

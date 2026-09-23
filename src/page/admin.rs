@@ -7,8 +7,8 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{Html, IntoResponse, Redirect, Response},
 };
+use axum_extra::extract::cookie::SignedCookieJar;
 use serde::Deserialize;
-use tower_sessions::Session;
 
 use crate::{
     AdminAuthSession, AppState,
@@ -57,20 +57,20 @@ pub struct LoginForm {
 pub async fn login_page(
     auth_session: AdminAuthSession,
     Query(params): Query<LoginQuery>,
+    jar: SignedCookieJar,
 ) -> Result<Response, StatusCode> {
     if auth_session.user.is_some() {
         return Ok(Redirect::to(redirect_target(params.next.as_deref())).into_response());
     }
 
     render_login_page(
-        &auth_session.session,
+        jar,
         StatusCode::OK,
         redirect_target(params.next.as_deref()),
         "",
         None,
         false,
     )
-    .await
 }
 
 /// Authenticates the seeded admin user.
@@ -82,21 +82,18 @@ pub async fn login_submit(
     State(app_state): State<AppState>,
     headers: HeaderMap,
     mut auth_session: AdminAuthSession,
+    jar: SignedCookieJar,
     Form(form): Form<LoginForm>,
 ) -> Result<Response, StatusCode> {
-    if !verify_csrf_token(&auth_session.session, &form.csrf_token)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
-    {
+    if !crate::login_csrf::verify(&jar, &form.csrf_token) {
         return render_login_page(
-            &auth_session.session,
+            jar,
             StatusCode::FORBIDDEN,
             redirect_target(form.next.as_deref()),
             &form.username,
             Some("Security token expired. Refresh and try again."),
             true,
-        )
-        .await;
+        );
     }
 
     let redirect_to = redirect_target(form.next.as_deref());
@@ -112,14 +109,13 @@ pub async fn login_submit(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
     else {
         return render_login_page(
-            &auth_session.session,
+            jar,
             StatusCode::UNAUTHORIZED,
             redirect_to,
             &form.username,
             Some("Invalid username or password."),
             false,
-        )
-        .await;
+        );
     };
 
     auth_session
@@ -134,7 +130,7 @@ pub async fn login_submit(
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(Redirect::to(redirect_to).into_response())
+    Ok((crate::login_csrf::clear(jar), Redirect::to(redirect_to)).into_response())
 }
 
 /// Renders the protected admin dashboard.
@@ -185,17 +181,15 @@ pub async fn logout(
     Ok(Redirect::to("/"))
 }
 
-async fn render_login_page(
-    session: &Session,
+fn render_login_page(
+    jar: SignedCookieJar,
     status: StatusCode,
     next: &str,
     username: &str,
     error: Option<&str>,
     error_is_security: bool,
 ) -> Result<Response, StatusCode> {
-    let csrf_token = csrf_token(session)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let (jar, csrf_token) = crate::login_csrf::challenge(jar);
     let page = LoginPage {
         title: "Login",
         show_admin_link: false,
@@ -208,6 +202,7 @@ async fn render_login_page(
 
     Ok((
         status,
+        jar,
         Html(
             page.render()
                 .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,

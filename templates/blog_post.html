@@ -1,7 +1,12 @@
 {% extends "base.html" %} {% block content %}
-<article>
-  <h1>{{ post.title }}</h1>
-
+<div class="article-layout">
+  <article class="reading-column">
+    <h1>{{ post.title }}</h1>
+    <div class="prose-content">{{ post.body|safe }}</div>
+  </article>
+  <aside class="article-sidebar" aria-label="About this post">
+    <section class="card">
+      <h2>About this post</h2>
   <div class="metadata mb-6">
     {% if post.published_at.len() != 0 %}
       <div>Published:</div>
@@ -21,6 +26,16 @@
     {% endif %}
   </div>
 
-  {{ post.body|safe }}
-</article>
+      <a href="/blog">All posts</a>
+    </section>
+    {% if !related.is_empty() %}
+    <section class="card">
+      <h2>Related posts</h2>
+      <ul class="related-posts">
+        {% for item in related %}<li><a href="/blog/{{ item.slug }}">{{ item.title }}</a></li>{% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+  </aside>
+</div>
 {% endblock %}

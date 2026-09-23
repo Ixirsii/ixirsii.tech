@@ -23,12 +23,17 @@ use tracing::{error, info, instrument, warn};
 pub use types::*;
 
 mod auth;
+mod browser;
 mod csrf;
 mod database;
+mod login_csrf;
 mod observability;
 mod page;
 mod session;
 mod types;
+
+#[cfg(test)]
+mod integration_tests;
 
 pub mod static_assets;
 
@@ -54,6 +59,7 @@ async fn main() -> Result<()> {
     let auth_security = Arc::new(auth::AuthSecurity::new(auth::AuthConfig::from_env()?));
     let db_pool: PgPool = get_db_pool().await?;
     migrate!().run(&db_pool).await?;
+    let login_csrf_key = login_csrf::load_key(&db_pool).await?;
     let session_store = session::PostgresSessionStore::new(db_pool.clone());
     let cleanup_task = session::spawn_cleanup(session_store.clone());
 
@@ -64,8 +70,14 @@ async fn main() -> Result<()> {
 
     let serve_result = serve(
         listener,
-        get_routes(db_pool, auth_security, session_store)
-            .into_make_service_with_connect_info::<SocketAddr>(),
+        get_routes(
+            db_pool,
+            auth_security,
+            session_store,
+            login_csrf_key,
+            configured_allowed_origins(),
+        )
+        .into_make_service_with_connect_info::<SocketAddr>(),
     )
     .await;
     cleanup_task.abort();
@@ -99,10 +111,26 @@ async fn get_db_pool() -> Result<PgPool> {
     }
 }
 
+fn configured_allowed_origins() -> Vec<String> {
+    match var("CSRF_ALLOWED_ORIGINS") {
+        Ok(val) if !val.is_empty() => val
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect(),
+        _ => {
+            warn!("CSRF_ALLOWED_ORIGINS not set; origin check disabled");
+            Vec::new()
+        }
+    }
+}
+
 fn get_routes(
     db_pool: PgPool,
     auth_security: Arc<auth::AuthSecurity>,
     session_store: session::PostgresSessionStore,
+    login_csrf_key: axum_extra::extract::cookie::Key,
+    allowed_origins: Vec<String>,
 ) -> Router {
     let admin_routes = Router::new()
         .route("/", get(page::admin_dashboard))
@@ -122,18 +150,8 @@ fn get_routes(
         .route("/logout", post(page::logout))
         .route_layer(login_required!(AppState, login_url = LOGIN_ROUTE))
         .layer(middleware::from_fn(session::admin_session_lifetime));
-    let allowed_origins: Vec<String> = match var("CSRF_ALLOWED_ORIGINS") {
-        Ok(val) if !val.is_empty() => val
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect(),
-        _ => {
-            warn!("CSRF_ALLOWED_ORIGINS not set; origin check disabled");
-            Vec::new()
-        }
-    };
     let app_state = AppState {
+        login_csrf_key,
         auth_security,
         db_pool: Arc::new(db_pool),
         allowed_origins,
@@ -158,6 +176,7 @@ fn get_routes(
         .route("/", get(page::home))
         .route("/about", get(page::about_page))
         .route("/blog", get(page::blog_index))
+        .route("/feed.xml", get(page::rss_feed))
         .route("/blog/{slug}", get(page::blog_post))
         .route("/code", get(page::code_index))
         .route("/code/dotfiles", get(page::code_dotfiles))
@@ -174,9 +193,11 @@ fn get_routes(
         .layer(middleware::from_fn(session::private_no_store));
 
     Router::new()
+        .route("/site.webmanifest", get(browser::manifest))
         .route("/.well-known/{*path}", get(well_known_asset))
         .route("/static/{*path}", get(static_asset))
         .merge(app_routes)
+        .layer(middleware::from_fn(browser::security_headers))
         .layer(middleware::from_fn(observability::trace_request))
 }
 

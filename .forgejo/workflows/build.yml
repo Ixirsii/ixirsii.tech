@@ -14,14 +14,14 @@ jobs:
       SOCKET_SECURITY_API_KEY: ${{ secrets.SOCKET_SECURITY_API_KEY }}
 
   rust:
-    name: Rust build
+    name: Rust quality checks and build
     needs: security
     runs-on: ci-rust
     timeout-minutes: 20
     steps:
       - name: Install workflow prerequisites
         run: |
-          pkg install -y npm-node24
+          pkg install -y npm-node24 postgresql18-server
 
       - name: Check out repository
         uses: https://data.forgejo.org/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -33,6 +33,15 @@ jobs:
         run: |
           npm install --no-save --no-package-lock @tailwindcss/cli@4.3.3 tailwindcss@4.3.3
           echo "$PWD/node_modules/.bin" >> "$FORGEJO_PATH"
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: SQLX_OFFLINE=true cargo clippy --locked --all-targets -- -D warnings
+
+      - name: Test with isolated PostgreSQL
+        run: sh .forgejo/scripts/test-postgres.sh
 
       - name: Build
         run: SQLX_OFFLINE=true cargo build --locked

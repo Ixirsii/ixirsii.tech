@@ -85,7 +85,7 @@ Startup connects to PostgreSQL and runs embedded schema-only SQLx migrations, in
 - **Page handlers**: `src/page/` contains `about.rs`, `admin.rs`, `admin_posts.rs`, `admin_tags.rs`, `blog.rs`, `code.rs`, `error.rs`, `hall_of_fame.rs`, `home.rs`, and `tag.rs`. They are re-exported by `src/page/mod.rs`.
 - **Templates**: Askama templates live in `templates/`. Full pages extend `base.html`; `tags_cloud.html` and `admin_markdown_preview.html` are HTMX fragments.
 - **Database**: `src/database/` is split into posts, tags, post-tag joins, transactions, users, and shared types. Public database operations use tracing instrumentation and SQLx checked query macros. IDs use `i64`; timestamps use PostgreSQL `TIMESTAMPTZ` and Rust `DateTime<Utc>`. Usernames, tag names, and slugs use case-sensitive PostgreSQL comparisons and uniqueness.
-- **Migrations**: Three embedded PostgreSQL migrations create content tables and indexes, admin users, and the session store. They do not seed any content or users. The old MySQL migrations and `seed_initial_content` have been removed.
+- **Migrations**: Four embedded PostgreSQL migrations create content tables and indexes, admin users, the session store, and the singleton login challenge signing-key table. They do not seed any content or users. The old MySQL migrations and `seed_initial_content` have been removed.
 - **Errors**: `src/types.rs` defines the internal `Error` and `Result<T>` types. `src/page/error.rs` renders styled public 404 and 500 responses.
 - **Observability**: `src/observability.rs` always enables console tracing. It adds an OTLP HTTP/protobuf exporter when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Request spans record method, raw request path, and response status.
 
@@ -94,8 +94,9 @@ Startup connects to PostgreSQL and runs embedded schema-only SQLx migrations, in
 Public routes include Home, About, Blog, Code projects, Hall of Fame, Tags, login, and health. The fallback renders a styled 404 page.
 
 - `PAGE_SIZE` is 8. Home shows the first eight published posts with full rendered bodies and no pagination.
-- The blog index shows eight previews per page with Previous/Next navigation. Blog detail pages render complete posts.
+- Blog and tag indexes show eight previews per page with Previous/Next navigation. Invalid or unavailable pages return 404; empty indexes allow page one. Tag previews do not fetch full Markdown bodies. Blog detail pages render complete posts with metadata and up to four published posts sharing tags in a sidebar.
 - Public post pagination selects posts before joining tags and orders by publication date descending, then ID ascending. Admin publication inputs and displayed dates use UTC.
+- Admin slug format is lowercase ASCII letters/numbers separated by single hyphens. Character limits match PostgreSQL VARCHAR columns; bodies are limited to 65,535 UTF-8 bytes. Unique constraint races return field-level 409 responses.
 - Markdown uses default `pulldown-cmark` parsing followed by `ammonia` sanitization.
 - The tag index uses HTMX search at `/tags/search`; tag sizes and colors are recalculated from the filtered result.
 - Code project data is hard-coded in `src/page/code.rs`, not stored in PostgreSQL.
@@ -106,7 +107,7 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 
 ## Authentication and CSRF
 
-- Login is at `/login`; logout is a POST to `/admin/logout`.
+- Login is at `/login`; logout is a POST to `/admin/logout`. Anonymous login challenges use signed 30-minute HttpOnly cookies, Secure and host-prefixed in release builds, without creating database sessions. A singleton signing key is initialized once in PostgreSQL at startup and shared across replicas. Login verifies the cookie signature, expiry, and form challenge before authenticating.
 - Password verification uses Argon2 hashes stored in `admin_users`.
 - Login limits are process-local and reset on restart; each application replica maintains independent account and client limits.
 - `X-Forwarded-For` is used only when the TCP peer matches `AUTH_TRUSTED_PROXY_CIDRS`; otherwise forwarded headers are ignored.
@@ -116,12 +117,13 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 - Each replica deletes expired session rows every five minutes. Cleanup is idempotent across replicas and retries after database errors.
 - Login and admin responses use `Cache-Control: no-store, private`.
 - Admin POST handlers verify a token stored in the session. Tokens rotate after successful login and successful post/tag mutations.
-- Token verification uses ordinary string equality and does not use per-form tokens.
-- Admin state-changing requests additionally check `Origin` or `Referer` against `CSRF_ALLOWED_ORIGINS`. This middleware check is skipped when no origins are configured. Login is outside that middleware and relies on its form token.
+- Admin session token verification uses ordinary string equality and does not use per-form tokens. Login cookie/form challenge comparison uses constant-time equality.
+- Admin state-changing requests additionally check `Origin` or `Referer` against `CSRF_ALLOWED_ORIGINS`. This middleware check is skipped when no origins are configured. Login is outside that middleware and relies on its signed cookie/form challenge.
 
 ## Static assets and CSS
 
 - `src/static/` is embedded into the executable with `include_dir`; it is not served from the filesystem with `ServeDir`.
+- `/site.webmanifest` is generated from the asset table at runtime with `no-cache`; its icon URLs are fingerprinted. `/feed.xml` provides the newest 20 published posts as RSS with a five-minute cache lifetime.
 - Normal assets are available only through fingerprinted `/static/*` paths defined in `src/static_assets.rs` and receive a one-year immutable cache header.
 - When adding or renaming an asset, update the table in `src/static_assets.rs`. Its unit tests check coverage of all embedded files, URL hashes, and reverse lookups.
 - Templates resolve asset paths through `crate::static_assets::static_url()`.
@@ -134,7 +136,7 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 
 `Cargo.toml` denies unsafe code and enables Clippy `cargo`, `nursery`, and `pedantic` warnings. It denies `expect_used`, `unwrap_used`, `missing_errors_doc`, and `missing_panics_doc`.
 
-Forgejo CI uses `.forgejo/workflows/build.yml` and `security.yml`. Pull requests and pushes to `main` run Semgrep, Trivy, and Socket checks before the Rust build. The `ci-rust` FreeBSD runner installs Tailwind 4.3.3 and runs `SQLX_OFFLINE=true cargo build --locked`. The workflow currently does not run formatting, Clippy, database tests, or online SQLx metadata validation. Run those locally against the development database after query changes. Validated release tags run the build workflow before deploying through `deploy.yml`; ordinary `main` pushes do not deploy.
+Forgejo CI uses `.forgejo/workflows/build.yml` and `security.yml`. Pull requests and pushes to `main` run Semgrep, Trivy, and Socket checks before the Rust build. The `ci-rust` FreeBSD runner installs Tailwind 4.3.3 and runs `SQLX_OFFLINE=true cargo build --locked`. The workflow also checks formatting, runs Clippy for all targets with warnings denied, and runs locked tests against a disposable PostgreSQL 18 cluster over a private Unix socket. It does not run online SQLx metadata validation; run that locally after query changes. Validated release tags run the build workflow before deploying through `deploy.yml`; ordinary `main` pushes do not deploy.
 
 Railway uses the Railpack builder configured by `railway.toml` and `railpack.json`. It builds with `SQLX_OFFLINE=true cargo build --release --locked`, copies the executable to the project root, starts `./ixirsii-tech`, checks `/health`, and restarts on failure.
 

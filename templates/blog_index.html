@@ -1,14 +1,14 @@
 {% extends "base.html" %} {% block content %}
 <h1>Blog</h1>
 
-<p class="metadata"><a href="/tags">Browse all tags</a></p>
+<p class="metadata"><a href="/tags">Browse all tags</a> · <a href="/feed.xml">RSS feed</a></p>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 {% for post in posts %}
   <article class="card">
     <h3><a href="/blog/{{ post.slug }}">{{ post.title }}</a></h3>
 
-    {{ post.preview|safe }}
+    <div class="prose-content mb-4">{{ post.preview|safe }}</div>
 
     <div class="metadata mt-auto">
       {% if post.published_at.len() != 0 %}
@@ -31,13 +31,14 @@
 </div>
 
 {% if total_pages > 1 %}
-<div class="flex justify-center gap-4 mt-8">
+<nav class="pagination" aria-label="Blog pages">
   {% if current_page > 1 %}
     <a href="/blog?page={{ current_page - 1 }}">&larr; Previous</a>
   {% endif %}
+  <span>Page {{ current_page }} of {{ total_pages }}</span>
   {% if current_page < total_pages %}
     <a href="/blog?page={{ current_page + 1 }}">Next &rarr;</a>
   {% endif %}
-</div>
+</nav>
 {% endif %}
 {% endblock %}

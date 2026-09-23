@@ -25,9 +25,16 @@ pub type AdminAuthSession = AuthSession<AppState>;
 /// Shared application state.
 #[derive(Clone)]
 pub struct AppState {
+    pub(crate) login_csrf_key: axum_extra::extract::cookie::Key,
     pub(crate) auth_security: Arc<AuthSecurity>,
     pub(crate) db_pool: Arc<PgPool>,
     pub(crate) allowed_origins: Vec<String>,
+}
+
+impl axum::extract::FromRef<AppState> for axum_extra::extract::cookie::Key {
+    fn from_ref(state: &AppState) -> Self {
+        state.login_csrf_key.clone()
+    }
 }
 
 impl AuthnBackend for AppState {
@@ -127,6 +134,20 @@ impl std::error::Error for Error {
             Self::Database(error) => Some(error),
             Self::DatabaseMigration(error) => Some(error),
             Self::Network(error) => Some(error),
+        }
+    }
+}
+
+impl Error {
+    pub(crate) fn unique_constraint(&self) -> Option<&str> {
+        match self {
+            Self::Database(error) => error.as_database_error().and_then(|error| {
+                error
+                    .is_unique_violation()
+                    .then(|| error.constraint())
+                    .flatten()
+            }),
+            _ => None,
         }
     }
 }

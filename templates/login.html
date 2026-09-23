@@ -1,11 +1,10 @@
 {% extends "base.html" %} {% block content %}
-<section>
+<section aria-label="Administrator login">
   <div class="card login-card">
     <h1>Login</h1>
 
     <div class="login-copy">
       <p>Admin access is limited to this site's administrator.</p>
-      <p class="login-hint">No public registration. Known route required.</p>
     </div>
 
     {% if let Some(message) = error %}
@@ -39,7 +38,7 @@
         >
       </div>
 
-      <button class="login-submit" type="submit">Sign In</button>
+      <button class="button-primary" type="submit">Sign In</button>
     </form>
   </div>
 </section>

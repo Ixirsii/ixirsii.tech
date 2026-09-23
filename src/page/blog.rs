@@ -9,8 +9,10 @@ use std::collections::HashMap;
 
 use crate::{
     AdminAuthSession, AppState,
-    database::{count_published_posts, get_post_by_slug, list_published_posts},
-    page::{PAGE_SIZE, PageError, PostView},
+    database::{
+        RelatedPost, count_published_posts, get_post_by_slug, list_published_posts, related_posts,
+    },
+    page::{PAGE_SIZE, PageError, PostView, public_page},
 };
 
 #[derive(Template)]
@@ -29,6 +31,7 @@ struct BlogPostPage<'a> {
     title: &'a str,
     show_admin_link: bool,
     post: &'a PostView,
+    related: Vec<RelatedPost>,
 }
 
 /// Renders the blog page with paginated post cards.
@@ -41,18 +44,18 @@ pub async fn blog_index(
     Query(params): Query<HashMap<String, String>>,
 ) -> Result<Html<String>, PageError> {
     let show_admin_link = auth_session.user.is_some();
-    let page = params
-        .get("page")
-        .and_then(|p| p.parse::<u32>().ok())
-        .unwrap_or(1);
+    let total = count_published_posts(&(*state.db_pool))
+        .await
+        .map_err(|_| PageError::internal_server_error(show_admin_link))?;
+    let (page, total_pages) = public_page(
+        params.get("page").map(String::as_str),
+        total,
+        show_admin_link,
+    )?;
     let post_rows = list_published_posts(&(*state.db_pool), page, PAGE_SIZE)
         .await
         .map_err(|_| PageError::internal_server_error(show_admin_link))?;
     let post_views: Vec<PostView> = post_rows.into_iter().map(PostView::from).collect();
-    let total = count_published_posts(&(*state.db_pool))
-        .await
-        .map_err(|_| PageError::internal_server_error(show_admin_link))?;
-    let total_pages = total.div_ceil(PAGE_SIZE);
     let page_data = BlogIndexPage {
         title: "Blog",
         show_admin_link,
@@ -84,7 +87,11 @@ pub async fn blog_post(
         return Err(PageError::not_found(show_admin_link));
     };
 
+    let related = related_posts(&(*state.db_pool), post.id)
+        .await
+        .map_err(|_| PageError::internal_server_error(show_admin_link))?;
     let page = BlogPostPage {
+        related,
         title: &post.title.clone(),
         show_admin_link,
         post: &PostView::from(post),

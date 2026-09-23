@@ -96,7 +96,6 @@
 .admin-form-field select:focus-visible,
 .admin-form-field textarea:focus-visible {
   @apply border-focus;
-  @apply outline-none;
 }
 
 .admin-form {
@@ -247,7 +246,7 @@
 .admin-tag-row-fields {
   @apply grid;
   @apply gap-4;
-  @apply md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_max-content];
+  @apply xl:grid-cols-2;
 }
 
 .admin-count-field {
@@ -280,3 +279,15 @@
   @apply text-sm;
   @apply mt-1;
 }
+
+.admin-form-field {
+  @apply flex flex-col gap-2 min-w-0;
+}
+
+.admin-form-field > input, .admin-form-field > textarea, .admin-form-field > select {
+  @apply w-full min-w-0;
+}
+
+.admin-count-field { @apply xl:col-span-2; }
+.admin-tag-row .admin-actions { @apply mt-4 flex-wrap; }
+.admin-slug { overflow-wrap: anywhere; }

@@ -234,29 +234,94 @@ pub async fn list_posts(
 /// # Errors
 /// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
-pub async fn list_posts_by_tag(executor: impl PgExecutor<'_>, tag_slug: &str) -> Result<Vec<Post>> {
+pub async fn list_posts_by_tag(
+    executor: impl PgExecutor<'_>,
+    tag_slug: &str,
+    page: u32,
+    page_size: u32,
+) -> Result<Vec<Post>> {
+    let offset = page_offset(page, page_size)?;
+    // Tag cards only use previews; do not load full Markdown bodies.
     let rows = query_as!(
         PostWithTagRow,
-        r#"SELECT p.id AS "id!", p.title AS "title!", p.slug AS "slug!", p.body AS "body!",
+        r#"SELECT p.id AS "id!", p.title AS "title!", p.slug AS "slug!", '' AS "body!",
                 p.preview, p.published_at, p.created_at AS "created_at!", p.updated_at,
                 t.id AS "tag_id?", t.name AS "tag_name?", t.slug AS "tag_slug?"
-         FROM posts p
-         JOIN post_tags pt_filter ON pt_filter.post_id = p.id
-         JOIN tags t_filter ON t_filter.id = pt_filter.tag_id
+         FROM (
+             SELECT p.id, p.title, p.slug, p.preview, p.published_at, p.created_at, p.updated_at
+             FROM posts p
+             JOIN post_tags pt ON pt.post_id = p.id
+             JOIN tags t ON t.id = pt.tag_id
+             WHERE t.slug = $1 AND p.published_at <= NOW()
+             ORDER BY p.published_at DESC, p.id
+             LIMIT $2 OFFSET $3
+         ) p
          LEFT JOIN post_tags pt ON pt.post_id = p.id
          LEFT JOIN tags t ON t.id = pt.tag_id
-         WHERE t_filter.slug = $1
-           AND p.published_at IS NOT NULL AND p.published_at <= NOW()
          ORDER BY p.published_at DESC, p.id, t.name"#,
-        tag_slug
+        tag_slug,
+        i64::from(page_size),
+        offset,
     )
     .fetch_all(executor)
     .await
     .inspect_err(|error| {
         error!(%error, operation = "select", table = "posts", "database query failed");
     })?;
-
     Ok(merge_tags(rows))
+}
+
+/// Count published posts belonging to a tag.
+///
+/// # Errors
+/// Returns a database error if the query fails.
+#[instrument(skip(executor))]
+pub async fn count_posts_by_tag(executor: impl PgExecutor<'_>, tag_slug: &str) -> Result<u32> {
+    let count = query_scalar!(
+        r#"SELECT COUNT(*) AS "count!" FROM posts p
+           JOIN post_tags pt ON pt.post_id = p.id
+           JOIN tags t ON t.id = pt.tag_id
+           WHERE t.slug = $1 AND p.published_at <= NOW()"#,
+        tag_slug,
+    )
+    .fetch_one(executor)
+    .await
+    .inspect_err(|error| {
+        error!(%error, operation = "count tagged posts", "database query failed");
+    })?;
+    count_as_u32(count)
+}
+
+pub struct RelatedPost {
+    pub title: String,
+    pub slug: String,
+}
+
+/// Return up to four published posts with shared tags, most overlap first.
+///
+/// # Errors
+/// Returns a database error if the query fails.
+#[instrument(skip(executor))]
+pub async fn related_posts(
+    executor: impl PgExecutor<'_>,
+    post_id: i64,
+) -> Result<Vec<RelatedPost>> {
+    Ok(query_as!(
+        RelatedPost,
+        r#"SELECT p.title, p.slug FROM posts p
+           JOIN post_tags candidate ON candidate.post_id = p.id
+           JOIN post_tags current ON current.tag_id = candidate.tag_id AND current.post_id = $1
+           WHERE p.id <> $1 AND p.published_at <= NOW()
+           GROUP BY p.id
+           ORDER BY COUNT(*) DESC, p.published_at DESC, p.id
+           LIMIT 4"#,
+        post_id,
+    )
+    .fetch_all(executor)
+    .await
+    .inspect_err(|error| {
+        error!(%error, operation = "related posts", "database query failed");
+    })?)
 }
 
 /// List a page of posts.
@@ -550,8 +615,27 @@ mod tests {
         let post = get_post_by_slug(&pool, "post-0").await?;
         assert_eq!(post.map(|post| post.tags.len()), Some(2));
 
-        let tagged = list_posts_by_tag(&pool, "alpha").await?;
-        assert_eq!(tagged.len(), 10);
+        let tagged = list_posts_by_tag(&pool, "alpha", 1, 8).await?;
+        assert_eq!(tagged.len(), 8);
+        let second_tagged = list_posts_by_tag(&pool, "alpha", 2, 8).await?;
+        assert_eq!(second_tagged.len(), 2);
+        assert_eq!(count_posts_by_tag(&pool, "alpha").await?, 10);
+        assert_eq!(
+            tagged
+                .iter()
+                .chain(&second_tagged)
+                .map(|p| p.id)
+                .collect::<Vec<_>>(),
+            published_ids[..10]
+        );
+        assert!(
+            tagged
+                .iter()
+                .chain(&second_tagged)
+                .all(|p| p.body.is_empty())
+        );
+        assert!(list_posts_by_tag(&pool, "alpha", 3, 8).await?.is_empty());
+        assert_eq!(count_posts_by_tag(&pool, "unused").await?, 0);
         assert!(tagged.iter().all(|post| post.tags.len() == 2));
         let public_counts = list_tags_with_published_count(&pool).await?;
         assert_eq!(
@@ -651,6 +735,78 @@ mod tests {
             assert!(first.iter().chain(&second).all(|post| post.tags.len() == 1));
         }
         assert!(get_post_by_id(&pool, draft).await?.is_some());
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn related_posts_rank_shared_tags_and_exclude_current_and_hidden(
+        pool: PgPool,
+    ) -> Result<()> {
+        let alpha = create_tag(&pool, "Alpha", "alpha").await?;
+        let beta = create_tag(&pool, "Beta", "beta").await?;
+        let published = Utc::now() - Duration::days(1);
+        let current = create_post_with_tags(
+            &pool,
+            "Current",
+            "current",
+            "Body",
+            None,
+            Some(published),
+            &[alpha, beta],
+        )
+        .await?;
+        for number in 0..5 {
+            create_post_with_tags(
+                &pool,
+                "One shared tag",
+                &format!("one-{number}"),
+                "Body",
+                None,
+                Some(published),
+                &[alpha],
+            )
+            .await?;
+        }
+        create_post_with_tags(
+            &pool,
+            "Two shared tags",
+            "two",
+            "Body",
+            None,
+            Some(published - Duration::days(1)),
+            &[alpha, beta],
+        )
+        .await?;
+        create_post_with_tags(&pool, "Draft", "draft", "Body", None, None, &[alpha, beta]).await?;
+        create_post_with_tags(
+            &pool,
+            "Future",
+            "future",
+            "Body",
+            None,
+            Some(published + Duration::days(2)),
+            &[alpha, beta],
+        )
+        .await?;
+        let untagged = create_post_with_tags(
+            &pool,
+            "Untagged",
+            "untagged",
+            "Body",
+            None,
+            Some(published),
+            &[],
+        )
+        .await?;
+        let related = related_posts(&pool, current).await?;
+        assert_eq!(
+            related
+                .iter()
+                .map(|post| post.slug.as_str())
+                .collect::<Vec<_>>(),
+            ["two", "one-0", "one-1", "one-2"]
+        );
+        assert!(related_posts(&pool, untagged).await?.is_empty());
         Ok(())
     }
 

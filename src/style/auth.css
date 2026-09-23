@@ -15,6 +15,7 @@
 }
 
 .login-card {
+  @apply max-w-md mx-auto w-full;
   @apply border;
   @apply border-ctp-sapphire/30;
   @apply shadow-ctp-sapphire;
@@ -65,7 +66,6 @@
 
 .login-field input:focus-visible {
   @apply border-focus;
-  @apply outline-none;
 }
 
 .login-field label {
@@ -80,13 +80,13 @@
   @apply gap-4;
 }
 
-.login-hint {
+.form-hint {
   @apply font-mono;
   @apply text-muted;
   @apply text-sm;
 }
 
-.login-kicker {
+.section-kicker {
   @apply font-mono;
   @apply mb-2;
   @apply text-accent;
@@ -95,7 +95,7 @@
   text-transform: uppercase;
 }
 
-.login-submit {
+.button-primary {
   @apply bg-ctp-sapphire/20;
   @apply border;
   @apply border-ctp-sapphire/40;
@@ -104,6 +104,6 @@
   @apply w-full;
 }
 
-.login-submit:hover {
+.button-primary:hover {
   @apply bg-ctp-sapphire/30;
 }

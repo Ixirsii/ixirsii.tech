@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT COUNT(*) AS \"count!\" FROM posts p\n           JOIN post_tags pt ON pt.post_id = p.id\n           JOIN tags t ON t.id = pt.tag_id\n           WHERE t.slug = $1 AND p.published_at <= NOW()",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "665dedbda287f371cede5bcdb19d54ad3f368d72505af8325cfdb1827ecb23e2"
+}

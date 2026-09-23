@@ -2,7 +2,7 @@
 <section class="admin-shell">
   <div class="admin-header">
     <div>
-      <p class="login-kicker">Posts</p>
+      <p class="section-kicker">Posts</p>
       <h1>{{ heading }}</h1>
       {% if is_edit %}
         <p>Update the stored content, publication timing, slug, and tag assignments for this post.</p>
@@ -25,7 +25,7 @@
 
         <div class="admin-form-field{% if errors.title.is_some() %} admin-form-field-error{% endif %}">
           <label for="post-title">Title</label>
-          <input id="post-title" name="title" type="text" value="{{ form.title }}" required>
+          <input id="post-title" name="title" type="text" value="{{ form.title }}" maxlength="255" required>
           {% if let Some(msg) = errors.title %}
             <p class="admin-form-field-error-message">{{ msg }}</p>
           {% endif %}
@@ -34,13 +34,13 @@
         {% if is_edit %}
           <div class="admin-form-field{% if errors.slug.is_some() %} admin-form-field-error{% endif %}">
             <label for="post-slug">Slug</label>
-            <input id="post-slug" name="slug" type="text" value="{{ form.slug }}" required>
+            <input id="post-slug" name="slug" type="text" value="{{ form.slug }}" maxlength="255" pattern="[a-z0-9]+(-[a-z0-9]+)*" required>
             {% if let Some(msg) = errors.slug %}
               <p class="admin-form-field-error-message">{{ msg }}</p>
             {% endif %}
           </div>
         {% else %}
-          <p class="login-hint">Slug will be generated from the title when the post is created.</p>
+          <p class="form-hint">Slug will be generated from the title when the post is created.</p>
         {% endif %}
 
         <div class="admin-form-field{% if errors.published_at.is_some() %} admin-form-field-error{% endif %}">
@@ -51,11 +51,12 @@
           {% endif %}
         </div>
 
-        <div class="admin-form-field">
+        <div class="admin-form-field{% if errors.preview.is_some() %} admin-form-field-error{% endif %}">
           <label for="post-preview">Preview</label>
           <textarea
             id="post-preview"
             name="preview"
+            maxlength="512"
             rows="6"
             hx-post="/admin/posts/preview/preview"
             hx-include="closest form"
@@ -65,10 +66,12 @@
             hx-trigger="input changed delay:300ms"
             hx-sync="this:queue last"
           >{{ form.preview }}</textarea>
+          {% if let Some(msg) = errors.preview %}<p class="admin-form-field-error-message">{{ msg }}</p>{% endif %}
         </div>
 
         <div class="admin-form-field{% if errors.body.is_some() %} admin-form-field-error{% endif %}">
           <label for="post-body">Body</label>
+          <p class="form-hint">Markdown, up to 65,535 bytes in UTF-8.</p>
           <textarea
             id="post-body"
             name="body"
@@ -103,14 +106,14 @@
         </fieldset>
 
         <div class="admin-actions">
-          <button class="login-submit" type="submit">Save Post</button>
+          <button class="button-primary" type="submit">Save Post</button>
         </div>
       </form>
 
       {% if let Some(action) = delete_action %}
         <form class="admin-inline-delete" action="{{ action }}" method="post" onsubmit="return confirm('Delete this post?');">
           <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-          <button type="submit">Delete Post</button>
+          <button class="button-danger" type="submit">Delete Post</button>
         </form>
       {% endif %}
     </div>
@@ -119,9 +122,9 @@
       <section class="admin-panel admin-preview-panel">
         <div class="admin-preview-header">
           <h2>Preview Preview</h2>
-          <p class="login-hint">Rendered markdown for the summary block.</p>
+          <p class="form-hint">Rendered markdown for the summary block.</p>
         </div>
-        <div id="preview-render" class="admin-markdown-preview">
+        <div id="preview-render" class="admin-markdown-preview prose-content">
           {% if form.preview_html.len() == 0 %}
             <p class="admin-empty">Write preview markdown to see it rendered here.</p>
           {% else %}
@@ -133,9 +136,9 @@
       <section class="admin-panel admin-preview-panel">
         <div class="admin-preview-header">
           <h2>Body Preview</h2>
-          <p class="login-hint">Rendered markdown for the full post body.</p>
+          <p class="form-hint">Rendered markdown for the full post body.</p>
         </div>
-        <div id="body-render" class="admin-markdown-preview">
+        <div id="body-render" class="admin-markdown-preview prose-content">
           {% if form.body_html.len() == 0 %}
             <p class="admin-empty">Write post body markdown to see it rendered here.</p>
           {% else %}

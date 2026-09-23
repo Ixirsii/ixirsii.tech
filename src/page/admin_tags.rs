@@ -17,7 +17,10 @@ use crate::{
         get_tag_by_id, list_tags_with_count, tag_name_exists, tag_name_exists_for_other_tag,
         tag_slug_exists, tag_slug_exists_for_other_tag, update_tag as update_tag_record,
     },
-    page::slugify,
+    page::{
+        slugify,
+        validation::{TAG_TEXT_MAX, slug_error, text_error},
+    },
 };
 
 const ADMIN_TAGS_PATH: &str = "/admin/tags";
@@ -160,9 +163,13 @@ pub async fn create_tag(
         );
     }
 
-    create_tag_record(&(*state.db_pool), &name, &slug)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if let Err(error) = create_tag_record(&(*state.db_pool), &name, &slug).await {
+        let errors = tag_conflict(&error, false).ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+        return render_tags_response(
+            &build_tags_page(&state, &auth_session, form.name, errors, None).await?,
+            StatusCode::CONFLICT,
+        );
+    }
 
     rotate_csrf_token(&auth_session.session)
         .await
@@ -254,9 +261,25 @@ pub async fn edit_tag(
         );
     }
 
-    update_tag_record(&(*state.db_pool), tag_id, &name, &slug)
-        .await
-        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    if let Err(error) = update_tag_record(&(*state.db_pool), tag_id, &name, &slug).await {
+        let errors = tag_conflict(&error, true).ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+        return render_tags_response(
+            &build_tags_page(
+                &state,
+                &auth_session,
+                String::new(),
+                TagFormErrors::default(),
+                Some(TagEditFormState {
+                    id: tag_id,
+                    name: form.name,
+                    slug: form.slug,
+                    errors,
+                }),
+            )
+            .await?,
+            StatusCode::CONFLICT,
+        );
+    }
 
     rotate_csrf_token(&auth_session.session)
         .await
@@ -293,8 +316,35 @@ pub async fn delete_tag(
     Ok(Redirect::to(ADMIN_TAGS_PATH))
 }
 
-fn validate_create_tag_form(input: &TagCreateForm) -> (TagFormErrors, String, String) {
+fn tag_conflict(error: &crate::Error, is_edit: bool) -> Option<TagFormErrors> {
     let mut errors = TagFormErrors::default();
+    match error.unique_constraint()? {
+        "tags_name_key" => errors.name = Some("A tag with this name already exists.".to_owned()),
+        "tags_slug_key" if is_edit => errors.slug = Some("This slug already exists.".to_owned()),
+        "tags_slug_key" => {
+            errors.name =
+                Some("The generated slug already exists. Choose a different name.".to_owned());
+        }
+        _ => return None,
+    }
+    Some(errors)
+}
+
+fn tag_slug_error(slug: &str) -> Option<String> {
+    if slug == "search" {
+        Some(
+            "The slug 'search' is reserved for tag search. Choose another name or slug.".to_owned(),
+        )
+    } else {
+        slug_error(slug, TAG_TEXT_MAX)
+    }
+}
+
+fn validate_create_tag_form(input: &TagCreateForm) -> (TagFormErrors, String, String) {
+    let mut errors = TagFormErrors {
+        name: text_error(input.name.trim(), "Tag name", TAG_TEXT_MAX),
+        ..TagFormErrors::default()
+    };
     let name = input.name.trim().to_string();
     let slug = if name.is_empty() {
         errors.name = Some("Tag name is required.".into());
@@ -307,6 +357,9 @@ fn validate_create_tag_form(input: &TagCreateForm) -> (TagFormErrors, String, St
                     .into(),
             );
         }
+        if errors.name.is_none() {
+            errors.name = tag_slug_error(&s);
+        }
         s
     };
 
@@ -314,16 +367,17 @@ fn validate_create_tag_form(input: &TagCreateForm) -> (TagFormErrors, String, St
 }
 
 fn validate_edit_tag_form(input: &TagEditForm) -> (TagFormErrors, String, String) {
-    let mut errors = TagFormErrors::default();
+    let mut errors = TagFormErrors {
+        name: text_error(input.name.trim(), "Tag name", TAG_TEXT_MAX),
+        ..TagFormErrors::default()
+    };
     let name = input.name.trim().to_string();
-    let slug = input.slug.trim().to_string();
+    let slug = input.slug.clone();
 
     if name.is_empty() {
         errors.name = Some("Tag name is required.".into());
     }
-    if slug.is_empty() {
-        errors.slug = Some("Slug is required when editing a tag.".into());
-    }
+    errors.slug = tag_slug_error(&slug);
 
     (errors, name, slug)
 }
@@ -389,4 +443,63 @@ fn render_tags_response(page: &AdminTagsPage, status: StatusCode) -> Result<Resp
         ),
     )
         .into_response())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tag_validation_enforces_schema_limits_and_slug_format() {
+        let create = TagCreateForm {
+            name: "a".repeat(128),
+            csrf_token: String::new(),
+        };
+        assert!(validate_create_tag_form(&create).0.name.is_some());
+        let edit = TagEditForm {
+            name: "é".repeat(127),
+            slug: "valid-tag".into(),
+            csrf_token: String::new(),
+        };
+        assert!(!validate_edit_tag_form(&edit).0.has_errors());
+        for slug in [
+            "bad/slug",
+            "tag#fragment",
+            "tag?query",
+            "UPPER",
+            "two words",
+            "-tag",
+            "search",
+        ] {
+            let edit = TagEditForm {
+                name: "Tag".into(),
+                slug: slug.into(),
+                csrf_token: String::new(),
+            };
+            assert!(validate_edit_tag_form(&edit).0.slug.is_some());
+        }
+    }
+
+    #[sqlx::test]
+    async fn database_name_and_slug_conflicts_map_to_form_fields(
+        pool: sqlx::PgPool,
+    ) -> crate::Result<()> {
+        create_tag_record(&pool, "First", "first").await?;
+        let second = create_tag_record(&pool, "Second", "second").await?;
+        for (name, slug, expected_name) in [("First", "free", true), ("Third", "first", false)] {
+            let Err(error) = create_tag_record(&pool, name, slug).await else {
+                return Err(crate::Error::System("duplicate insert succeeded".into()));
+            };
+            assert!(tag_conflict(&error, false).is_some_and(|errors| errors.name.is_some()));
+            let Err(error) = update_tag_record(&pool, second, name, slug).await else {
+                return Err(crate::Error::System("duplicate update succeeded".into()));
+            };
+            let errors = tag_conflict(&error, true)
+                .ok_or_else(|| crate::Error::System("conflict not recognized".into()))?;
+            assert_eq!(errors.name.is_some(), expected_name);
+            assert_eq!(errors.slug.is_some(), !expected_name);
+        }
+        assert!(tag_conflict(&crate::Error::Database(sqlx::Error::PoolClosed), true).is_none());
+        Ok(())
+    }
 }

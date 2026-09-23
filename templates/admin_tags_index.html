@@ -2,7 +2,7 @@
 <section class="admin-shell">
   <div class="admin-header">
     <div>
-      <p class="login-kicker">Tags</p>
+      <p class="section-kicker">Tags</p>
       <h1>Manage Tags</h1>
       <p>Create new tags, rename existing ones, and remove tags you no longer need.</p>
     </div>
@@ -23,15 +23,15 @@
 
         <div class="admin-form-field{% if create_errors.name.is_some() %} admin-form-field-error{% endif %}">
           <label for="create-tag-name">Name</label>
-          <input id="create-tag-name" name="name" type="text" value="{{ create_name }}" required>
+          <input id="create-tag-name" name="name" type="text" value="{{ create_name }}" maxlength="127" required>
           {% if let Some(msg) = create_errors.name %}
             <p class="admin-form-field-error-message">{{ msg }}</p>
           {% endif %}
         </div>
 
-        <p class="login-hint">Slug will be generated from the name when the tag is created.</p>
+        <p class="form-hint">Slug will be generated from the name when the tag is created.</p>
 
-        <button class="login-submit" type="submit">Create Tag</button>
+        <button class="button-primary" type="submit">Create Tag</button>
       </form>
     </section>
 
@@ -46,7 +46,7 @@
             <div class="admin-tag-row-fields">
               <div class="admin-form-field{% if tag.errors.name.is_some() %} admin-form-field-error{% endif %}">
                 <label for="tag-name-{{ tag.id }}">Name</label>
-                <input id="tag-name-{{ tag.id }}" name="name" type="text" value="{{ tag.name }}" required>
+                <input id="tag-name-{{ tag.id }}" name="name" type="text" value="{{ tag.name }}" maxlength="127" required>
                 {% if let Some(msg) = tag.errors.name %}
                   <p class="admin-form-field-error-message">{{ msg }}</p>
                 {% endif %}
@@ -54,7 +54,7 @@
 
               <div class="admin-form-field{% if tag.errors.slug.is_some() %} admin-form-field-error{% endif %}">
                 <label for="tag-slug-{{ tag.id }}">Slug</label>
-                <input id="tag-slug-{{ tag.id }}" name="slug" type="text" value="{{ tag.slug }}" required>
+                <input id="tag-slug-{{ tag.id }}" name="slug" type="text" value="{{ tag.slug }}" maxlength="127" pattern="[a-z0-9]+(-[a-z0-9]+)*" required>
                 {% if let Some(msg) = tag.errors.slug %}
                   <p class="admin-form-field-error-message">{{ msg }}</p>
                 {% endif %}
@@ -72,7 +72,7 @@
 
             <div class="admin-actions">
               <button type="submit">Save Tag</button>
-              <button formaction="/admin/tags/{{ tag.id }}/delete" formmethod="post" onclick="return confirm('Delete this tag?');" type="submit">Delete Tag</button>
+              <button class="button-danger" formaction="/admin/tags/{{ tag.id }}/delete" formmethod="post" onclick="return confirm('Delete this tag?');" type="submit">Delete Tag</button>
             </div>
           </form>
         {% else %}
