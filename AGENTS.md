@@ -24,7 +24,7 @@ Cargo build, check, run, and Clippy commands execute `build.rs`. It runs:
 tailwindcss -i src/style/main.css -o src/static/main.css --minify
 ```
 
-The build script also fingerprints every file under `src/static/` with SHA-256 and generates `OUT_DIR/static_assets.rs`. It watches every top-level `.css` file in `src/style/` and every static asset. A missing `tailwindcss` executable causes these Cargo commands to fail during the build script.
+The build script also fingerprints every file under `src/static/` with SHA-256 and publishes the first 16 lowercase hexadecimal characters through `cargo:rustc-env`. `src/static_assets.rs` defines the asset table in ordinary Rust using `env!` and `concat!`; no Rust source is generated. Hash variable names use `ASSET_HASH_` followed by the exact relative asset path, including case and punctuation. These values are compiled into the executable and require no runtime environment configuration. The script watches `src/style/`, `templates/`, and `src/static/`, including added and removed files. A missing `tailwindcss` executable causes these Cargo commands to fail during the build script.
 
 Unit tests are colocated with the Rust modules they exercise; there is no separate `tests/` directory or integration-test harness.
 
@@ -96,7 +96,8 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 ## Static assets and CSS
 
 - `src/static/` is embedded into the executable with `include_dir`; it is not served from the filesystem with `ServeDir`.
-- Normal assets are available only through build-generated fingerprinted `/static/*` paths and receive a one-year immutable cache header.
+- Normal assets are available only through fingerprinted `/static/*` paths defined in `src/static_assets.rs` and receive a one-year immutable cache header.
+- When adding or renaming an asset, update the table in `src/static_assets.rs`. Its unit tests check coverage of all embedded files, URL hashes, and reverse lookups.
 - Templates resolve asset paths through `crate::static_assets::static_url()`.
 - Embedded `/.well-known/*` files use non-fingerprinted paths and a one-hour cache header.
 - Source CSS is split across `src/style/main.css`, `about.css`, `admin.css`, `auth.css`, `blog.css`, `code.css`, and `tag.css`. Tailwind v4 configuration lives in CSS through `@theme`; there is no JavaScript config.
@@ -116,7 +117,7 @@ There are no pre-commit hooks.
 ## If stuck
 
 - If any Cargo command fails while running `build.rs`, verify that a compatible `tailwindcss` executable is on `PATH`, then inspect `src/style/main.css` and its imports.
-- If CSS or an asset URL is stale, inspect `build.rs`, the generated `src/static/main.css`, and the static manifest generation inputs.
+- If CSS or an asset URL is stale, inspect `build.rs`, the generated `src/static/main.css`, and the table in `src/static_assets.rs`.
 - If startup fails before listening, verify `DATABASE_URL`, MySQL connectivity, and the migrations in `migrations/`.
 - If admin state-changing requests return `403`, verify the session token and `CSRF_ALLOWED_ORIGINS` values, including scheme and port.
 - If login fails, verify that `admin_users` contains the expected username and a valid Argon2 password hash. There is no in-repository seeding command.

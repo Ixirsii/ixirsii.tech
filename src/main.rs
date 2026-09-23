@@ -15,7 +15,7 @@ use axum::{
 use axum_login::{AuthManagerLayerBuilder, login_required};
 use dotenvy::{dotenv, var};
 use include_dir::{Dir, include_dir};
-use sqlx::{MySqlPool, mysql::MySqlPoolOptions};
+use sqlx::{MySqlPool, migrate, mysql::MySqlPoolOptions};
 use tokio::net::TcpListener;
 use tower_sessions::{SessionManagerLayer, cookie::SameSite};
 use tracing::{error, info, instrument, warn};
@@ -30,9 +30,7 @@ mod page;
 mod session;
 mod types;
 
-pub mod static_assets {
-    include!(concat!(env!("OUT_DIR"), "/static_assets.rs"));
-}
+pub mod static_assets;
 
 /* ********************************************************************************************** *
  *                                           Constants                                            *
@@ -55,7 +53,7 @@ async fn main() -> Result<()> {
 
     let auth_security = Arc::new(auth::AuthSecurity::new(auth::AuthConfig::from_env()?));
     let db_pool: MySqlPool = get_db_pool().await?;
-    sqlx::migrate!().run(&db_pool).await?;
+    migrate!().run(&db_pool).await?;
     let session_store = session::MySqlSessionStore::new(db_pool.clone());
     let cleanup_task = session::spawn_cleanup(session_store.clone());
 
