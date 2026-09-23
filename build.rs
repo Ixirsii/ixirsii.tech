@@ -33,6 +33,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn emit_static_asset_hashes(root: &Path, dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
+
     for entry in std::fs::read_dir(dir)? {
         let path = entry?.path();
         if path.is_dir() {
@@ -46,7 +48,11 @@ fn emit_static_asset_hashes(root: &Path, dir: &Path) -> Result<(), Box<dyn std::
             .ok_or("static asset paths must be valid UTF-8")?
             .replace('\\', "/");
         let digest = Sha256::digest(std::fs::read(&path)?);
-        let fingerprint = format!("{digest:x}");
+        let mut fingerprint = String::with_capacity(12);
+        for byte in &digest[..8] {
+            fingerprint.push(char::from(HEX_DIGITS[usize::from(byte >> 4)]));
+            fingerprint.push(char::from(HEX_DIGITS[usize::from(byte & 0x0f)]));
+        }
 
         // Keep the path's case and punctuation so different filenames have distinct keys.
         println!(

@@ -150,10 +150,16 @@ mod tests {
 
     #[test]
     fn urls_match_embedded_contents_and_resolve() -> Result<(), Box<dyn std::error::Error>> {
+        const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
+
         for &(source, url) in STATIC_ASSETS {
             let file = STATIC_DIR.get_file(source).ok_or("asset is not embedded")?;
-            let digest = format!("{:x}", Sha256::digest(file.contents()));
-            let fingerprint = &digest[..16];
+            let digest = Sha256::digest(file.contents());
+            let mut fingerprint = String::with_capacity(12);
+            for byte in &digest[..8] {
+                fingerprint.push(char::from(HEX_DIGITS[usize::from(byte >> 4)]));
+                fingerprint.push(char::from(HEX_DIGITS[usize::from(byte & 0x0f)]));
+            }
             let (directory, name) = source
                 .rsplit_once('/')
                 .map_or((String::new(), source), |(dir, name)| {
@@ -168,7 +174,7 @@ mod tests {
             let request_path = url.strip_prefix("/static/").ok_or("missing URL prefix")?;
             assert_eq!(source_path_for_request(request_path), Some(source));
 
-            let stale_path = request_path.replace(fingerprint, "stale");
+            let stale_path = request_path.replace(&fingerprint, "stale");
             assert_eq!(source_path_for_request(&stale_path), None);
             assert_eq!(source_path_for_request(source), None);
         }

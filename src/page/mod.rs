@@ -3,7 +3,6 @@
 use ammonia::clean;
 use axum::http::Uri;
 use pulldown_cmark::{Parser, html};
-use rand::Rng;
 
 use crate::{
     ADMIN_ROUTE,
@@ -237,7 +236,7 @@ pub fn random_tagline() -> &'static str {
         return "";
     };
 
-    let mut roll = rand::rng().random_range(0..TOTAL_TAGLINE_WEIGHT);
+    let mut roll = rand::random_range(0..TOTAL_TAGLINE_WEIGHT);
 
     for &(tagline, weight) in candidates {
         if roll < weight {
