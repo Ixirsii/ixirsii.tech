@@ -55,7 +55,7 @@ Startup connects to MySQL and runs embedded SQLx migrations, including the `towe
 ## Architecture
 
 - **Backend**: Rust 2024, Axum 0.8, Askama, SQLx, and MySQL.
-- **Frontend**: Askama templates, vendored HTMX 2.0.10, Tailwind CSS v4, and Catppuccin CSS custom properties.
+- **Frontend**: Askama templates, vendored HTMX 4.0.0, Tailwind CSS v4, and Catppuccin CSS custom properties.
 - **Entrypoint and routing**: `src/main.rs` initializes tracing and the database, runs migrations, builds public and protected routers, configures sessions, and serves embedded assets.
 - **Application state**: `AppState` in `src/types.rs` contains `Arc<MySqlPool>` and configured CSRF origins. It also implements the `axum-login` authentication backend.
 - **Page handlers**: `src/page/` contains `about.rs`, `admin.rs`, `admin_posts.rs`, `admin_tags.rs`, `blog.rs`, `code.rs`, `error.rs`, `hall_of_fame.rs`, `home.rs`, and `tag.rs`. They are re-exported by `src/page/mod.rs`.
@@ -75,6 +75,7 @@ Public routes include Home, About, Blog, Code projects, Hall of Fame, Tags, logi
 - The tag index uses HTMX search at `/tags/search`; tag sizes and colors are recalculated from the filtered result.
 - Code project data is hard-coded in `src/page/code.rs`, not stored in MySQL.
 - HTMX is used only for tag filtering and admin Markdown previews.
+- HTMX keeps the last queued request for each search/preview control. Its global `noSwap` configuration preserves the previous behavior of leaving fragment targets unchanged on 4xx and 5xx responses.
 
 The protected `/admin` router provides post and tag CRUD, Markdown previews, and logout. It is gated by `login_required!` and the CSRF Origin/Referer middleware. The admin post interface provides status filtering, sorting, and pagination across all posts.
 

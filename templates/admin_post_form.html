@@ -62,6 +62,7 @@
             hx-target="#preview-render"
             hx-swap="innerHTML"
             hx-trigger="input changed delay:300ms"
+            hx-sync="this:queue last"
           >{{ form.preview }}</textarea>
         </div>
 
@@ -76,6 +77,7 @@
             hx-target="#body-render"
             hx-swap="innerHTML"
             hx-trigger="input changed delay:300ms"
+            hx-sync="this:queue last"
             required
           >{{ form.body }}</textarea>
           {% if let Some(msg) = errors.body %}
