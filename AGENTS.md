@@ -56,12 +56,12 @@ Offline compilation does not make database tests offline: `cargo test` still nee
 
 ## Runtime configuration
 
-`dotenv().ok()` attempts to load a local `.env` before startup. The application uses these variables:
+The application loads a local `.env` when present and reports a startup error if it cannot be parsed. Exported environment variables take precedence. Supplied invalid values fail startup rather than silently using defaults. The application uses these variables:
 
 | Variable | Required | Default | Purpose |
 |---|---:|---|---|
 | `DATABASE_URL` | Yes | None | PostgreSQL connection URL |
-| `DATABASE_MAX_CONNECTIONS` | No | `5` | SQLx pool size; invalid values also fall back to 5 |
+| `DATABASE_MAX_CONNECTIONS` | No | `5` | Positive SQLx pool size |
 | `PORT` | No | `3000` | Listen port; the host is fixed to `0.0.0.0` |
 | `CSRF_ALLOWED_ORIGINS` | No | Origin check disabled | Comma-separated allowed origins for admin state-changing requests |
 | `AUTH_TRUSTED_PROXY_CIDRS` | No | Forwarded headers ignored | Comma-separated proxy CIDRs allowed to supply `X-Forwarded-For` |

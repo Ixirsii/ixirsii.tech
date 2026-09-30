@@ -15,11 +15,20 @@ use tracing_subscriber::util::SubscriberInitExt;
 /// Sets up a console logger (respecting `RUST_LOG`) and conditionally adds an
 /// OpenTelemetry exporter for Datadog APM when `OTEL_EXPORTER_OTLP_ENDPOINT` is
 /// configured.
-pub fn init_tracing() {
+pub fn init_tracing() -> crate::Result<()> {
     let fmt_layer = tracing_subscriber::fmt::layer().with_target(true);
 
-    let env_filter = tracing_subscriber::EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"));
+    let env_filter = match std::env::var("RUST_LOG") {
+        Ok(value) => tracing_subscriber::EnvFilter::try_new(value).map_err(|_| {
+            crate::Error::Configuration("RUST_LOG must be a valid tracing filter".to_owned())
+        })?,
+        Err(std::env::VarError::NotPresent) => tracing_subscriber::EnvFilter::new("info"),
+        Err(std::env::VarError::NotUnicode(_)) => {
+            return Err(crate::Error::Configuration(
+                "RUST_LOG must contain valid Unicode".to_owned(),
+            ));
+        }
+    };
 
     let registry = tracing_subscriber::Registry::default()
         .with(env_filter)
@@ -30,7 +39,7 @@ pub fn init_tracing() {
         .filter(|v| !v.is_empty())
     else {
         registry.init();
-        return;
+        return Ok(());
     };
 
     match opentelemetry_otlp::SpanExporter::builder()
@@ -53,6 +62,7 @@ pub fn init_tracing() {
             registry.init();
         }
     }
+    Ok(())
 }
 
 /// Axum middleware that wraps each HTTP request in a tracing span.
