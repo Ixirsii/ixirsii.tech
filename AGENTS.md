@@ -75,7 +75,7 @@ Public routes include Home, About, Blog, Code projects, Hall of Fame, Tags, logi
 - The tag index uses HTMX search at `/tags/search`; tag sizes and colors are recalculated from the filtered result.
 - Code project data is hard-coded in `src/page/code.rs`, not stored in MySQL.
 - HTMX is used only for tag filtering and admin Markdown previews.
-- HTMX keeps the last queued request for each search/preview control. Its global `noSwap` configuration preserves the previous behavior of leaving fragment targets unchanged on 4xx and 5xx responses.
+- HTMX keeps the last queued request for each search/preview control. Its global `noSwap` configuration leaves fragment targets unchanged on 4xx and 5xx responses, except for explicit 403 overrides on admin Markdown previews so CSRF error messages remain visible.
 
 The protected `/admin` router provides post and tag CRUD, Markdown previews, and logout. It is gated by `login_required!` and the CSRF Origin/Referer middleware. The admin post interface provides status filtering, sorting, and pagination across all posts.
 
