@@ -74,6 +74,21 @@ pub struct AuthConfig {
 }
 
 impl AuthConfig {
+    /// Fixed direct-client settings for HTTP tests, independent of the process environment.
+    #[cfg(test)]
+    pub(crate) const fn for_tests() -> Self {
+        Self {
+            client_ip_mode: ClientIpMode::Direct,
+            account_attempts: 5,
+            account_window: Duration::from_secs(300),
+            argon2_max_concurrent: 2,
+            client_attempts: 20,
+            client_window: Duration::from_secs(300),
+            max_identities: 10_000,
+            trusted_proxies: Vec::new(),
+        }
+    }
+
     /// Reads and validates authentication security configuration from the environment.
     ///
     /// # Errors

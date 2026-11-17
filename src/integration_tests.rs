@@ -25,7 +25,7 @@ type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 async fn app(pool: &PgPool) -> crate::Result<Router> {
     Ok(get_routes(
         pool.clone(),
-        Arc::new(AuthSecurity::new(AuthConfig::from_env()?)),
+        Arc::new(AuthSecurity::new(AuthConfig::for_tests())),
         PostgresSessionStore::new(pool.clone()),
         login_csrf::load_key(pool).await?,
         vec!["http://localhost".to_owned()],

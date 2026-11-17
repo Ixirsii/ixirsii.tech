@@ -25,7 +25,7 @@
 
         <div class="admin-form-field{% if errors.title.is_some() %} admin-form-field-error{% endif %}">
           <label for="post-title">Title</label>
-          <input id="post-title" name="title" type="text" value="{{ form.title }}" maxlength="255" required>
+          <input id="post-title" name="title" type="text" value="{{ form.title }}" required>
           {% if let Some(msg) = errors.title %}
             <p class="admin-form-field-error-message">{{ msg }}</p>
           {% endif %}
@@ -56,7 +56,6 @@
           <textarea
             id="post-preview"
             name="preview"
-            maxlength="512"
             rows="6"
             hx-post="/admin/posts/preview/preview"
             hx-include="closest form"

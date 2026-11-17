@@ -13,7 +13,7 @@ use axum::{
     serve,
 };
 use axum_login::{AuthManagerLayerBuilder, login_required};
-use dotenvy::{from_path, var};
+use dotenvy::from_path;
 use include_dir::{Dir, include_dir};
 use sqlx::{PgPool, migrate, postgres::PgPoolOptions};
 use tokio::net::TcpListener;
@@ -103,8 +103,7 @@ fn load_local_dotenv(path: &std::path::Path) -> Result<()> {
 
 async fn get_db_pool() -> Result<PgPool> {
     let max_connections = configured_max_connections()?;
-    let database_url = var("DATABASE_URL")?;
-    validate_database_url(&database_url)?;
+    let database_url = configured_database_url()?;
 
     match PgPoolOptions::new()
         .max_connections(max_connections)
@@ -118,6 +117,13 @@ async fn get_db_pool() -> Result<PgPool> {
             Err(Error::Database(err))
         }
     }
+}
+
+fn configured_database_url() -> Result<String> {
+    let value = optional_config("DATABASE_URL")?
+        .ok_or_else(|| Error::Configuration("DATABASE_URL is required".to_owned()))?;
+    validate_database_url(&value)?;
+    Ok(value)
 }
 
 fn validate_database_url(database_url: &str) -> Result<()> {
@@ -364,7 +370,10 @@ mod tests {
 
     use axum::http::StatusCode;
 
-    use super::{health_check_status, load_local_dotenv, positive_u16, validate_database_url};
+    use super::{
+        configured_allowed_origins, configured_database_url, configured_port, health_check_status,
+        load_local_dotenv, positive_u16, validate_database_url,
+    };
 
     struct TestDir(PathBuf);
 
@@ -393,13 +402,61 @@ mod tests {
         let dir = TestDir::new()?;
         fs::write(
             dir.0.join(".env"),
-            "IXIRSII_DOTENV_PARENT_TEST=unexpected\n",
+            "DATABASE_URL=postgres://localhost/parent\nPORT=4321\nCSRF_ALLOWED_ORIGINS=http://parent\n",
         )?;
         let child = dir.0.join("child");
         fs::create_dir(&child)?;
 
-        load_local_dotenv(&child.join(".env"))?;
-        assert!(std::env::var_os("IXIRSII_DOTENV_PARENT_TEST").is_none());
+        for local in [false, true] {
+            if local {
+                fs::write(
+                    child.join(".env"),
+                    "DATABASE_URL=postgres://localhost/local\nPORT=4567\nCSRF_ALLOWED_ORIGINS=http://local\n",
+                )?;
+            }
+            let output = Command::new(std::env::current_exe()?)
+                .args(["--exact", "tests::local_dotenv_configuration_child"])
+                .current_dir(&child)
+                .env(
+                    "IXIRSII_DOTENV_CONFIG_FIXTURE",
+                    if local { "local" } else { "missing" },
+                )
+                .env_remove("DATABASE_URL")
+                .env_remove("PORT")
+                .env_remove("CSRF_ALLOWED_ORIGINS")
+                .output()?;
+            assert!(
+                output.status.success(),
+                "isolated dotenv configuration test failed: {}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr),
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn local_dotenv_configuration_child() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let Ok(mode) = std::env::var("IXIRSII_DOTENV_CONFIG_FIXTURE") else {
+            return Ok(());
+        };
+        load_local_dotenv(Path::new(".env"))?;
+        let port = configured_port()?;
+        let origins = configured_allowed_origins()?;
+        // Exercise the same later read used by get_db_pool, without connecting.
+        let database_url = configured_database_url();
+        if mode == "local" {
+            assert_eq!(port, 4567);
+            assert_eq!(origins, ["http://local"]);
+            assert_eq!(database_url?, "postgres://localhost/local");
+        } else {
+            assert_eq!(port, 3000);
+            assert_eq!(origins, Vec::<String>::new());
+            assert!(database_url.is_err());
+            assert!(std::env::var_os("DATABASE_URL").is_none());
+        }
+        assert_eq!(configured_port()?, port);
+        assert_eq!(configured_allowed_origins()?, origins);
         Ok(())
     }
 

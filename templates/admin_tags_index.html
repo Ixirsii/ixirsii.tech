@@ -23,7 +23,7 @@
 
         <div class="admin-form-field{% if create_errors.name.is_some() %} admin-form-field-error{% endif %}">
           <label for="create-tag-name">Name</label>
-          <input id="create-tag-name" name="name" type="text" value="{{ create_name }}" maxlength="127" required>
+          <input id="create-tag-name" name="name" type="text" value="{{ create_name }}" required>
           {% if let Some(msg) = create_errors.name %}
             <p class="admin-form-field-error-message">{{ msg }}</p>
           {% endif %}
@@ -46,7 +46,7 @@
             <div class="admin-tag-row-fields">
               <div class="admin-form-field{% if tag.errors.name.is_some() %} admin-form-field-error{% endif %}">
                 <label for="tag-name-{{ tag.id }}">Name</label>
-                <input id="tag-name-{{ tag.id }}" name="name" type="text" value="{{ tag.name }}" maxlength="127" required>
+                <input id="tag-name-{{ tag.id }}" name="name" type="text" value="{{ tag.name }}" required>
                 {% if let Some(msg) = tag.errors.name %}
                   <p class="admin-form-field-error-message">{{ msg }}</p>
                 {% endif %}
@@ -72,7 +72,7 @@
 
             <div class="admin-actions">
               <button type="submit">Save Tag</button>
-              <button class="button-danger" formaction="/admin/tags/{{ tag.id }}/delete" formmethod="post" onclick="return confirm('Delete this tag?');" type="submit">Delete Tag</button>
+              <button class="button-danger" formaction="/admin/tags/{{ tag.id }}/delete" formmethod="post" formnovalidate onclick="return confirm('Delete this tag?');" type="submit">Delete Tag</button>
             </div>
           </form>
         {% else %}
