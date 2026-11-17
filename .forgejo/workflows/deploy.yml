@@ -39,18 +39,12 @@ jobs:
   build:
     needs: validate
     uses: ./.forgejo/workflows/build.yml
-
-  security:
-    needs: validate
-    uses: ./.forgejo/workflows/security-trusted.yml
     secrets:
-      SOCKET_API_KEY: ${{ secrets.SOCKET_API_KEY }}
+      SOCKET_SECURITY_API_KEY: ${{ secrets.SOCKET_SECURITY_API_KEY }}
 
   railway:
     name: Railway
-    needs:
-      - build
-      - security
+    needs: build
     runs-on: node24
     timeout-minutes: 30
     steps:

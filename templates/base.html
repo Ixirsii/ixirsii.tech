@@ -5,6 +5,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Ixirsii's personal website">
+    <!-- Keep full error pages out of HTMX fragment targets. -->
+    <meta name="htmx-config" content='{"noSwap":[204,304,"4xx","5xx"]}'>
     <title>{{ title }} | Ixirsii</title>
     <link rel="icon" href="{{ crate::static_assets::static_url("favicon.ico") }}">
     <link rel="me" href="https://mastodon.social/@ixirsii">

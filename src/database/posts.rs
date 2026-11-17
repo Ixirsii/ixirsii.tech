@@ -1,7 +1,7 @@
 //! Post database operations.
 
 use chrono::NaiveDateTime;
-use sqlx::{FromRow, MySqlExecutor, query, query_as, query_scalar};
+use sqlx::{AssertSqlSafe, FromRow, MySqlExecutor, query, query_as, query_scalar};
 
 use tracing::{error, instrument};
 
@@ -114,7 +114,7 @@ pub async fn count_posts(
 ) -> Result<u32> {
     let where_clause = filter.get_sql_clause();
     let sql = format!("SELECT COUNT(*) FROM posts p {where_clause}");
-    let total: i32 = query_scalar(&sql)
+    let total: i32 = query_scalar(AssertSqlSafe(sql))
         .fetch_one(executor)
         .await
         .inspect_err(|error| {
@@ -214,7 +214,7 @@ pub async fn list_posts(
           ORDER BY {order_clause}, p.id, t.name"
     );
 
-    let rows = query_as::<_, PostWithTagRow>(&sql)
+    let rows = query_as::<_, PostWithTagRow>(AssertSqlSafe(sql))
         .bind(page_size)
         .bind(offset)
         .fetch_all(executor)

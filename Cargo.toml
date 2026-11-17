@@ -10,57 +10,60 @@ readme = "README.md"
 keywords = ["web", "axum", "htmx", "blog"]
 categories = ["web-programming"]
 
+[build-dependencies]
+sha2 = "0.11.0"
+
 [dependencies]
-askama = "0.16.0"
 ammonia = "4.1.2"
 argon2 = "0.5.3"
+askama = "0.16.0"
 async-trait = "0.1"
-chrono = "0.4"
-pulldown-cmark = "0.13"
-rand = "0.9"
 axum = "0.8.9"
 axum-htmx = "0.8.1"
 axum-login = "0.18.0"
+chrono = "0.4"
 dotenvy = "0.15.7"
 include_dir = "0.7"
 ipnet = "2.11"
-mime_guess = "2"
-opentelemetry = { version = "0.28", features = ["trace"] }
-opentelemetry-otlp = { version = "0.28", default-features = false, features = [
-    "trace",
-    "http-proto",
-    "reqwest-blocking-client",
+mime_guess = "2.0.5"
+opentelemetry = { version = "0.33.0", features = ["trace"] }
+opentelemetry-otlp = { version = "0.33.0", default-features = false, features = [
+  "trace",
+  "http-proto",
+  "reqwest-blocking-client",
 ] }
-opentelemetry_sdk = { version = "0.28", features = ["trace", "rt-tokio"] }
-reqwest = { version = "0.13.4", default-features = false, features = [
-    "blocking",
-    "rustls",
+opentelemetry_sdk = { version = "0.33.0", features = ["trace", "rt-tokio"] }
+pulldown-cmark = "0.13.4"
+rand = "0.10.3"
+reqwest = { version = "0.13.5", default-features = false, features = [
+  "blocking",
+  "rustls",
 ] }
-rmp-serde = "1.3"
-serde = { version = "1.0", features = ["derive"] }
-sha2 = "0.10"
-sqlx = { version = "0.8.6", features = [
-    "mysql",
-    "runtime-tokio",
-    "tls-native-tls",
-    "migrate",
-    "chrono",
-    "time",
+rmp-serde = "1.3.1"
+serde = { version = "1.0.229", features = ["derive"] }
+sha2 = "0.11.0"
+sqlx = { version = "0.9.0", default-features = false, features = [
+  "chrono",
+  "derive",
+  "macros",
+  "migrate",
+  "mysql",
+  "mysql-rsa",
+  "runtime-tokio",
+  "time",
+  "tls-rustls-aws-lc-rs",
 ] }
-time = "0.3"
-tokio = { version = "1.52.3", features = [
-    "macros",
-    "rt-multi-thread",
-    "sync",
-    "time",
+time = "0.3.55"
+tokio = { version = "1.53.1", features = [
+  "macros",
+  "rt-multi-thread",
+  "sync",
+  "time",
 ] }
 tower-sessions = "0.14.0"
 tracing = "0.1.44"
-tracing-opentelemetry = "0.29"
+tracing-opentelemetry = "0.34.0"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-
-[build-dependencies]
-sha2 = "0.10"
 
 [lints.rust]
 unsafe_code = "deny"

@@ -1,4 +1,3 @@
-use std::fmt::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -8,12 +7,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR")?);
     let static_dir = manifest_dir.join("src/static");
 
-    for entry in std::fs::read_dir(manifest_dir.join("src/style"))? {
-        let path = entry?.path();
-        if path.extension().is_some_and(|ext| ext == "css") {
-            println!("cargo:rerun-if-changed={}", path.display());
-        }
-    }
+    println!("cargo:rerun-if-changed=src/style");
+    println!("cargo:rerun-if-changed=templates");
+    println!("cargo:rerun-if-changed=src/static");
 
     let output = Command::new("tailwindcss")
         .args([
@@ -31,132 +27,39 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err(format!("tailwindcss build failed:\n{stdout}\n{stderr}").into());
     }
 
-    write_static_asset_manifest(&static_dir)?;
+    emit_static_asset_hashes(&static_dir, &static_dir)?;
 
     Ok(())
 }
 
-fn write_static_asset_manifest(static_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    let mut assets = Vec::new();
-    collect_static_assets(static_dir, static_dir, &mut assets)?;
-    assets.sort_by(|left, right| left.source_path.cmp(&right.source_path));
+fn emit_static_asset_hashes(root: &Path, dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
 
-    let mut output = String::new();
-    output.push_str("#[derive(Debug)]\n");
-    output.push_str("pub struct StaticAsset {\n");
-    output.push_str("    pub source_path: &'static str,\n");
-    output.push_str("    pub request_path: &'static str,\n");
-    output.push_str("}\n\n");
-    output.push_str("pub static STATIC_ASSETS: &[StaticAsset] = &[\n");
-
-    for asset in &assets {
-        writeln!(
-            output,
-            "    StaticAsset {{ source_path: {:?}, request_path: {:?} }},",
-            asset.source_path, asset.request_path
-        )?;
-    }
-
-    output.push_str("];\n\n");
-    output.push_str("#[must_use]\n");
-    output.push_str("pub fn static_url(source_path: &str) -> &'static str {\n");
-    output.push_str("    match source_path {\n");
-
-    for asset in &assets {
-        writeln!(
-            output,
-            "        {:?} => {:?},",
-            asset.source_path, asset.request_path
-        )?;
-    }
-
-    output.push_str("        _ => \"/static/missing\",\n");
-    output.push_str("    }\n");
-    output.push_str("}\n\n");
-    output.push_str("#[must_use]\n");
-    output
-        .push_str("pub fn source_path_for_request(request_path: &str) -> Option<&'static str> {\n");
-    output.push_str("    match request_path {\n");
-
-    for asset in &assets {
-        writeln!(
-            output,
-            "        {:?} => Some({:?}),",
-            asset.request_path.trim_start_matches("/static/"),
-            asset.source_path
-        )?;
-    }
-
-    output.push_str("        _ => None,\n");
-    output.push_str("    }\n");
-    output.push_str("}\n");
-
-    let out_dir = PathBuf::from(std::env::var("OUT_DIR")?);
-    std::fs::write(out_dir.join("static_assets.rs"), output)?;
-
-    Ok(())
-}
-
-#[derive(Debug)]
-struct StaticAssetBuildData {
-    source_path: String,
-    request_path: String,
-}
-
-fn collect_static_assets(
-    root: &Path,
-    dir: &Path,
-    assets: &mut Vec<StaticAssetBuildData>,
-) -> Result<(), Box<dyn std::error::Error>> {
     for entry in std::fs::read_dir(dir)? {
         let path = entry?.path();
         if path.is_dir() {
-            collect_static_assets(root, &path, assets)?;
+            emit_static_asset_hashes(root, &path)?;
             continue;
         }
 
-        println!("cargo:rerun-if-changed={}", path.display());
-
         let source_path = path
             .strip_prefix(root)?
-            .to_string_lossy()
+            .to_str()
+            .ok_or("static asset paths must be valid UTF-8")?
             .replace('\\', "/");
-        let request_path = fingerprinted_request_path(&source_path, &path)?;
+        let digest = Sha256::digest(std::fs::read(&path)?);
+        let mut fingerprint = String::with_capacity(12);
+        for byte in &digest[..8] {
+            fingerprint.push(char::from(HEX_DIGITS[usize::from(byte >> 4)]));
+            fingerprint.push(char::from(HEX_DIGITS[usize::from(byte & 0x0f)]));
+        }
 
-        assets.push(StaticAssetBuildData {
-            source_path,
-            request_path,
-        });
+        // Keep the path's case and punctuation so different filenames have distinct keys.
+        println!(
+            "cargo:rustc-env=ASSET_HASH_{source_path}={}",
+            &fingerprint[..16]
+        );
     }
 
     Ok(())
-}
-
-fn fingerprinted_request_path(
-    source_path: &str,
-    path: &Path,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let contents = std::fs::read(path)?;
-    let digest = Sha256::digest(contents);
-    let fingerprint = format!("{digest:x}");
-    let fingerprint = &fingerprint[..16];
-
-    let Some(file_name) = source_path.rsplit('/').next() else {
-        return Err(format!("static asset path has no file name: {source_path}").into());
-    };
-    let directory = source_path
-        .strip_suffix(file_name)
-        .unwrap_or_default()
-        .trim_end_matches('/');
-
-    let fingerprinted_name = match file_name.rsplit_once('.') {
-        Some((stem, extension)) => format!("{stem}.{fingerprint}.{extension}"),
-        None => format!("{file_name}.{fingerprint}"),
-    };
-
-    if directory.is_empty() {
-        Ok(format!("/static/{fingerprinted_name}"))
-    } else {
-        Ok(format!("/static/{directory}/{fingerprinted_name}"))
-    }
 }
