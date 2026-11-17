@@ -59,7 +59,7 @@ impl AuthnBackend for AppState {
         let user = get_admin_user_by_username(&(*self.db_pool), &username).await?;
         if !self
             .auth_security
-            .allow_account(user.as_ref().map(|user| user.id), &username)
+            .allow_account(user.as_ref().map(|user| user.id), &username, client)
             .await
         {
             return Ok(None);

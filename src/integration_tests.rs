@@ -97,6 +97,36 @@ fn assert_security_headers(response: &Response) {
 }
 
 #[sqlx::test]
+async fn account_attack_does_not_lock_out_another_client(pool: PgPool) -> TestResult {
+    let app = app(&pool).await?;
+    sqlx::query!("INSERT INTO admin_users (username, password_hash) VALUES ($1, $2)", "developer", "$argon2id$v=19$m=19456,t=2,p=1$aXhpcnNpaS1kZXYtb25seQ$8k8VcWHiaaBqwzl4afJ3L7QMp6nhuG4FxUX4O5Qu964").execute(&pool).await?;
+    let challenge = app.clone().oneshot(request("/login")?).await?;
+    let cookie = cookies(&challenge)?;
+    let body = html(challenge).await?;
+    let csrf = token(&body)?;
+    for _ in 0..5 {
+        let response = app
+            .clone()
+            .oneshot(login_request(&cookie, csrf, "wrong")?)
+            .await?;
+        assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    }
+    let blocked = app
+        .clone()
+        .oneshot(login_request(&cookie, csrf, "local-development-only")?)
+        .await?;
+    assert_eq!(blocked.status(), StatusCode::UNAUTHORIZED);
+    let mut legitimate = login_request(&cookie, csrf, "local-development-only")?;
+    legitimate
+        .extensions_mut()
+        .insert(ConnectInfo("127.0.0.2:4321".parse::<SocketAddr>()?));
+    let response = app.oneshot(legitimate).await?;
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert!(response.headers().contains_key(header::SET_COOKIE));
+    Ok(())
+}
+
+#[sqlx::test]
 async fn anonymous_login_does_not_create_sessions_and_login_still_works(
     pool: PgPool,
 ) -> TestResult {

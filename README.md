@@ -83,6 +83,65 @@ admin provisioning must be handled separately. The old MySQL migrations and
 `seed_initial_content` are intentionally removed. Never use the development
 credentials or fixture command for production.
 
+## Login identity and throttling
+
+Set `AUTH_CLIENT_IP_MODE` explicitly in production:
+
+| Mode | Client identity |
+| --- | --- |
+| `direct` | TCP peer; all forwarding headers are ignored. |
+| `trusted-proxy` | Nearest untrusted address walking `X-Forwarded-For` right to left, only when the TCP peer belongs to `AUTH_TRUSTED_PROXY_CIDRS`. |
+| `railway` | Exactly one valid `X-Real-IP` supplied by Railway's public HTTP edge. |
+
+`railway.toml` selects `railway` at startup. Railway's edge replaces caller-supplied
+`X-Real-IP`; the application does not read `CF-Connecting-IP` directly or guess
+Railway proxy CIDRs. This deployment assumes all login traffic traverses the
+public HTTP edge. Private-network and TCP-proxy paths bypass edge sanitization
+and must not be exposed to untrusted callers when using this mode.
+See [Railway's networking specifications](https://docs.railway.com/networking/public-networking/specs-and-limits)
+and [the forwarding-header clarification](https://station.railway.com/questions/need-authoritative-client-ip-proxy-tru-090eac86).
+
+Trusted-proxy mode requires nonempty CIDRs and rejects universal `/0` trust.
+Missing, malformed, oversized, or entirely trusted forwarding chains are rejected
+for trusted peers. Railway mode rejects missing, malformed, or duplicate
+`X-Real-IP` headers. Neither falls back to a shared proxy address.
+An unset mode preserves direct behavior (or trusted-proxy behavior when CIDRs
+are supplied), with a warning in release builds. Startup logs the selected mode;
+rejection logs distinguish invalid identity, client limits, account/client limits,
+and exhausted password-verification capacity without logging credentials.
+
+The default budgets are five attempts per **account + client** and twenty attempts
+per **client**, each in a five-minute sliding window. Known and unknown accounts
+use the same policy. Attempts reserve capacity before password verification,
+including successful attempts. Rejected attempts do not extend the window.
+An attacker on another IP cannot consume the administrator's account/client
+budget. Someone sharing the administrator's actual public IP still shares the
+client budget; recovery is to wait for admitted attempts to expire or use another
+network. Changing the username does not bypass the overall client budget.
+
+This deliberately trades a global account lockout for greater resistance to
+targeted denial of service: distributed attackers get a separate budget per IP.
+Use strong administrator passwords. The Argon2 concurrency cap still bounds
+password-verification work. Limits and bounded identity maps are process-local;
+replicas have independent budgets, restarts reset them, and a full map rejects
+new identities until entries expire.
+
+### Deployment verification
+
+Before closing IXI-4, verify the deployed configuration using controlled clients
+and correlate Railway request logs with application rejection logs:
+
+1. Through Cloudflare, confirm two different public client IPs get independent
+   budgets despite sharing the same Railway transport proxy.
+2. Repeat over IPv4 and IPv6. Railway's Cloudflare client-IP derivation is confirmed
+   for IPv4 origin connections; do not assume the IPv6 origin path behaves identically.
+3. Through both the custom domain and the generated Railway domain, submit forged
+   `X-Real-IP`, `X-Forwarded-For`, and `CF-Connecting-IP`. Confirm the edge-generated
+   client identity cannot be changed by these headers.
+4. Using a controlled account, exhaust one account/client budget and confirm valid
+   login from another client, then recovery on the original client after expiry.
+5. Confirm there is no untrusted private-network or TCP-proxy path to login.
+
 ## CI
 
 Pull requests and pushes to `main` run the security scans before the Rust build.

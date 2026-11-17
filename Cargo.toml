@@ -20,7 +20,6 @@ askama = "0.16.0"
 async-trait = "0.1"
 axum = "0.8.9"
 axum-extra = { version = "0.12.6", default-features = false, features = ["form", "cookie-signed"] }
-axum-htmx = "0.8.1"
 axum-login = "0.18.0"
 chrono = "0.4"
 dotenvy = "0.15.7"

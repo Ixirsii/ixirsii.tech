@@ -214,18 +214,13 @@ impl From<Post> for PostView {
             slug: post.slug,
             title: post.title,
             body: render_markdown(&post.body),
-            preview: post
-                .preview
-                .map(|p| render_markdown(&p))
-                .unwrap_or_default(),
+            preview: post.preview.map_or_default(|p| render_markdown(&p)),
             published_at: post
                 .published_at
-                .map(|d| d.format("%B %e, %Y").to_string())
-                .unwrap_or_default(),
+                .map_or_default(|d| d.format("%B %e, %Y").to_string()),
             updated_at: post
                 .updated_at
-                .map(|d| d.format("%B %e, %Y").to_string())
-                .unwrap_or_default(),
+                .map_or_default(|d| d.format("%B %e, %Y").to_string()),
             tags: post.tags.into_iter().map(TagView::from).collect(),
         }
     }

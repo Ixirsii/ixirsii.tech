@@ -64,10 +64,11 @@ The application loads a local `.env` when present and reports a startup error if
 | `DATABASE_MAX_CONNECTIONS` | No | `5` | Positive SQLx pool size |
 | `PORT` | No | `3000` | Listen port; the host is fixed to `0.0.0.0` |
 | `CSRF_ALLOWED_ORIGINS` | No | Origin check disabled | Comma-separated allowed origins for admin state-changing requests |
-| `AUTH_TRUSTED_PROXY_CIDRS` | No | Forwarded headers ignored | Comma-separated proxy CIDRs allowed to supply `X-Forwarded-For` |
+| `AUTH_CLIENT_IP_MODE` | No | `trusted-proxy` if CIDRs supplied, otherwise `direct` | `direct`, `trusted-proxy`, or `railway`; release builds warn when unset |
+| `AUTH_TRUSTED_PROXY_CIDRS` | No | Forwarded headers ignored | Required in trusted-proxy mode; comma-separated proxy CIDRs allowed to supply `X-Forwarded-For`; `/0` rejected |
 | `AUTH_ARGON2_MAX_CONCURRENT` | No | `2` | Maximum concurrent Argon2 password checks |
-| `AUTH_ACCOUNT_ATTEMPTS` | No | `5` | Login attempts allowed per account window |
-| `AUTH_ACCOUNT_WINDOW_SECONDS` | No | `300` | Per-account rate-limit window |
+| `AUTH_ACCOUNT_ATTEMPTS` | No | `5` | Login attempts allowed per account/client pair |
+| `AUTH_ACCOUNT_WINDOW_SECONDS` | No | `300` | Per-account/client rate-limit window |
 | `AUTH_CLIENT_ATTEMPTS` | No | `20` | Login attempts allowed per trusted client window |
 | `AUTH_CLIENT_WINDOW_SECONDS` | No | `300` | Per-client rate-limit window |
 | `AUTH_RATE_LIMIT_MAX_IDENTITIES` | No | `10000` | Maximum account and client keys retained by each limiter |
@@ -110,7 +111,9 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 - Login is at `/login`; logout is a POST to `/admin/logout`. Anonymous login challenges use signed 30-minute HttpOnly cookies, Secure and host-prefixed in release builds, without creating database sessions. A singleton signing key is initialized once in PostgreSQL at startup and shared across replicas. Login verifies the cookie signature, expiry, and form challenge before authenticating.
 - Password verification uses Argon2 hashes stored in `admin_users`.
 - Login limits are process-local and reset on restart; each application replica maintains independent account and client limits.
-- `X-Forwarded-For` is used only when the TCP peer matches `AUTH_TRUSTED_PROXY_CIDRS`; otherwise forwarded headers are ignored.
+- Direct identity mode ignores forwarding headers. Trusted-proxy mode walks `X-Forwarded-For` only when the TCP peer matches `AUTH_TRUSTED_PROXY_CIDRS`; missing, malformed, or entirely trusted chains are rejected.
+- Railway startup explicitly selects `AUTH_CLIENT_IP_MODE=railway`, requiring a single valid edge-generated `X-Real-IP`. All untrusted login traffic must traverse the public HTTP edge; private/TCP bypasses cannot be trusted. See README for deployment verification, including Cloudflare IPv6 behavior.
+- Account limits are scoped to account/client pairs, preventing another IP from exhausting an administrator's account budget. Distributed guessing gets independent budgets; actual shared public IPs still share client limits. Recovery is window expiry or another network; rejected attempts do not extend the window.
 - Unknown usernames are checked against a fixed Argon2id dummy hash, and concurrent password checks are bounded.
 - Sessions use a shared PostgreSQL store, `SameSite=Lax`, and secure cookies outside debug builds. They survive application restarts and work across replicas connected to the same database.
 - Login and admin activity refreshes a 30-minute idle lifetime capped at a hard 12-hour maximum from successful login. Public-page activity does not extend an admin session.

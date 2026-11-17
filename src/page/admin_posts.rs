@@ -813,9 +813,7 @@ fn format_optional_datetime(datetime: Option<DateTime<Utc>>, fallback: &str) -> 
 }
 
 fn format_datetime_input(datetime: Option<DateTime<Utc>>) -> String {
-    datetime
-        .map(|value| value.format("%Y-%m-%dT%H:%M").to_string())
-        .unwrap_or_default()
+    datetime.map_or_default(|value| value.format("%Y-%m-%dT%H:%M").to_string())
 }
 
 fn optional_text(text: &str) -> Option<&str> {
