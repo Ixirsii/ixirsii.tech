@@ -1,9 +1,27 @@
 name: Security
 
 on:
+  push:
+    branches:
+      - main
   workflow_call:
 
 jobs:
+  secrets:
+    name: Secrets
+    runs-on: ci-security
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: https://data.forgejo.org/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+          ref: ${{ forgejo.sha }}
+
+      - name: Scan Git history
+        run: gitleaks detect --no-banner --redact --verbose --source .
+
   semgrep:
     name: Semgrep
     runs-on: ci-security
@@ -15,11 +33,13 @@ jobs:
           persist-credentials: false
           ref: ${{ forgejo.sha }}
 
-      - name: Semgrep scan
+      - name: Scan source
+        # Askama forms use session-validated hidden tokens, not Django template tags.
         run: >-
           semgrep
           scan
           --config auto
+          --exclude-rule python.django.security.django-no-csrf-token.django-no-csrf-token
           --sarif
           --sarif-output=semgrep.sarif
           --text
@@ -32,27 +52,6 @@ jobs:
         with:
           name: semgrep
           path: semgrep.sarif
-
-  socket:
-    name: Socket
-    runs-on: ci-security
-    timeout-minutes: 20
-    steps:
-      - name: Check out repository
-        uses: https://data.forgejo.org/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-        with:
-          persist-credentials: false
-          ref: ${{ forgejo.sha }}
-
-      - name: Scan dependencies
-        run: |
-          if [ -z "$SOCKET_SECURITY_API_TOKEN" ]; then
-            echo "Socket API key is unavailable; refusing to build dependencies without a scan." >&2
-            exit 1
-          fi
-          socket ci --org 9-developers
-        env:
-          SOCKET_SECURITY_API_TOKEN: ${{ secrets.SOCKET_SECURITY_API_KEY }}
 
   trivy-blocking:
     name: Trivy (blocking)

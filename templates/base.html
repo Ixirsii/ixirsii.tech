@@ -9,6 +9,8 @@
     <meta name="htmx-config" content='{"noSwap":[204,304,"4xx","5xx"]}'>
     <title>{{ title }} | Ixirsii</title>
     <link rel="icon" href="{{ crate::static_assets::static_url("favicon.ico") }}">
+    <!-- Identity link, not a fetched subresource; SRI does not apply. -->
+    <!-- nosemgrep: html.security.audit.missing-integrity.missing-integrity -->
     <link rel="me" href="https://mastodon.social/@ixirsii">
     <link rel="manifest" href="/site.webmanifest">
     <link rel="apple-touch-icon" href="{{ crate::static_assets::static_url("apple-touch-icon.png") }}">

@@ -144,13 +144,22 @@ and correlate Railway request logs with application rejection logs:
 
 ## CI
 
-Pull requests and pushes to `main` run the security scans before the Rust build.
-The build workflow calls `security.yml` and waits for all checks to succeed before
-installing Tailwind or running Cargo. A failed scan or missing Socket API key blocks
-the build; fork PRs cannot build because Forgejo withholds that key.
+Pull requests and pushes to `main` run the build workflow. Pushes to `main` also
+run Gitleaks, Semgrep, and Trivy in the independent security workflow.
 
-Release tags validate the release, run the same security and build sequence, and
-then deploy to Railway. Scans and builds check out the same triggering commit.
+Pushes to `main` also run `deploy.yml`, which requires both security and build
+checks before deploying to Railway staging. Release tags run `release.yml`,
+validate the release and require a successful staging deployment of the exact
+commit, then run both checks before deploying to production. Scans and builds
+check out the same triggering commit.
+
+Both environments use the reusable `railway.yml` workflow and wait for that
+deployment's successful health-check result. Configure a Railway `staging`
+environment with its own database and runtime variables, and set the Forgejo
+`RAILWAY_STAGING_TOKEN` secret to its environment-scoped token. Production keeps
+the `RAILWAY_TOKEN` secret. Both use `RAILWAY_SERVICE`, which must identify the
+service in each environment (use the shared service name). Deployment gates and
+health-check waits are tested with Node.js in the build workflow.
 The `ci-rust` FreeBSD runner installs Tailwind and PostgreSQL 18, checks formatting,
 runs Clippy with warnings denied, runs all tests with the locked dependency graph,
 and builds with `SQLX_OFFLINE=true`. Tests use a disposable PostgreSQL cluster

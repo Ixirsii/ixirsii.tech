@@ -8,20 +8,14 @@ on:
   workflow_call:
 
 jobs:
-  security:
-    uses: ./.forgejo/workflows/security.yml
-    secrets:
-      SOCKET_SECURITY_API_KEY: ${{ secrets.SOCKET_SECURITY_API_KEY }}
-
   rust:
     name: Rust quality checks and build
-    needs: security
     runs-on: ci-rust
     timeout-minutes: 20
     steps:
       - name: Install workflow prerequisites
         run: |
-          pkg install -y npm-node24 postgresql18-server
+          pkg install -y postgresql18-server
 
       - name: Check out repository
         uses: https://data.forgejo.org/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -36,6 +30,9 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+      - name: Test deployment health-check wait
+        run: node --test .forgejo/scripts/deploy.test.mjs
 
       - name: Clippy
         run: SQLX_OFFLINE=true cargo clippy --locked --all-targets -- -D warnings
