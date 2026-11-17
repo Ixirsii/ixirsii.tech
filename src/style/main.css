@@ -218,13 +218,22 @@
     @apply mb-0;
   }
 
+  blockquote p + p {
+    @apply mt-2;
+  }
+
   button {
     @apply bg-ctp-surface0;
     @apply hover:bg-ctp-surface2;
     @apply cursor-pointer;
-    @apply p-2;
+    @apply px-3 py-2;
     @apply rounded-md;
     @apply transition-colors;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--semantic-focus);
+    outline-offset: 3px;
   }
 
   :not(pre) code {
@@ -242,6 +251,7 @@
   h5,
   h6 {
     @apply text-inherit;
+    overflow-wrap: anywhere;
   }
 
   h1 {
@@ -275,6 +285,7 @@
   }
 
   h6 {
+    @apply font-semibold;
     @apply mb-1;
     @apply text-sm;
   }
@@ -311,59 +322,36 @@
  * ************************************************************************** */
 
 @layer components {
-  details {
-    @apply flex;
-    @apply flex-col;
-    @apply justify-center;
+  #theme-switcher {
     @apply relative;
   }
 
-  details li {
-    @apply hover:bg-ctp-surface0;
-    @apply transition-colors;
+  #theme-switcher summary {
+    @apply border border-ctp-sapphire list-none px-3 py-2 rounded-md whitespace-nowrap;
+    @apply cursor-pointer flex gap-2 items-center min-h-11;
   }
 
-  details summary {
-    @apply border;
-    @apply border-ctp-sapphire;
-    @apply list-none;
-    @apply p-2;
-    @apply rounded-md;
-    @apply whitespace-nowrap;
+  #theme-switcher summary::-webkit-details-marker {
+    display: none;
   }
 
-  details summary svg {
-    @apply h-4;
-    @apply w-4;
+  #theme-switcher ul {
+    @apply absolute bg-ctp-mantle border border-ctp-surface2 rounded-md min-w-max mt-2 p-1 right-0 shadow-lg z-10;
   }
 
-  details li,
-  details summary {
-    @apply cursor-pointer;
-    @apply flex;
-    @apply flex-row;
-    @apply gap-2;
-    @apply items-center;
+  #theme-switcher button {
+    @apply bg-transparent hover:bg-ctp-surface0 flex gap-2 items-center text-left w-full min-h-11;
   }
 
-  details ul {
-    @apply absolute;
-    @apply bg-ctp-mantle;
-    @apply min-w-max;
-    @apply mt-1;
-    @apply p-2;
-    @apply right-0;
-    @apply shadow-ctp-sapphire;
-    @apply shadow-lg/30;
-    @apply z-10;
+  #theme-switcher button[aria-pressed="true"] {
+    @apply bg-ctp-surface0;
   }
 
-  details .expand-icon {
-    @apply duration-300;
-    @apply rotate-0;
+  #theme-switcher .expand-icon {
+    @apply transition-transform duration-300;
   }
 
-  details:open .expand-icon {
+  #theme-switcher[open] .expand-icon {
     @apply -rotate-90;
   }
 
@@ -385,42 +373,32 @@
   main {
     @apply max-w-5xl;
     @apply mx-auto;
-    @apply pb-8;
+    @apply px-4 sm:px-6;
+    @apply pb-12;
     @apply w-full;
   }
 
-  nav {
-    @apply flex;
-    @apply flex-col;
-    @apply md:flex-row;
-    @apply font-semibold;
-    @apply md:grow;
-    @apply items-center;
-    @apply md:items-stretch;
-    @apply md:self-stretch;
-    @apply w-full;
+  .site-nav {
+    @apply flex flex-wrap gap-1 items-center justify-center;
+    grid-area: navigation;
   }
 
-  nav a {
-    @apply hover:bg-ctp-surface0;
-    @apply flex;
-    @apply md:flex-1;
-    @apply md:flex-col;
-    @apply justify-center;
-    @apply leading-8;
-    @apply rounded-md;
+  .site-nav a {
+    @apply hover:bg-ctp-surface0 rounded-md px-3 py-2 min-h-11 font-semibold;
   }
 
   .button {
     @apply bg-ctp-surface0;
     @apply hover:bg-ctp-surface2;
     @apply inline-block;
-    @apply p-3;
+    @apply px-3 py-2;
+    @apply text-ctp-text hover:no-underline;
     @apply rounded-md;
     @apply transition-colors;
   }
 
   .card {
+    @apply min-w-0;
     @apply bg-ctp-surface0;
     @apply flex;
     @apply flex-col;
@@ -441,58 +419,81 @@
   }
 
   .header-inner {
-    @apply flex;
-    @apply flex-col;
-    @apply md:flex-row;
-    @apply gap-4;
-    @apply items-center;
-    @apply md:justify-between;
-    @apply max-w-5xl;
-    @apply mx-auto;
-    @apply w-full;
-  }
-
-  .loading {
-    @apply flex;
-    @apply grow;
-    @apply items-center;
-    @apply justify-center;
-  }
-
-  .loading svg {
-    @apply animate-spin;
-    @apply fill-ctp-sapphire;
-    @apply h-8;
-    @apply w-8;
-    @apply text-ctp-overlay0;
+    @apply grid gap-x-4 gap-y-3 max-w-5xl mx-auto px-4 sm:px-6 py-4 w-full;
+    grid-template-areas: "title" "navigation" "settings";
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .settings {
-    @apply flex;
-    @apply flex-row;
-    @apply gap-4;
+    @apply flex flex-wrap gap-2 items-center justify-center;
+    grid-area: settings;
   }
 
-  .settings a {
-    @apply flex;
-    @apply flex-col;
-    @apply justify-center;
+  .settings > a {
+    @apply flex items-center justify-center rounded-md hover:bg-ctp-surface0 min-h-11 min-w-11;
   }
 
   .site-title {
-    @apply my-2;
-    @apply shrink-0;
-    @apply w-full;
-    @apply md:w-96;
+    @apply min-w-0 text-center;
+    grid-area: title;
   }
 
   .tagline {
-    @apply mb-0;
-    @apply min-h-10;
-    @apply text-muted;
-    @apply text-sm;
-    @apply whitespace-normal;
-    @apply md:whitespace-nowrap;
+    @apply mb-0 mt-1 text-muted text-sm whitespace-normal;
+    overflow-wrap: anywhere;
+  }
+
+  @media (width >= 48rem) {
+    .header-inner {
+      grid-template-areas: "title settings" "navigation navigation";
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+    .site-title { text-align: left; }
+    .settings { justify-content: end; }
+    .site-nav { justify-content: start; }
+  }
+
+  @media (width >= 64rem) {
+    .header-inner {
+      grid-template-areas: "title navigation settings";
+      grid-template-columns: minmax(0, 1fr) auto auto;
+    }
+  }
+
+  .reading-column {
+    width: 100%;
+    max-width: 45rem;
+    margin-inline: auto;
+    min-width: 0;
+  }
+
+  .prose-content {
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+  }
+
+  .prose-content ul, .prose-content ol {
+    @apply pl-6 mb-4;
+  }
+
+  .prose-content ul { list-style: disc; }
+  .prose-content ol { list-style: decimal; }
+  .prose-content li + li { margin-top: 0.375rem; }
+  .prose-content li > ul, .prose-content li > ol { margin-block: 0.5rem; }
+  .prose-content pre { margin-bottom: 1rem; }
+  .prose-content img { max-width: 100%; height: auto; }
+  .prose-content > :last-child, .card > :last-child, .admin-panel > :last-child { margin-bottom: 0; }
+
+  .button-danger {
+    @apply bg-ctp-red/10 hover:bg-ctp-red/20 border border-status-danger text-status-danger;
+  }
+
+  .pagination {
+    @apply flex flex-wrap justify-center items-center gap-4 mt-8;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #theme-switcher .expand-icon { transition: none; }
   }
 
   .tagline-note {

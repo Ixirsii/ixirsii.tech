@@ -9,8 +9,10 @@ use serde::Deserialize;
 
 use crate::{
     AdminAuthSession, AppState,
-    database::{get_tag_by_slug, list_posts_by_tag, list_tags_with_published_count},
-    page::{PageError, PostView},
+    database::{
+        count_posts_by_tag, get_tag_by_slug, list_posts_by_tag, list_tags_with_published_count,
+    },
+    page::{PAGE_SIZE, PageError, PostView, public_page},
 };
 
 /* ********************************************************************************************** *
@@ -18,20 +20,20 @@ use crate::{
  * ********************************************************************************************** */
 
 const TAG_CLOUD_COLORS: [&str; 12] = [
-    "text-ctp-pink",
-    "text-ctp-mauve",
-    "text-ctp-red",
-    "text-ctp-maroon",
-    "text-ctp-peach",
-    "text-ctp-yellow",
-    "text-ctp-green",
-    "text-ctp-teal",
-    "text-ctp-sky",
-    "text-ctp-sapphire",
-    "text-ctp-blue",
-    "text-ctp-lavender",
+    "border-ctp-pink",
+    "border-ctp-mauve",
+    "border-ctp-red",
+    "border-ctp-maroon",
+    "border-ctp-peach",
+    "border-ctp-yellow",
+    "border-ctp-green",
+    "border-ctp-teal",
+    "border-ctp-sky",
+    "border-ctp-sapphire",
+    "border-ctp-blue",
+    "border-ctp-lavender",
 ];
-const TAG_CLOUD_COLOR_COUNT: u64 = 12;
+const TAG_CLOUD_COLOR_COUNT: i64 = 12;
 
 /* ********************************************************************************************** *
  *                                             Types                                              *
@@ -40,7 +42,7 @@ const TAG_CLOUD_COLOR_COUNT: u64 = 12;
 struct TagCloudEntry {
     name: String,
     slug: String,
-    count: i32,
+    count: i64,
     class: String,
 }
 
@@ -64,6 +66,9 @@ struct TagPostsPage<'a> {
     title: String,
     show_admin_link: bool,
     tag_name: String,
+    tag_slug: String,
+    current_page: u32,
+    total_pages: u32,
     posts: &'a [PostView],
 }
 
@@ -121,6 +126,7 @@ pub async fn tag_posts(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
     Path(slug): Path<String>,
+    Query(params): Query<std::collections::HashMap<String, String>>,
 ) -> Result<Html<String>, PageError> {
     let show_admin_link = auth_session.user.is_some();
     let Some(tag) = get_tag_by_slug(&(*state.db_pool), &slug)
@@ -130,7 +136,15 @@ pub async fn tag_posts(
         return Err(PageError::not_found(show_admin_link));
     };
 
-    let post_rows = list_posts_by_tag(&(*state.db_pool), &slug)
+    let total = count_posts_by_tag(&(*state.db_pool), &slug)
+        .await
+        .map_err(|_| PageError::internal_server_error(show_admin_link))?;
+    let (current_page, total_pages) = public_page(
+        params.get("page").map(String::as_str),
+        total,
+        show_admin_link,
+    )?;
+    let post_rows = list_posts_by_tag(&(*state.db_pool), &slug, current_page, PAGE_SIZE)
         .await
         .map_err(|_| PageError::internal_server_error(show_admin_link))?;
     let post_views: Vec<PostView> = post_rows.into_iter().map(PostView::from).collect();
@@ -141,6 +155,9 @@ pub async fn tag_posts(
         title,
         show_admin_link,
         tag_name: tag.name,
+        tag_slug: tag.slug,
+        current_page,
+        total_pages,
         posts: &post_views,
     };
 
@@ -186,18 +203,19 @@ async fn get_tag_cloud(
         .collect())
 }
 
-fn get_tag_size(count: i32, max_count: i32) -> &'static str {
+fn get_tag_size(count: i64, max_count: i64) -> &'static str {
     if max_count == 0 {
         return "text-sm";
     }
-    let ratio = f64::from(count) / f64::from(max_count);
-    if ratio >= 0.9 {
+    let scaled_count = i128::from(count) * 10;
+    let max_count = i128::from(max_count);
+    if scaled_count >= max_count * 9 {
         "text-4xl"
-    } else if ratio >= 0.7 {
+    } else if scaled_count >= max_count * 7 {
         "text-2xl"
-    } else if ratio >= 0.5 {
+    } else if scaled_count >= max_count * 5 {
         "text-xl"
-    } else if ratio >= 0.2 {
+    } else if scaled_count >= max_count * 2 {
         "text-base"
     } else {
         "text-sm"

@@ -9,6 +9,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("cargo:rerun-if-changed=src/style");
     println!("cargo:rerun-if-changed=templates");
+    println!("cargo:rerun-if-changed=migrations");
     println!("cargo:rerun-if-changed=src/static");
 
     let output = Command::new("tailwindcss")

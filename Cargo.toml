@@ -19,7 +19,7 @@ argon2 = "0.5.3"
 askama = "0.16.0"
 async-trait = "0.1"
 axum = "0.8.9"
-axum-htmx = "0.8.1"
+axum-extra = { version = "0.12.6", default-features = false, features = ["form", "cookie-signed"] }
 axum-login = "0.18.0"
 chrono = "0.4"
 dotenvy = "0.15.7"
@@ -47,12 +47,11 @@ sqlx = { version = "0.9.0", default-features = false, features = [
   "derive",
   "macros",
   "migrate",
-  "mysql",
-  "mysql-rsa",
+  "postgres",
   "runtime-tokio",
-  "time",
   "tls-rustls-aws-lc-rs",
 ] }
+subtle = "2.6"
 time = "0.3.55"
 tokio = { version = "1.53.1", features = [
   "macros",
@@ -64,6 +63,10 @@ tower-sessions = "0.14.0"
 tracing = "0.1.44"
 tracing-opentelemetry = "0.34.0"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+
+[dev-dependencies]
+serde_json = "1.0"
+tower = { version = "0.5", features = ["util"] }
 
 [lints.rust]
 unsafe_code = "deny"

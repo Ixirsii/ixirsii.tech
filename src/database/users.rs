@@ -1,17 +1,17 @@
 //! Admin user database operations.
 
 use axum_login::AuthUser;
-use sqlx::{FromRow, MySqlExecutor, query_as};
+use sqlx::{PgExecutor, query_as};
 
 use tracing::{error, instrument};
 
 use crate::Result;
 
 /// User.
-#[derive(Clone, Debug, FromRow)]
+#[derive(Clone, Debug)]
 pub struct User {
     /// User ID.
-    pub id: u64,
+    pub id: i64,
     /// Username.
     pub username: String,
     /// Password hash.
@@ -19,7 +19,7 @@ pub struct User {
 }
 
 impl AuthUser for User {
-    type Id = u64;
+    type Id = i64;
 
     fn id(&self) -> Self::Id {
         self.id
@@ -47,14 +47,12 @@ impl AuthUser for User {
 /// # Errors
 /// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor))]
-pub async fn get_admin_user_by_id(
-    executor: impl MySqlExecutor<'_>,
-    id: u64,
-) -> Result<Option<User>> {
-    let user = query_as::<_, User>(
-        "SELECT id, username, password_hash FROM admin_users WHERE id = ?",
+pub async fn get_admin_user_by_id(executor: impl PgExecutor<'_>, id: i64) -> Result<Option<User>> {
+    let user = query_as!(
+        User,
+        "SELECT id, username, password_hash FROM admin_users WHERE id = $1",
+        id
     )
-    .bind(id)
     .fetch_optional(executor)
     .await
     .inspect_err(|error| {
@@ -70,13 +68,14 @@ pub async fn get_admin_user_by_id(
 /// Returns [`crate::Error::Database`] on failure to read from database.
 #[instrument(skip(executor, username))]
 pub async fn get_admin_user_by_username(
-    executor: impl MySqlExecutor<'_>,
+    executor: impl PgExecutor<'_>,
     username: &str,
 ) -> Result<Option<User>> {
-    let user = query_as::<_, User>(
-        "SELECT id, username, password_hash FROM admin_users WHERE BINARY username = BINARY ?",
+    let user = query_as!(
+        User,
+        "SELECT id, username, password_hash FROM admin_users WHERE username = $1",
+        username
     )
-    .bind(username)
     .fetch_optional(executor)
     .await
     .inspect_err(|error| {
@@ -89,3 +88,40 @@ pub async fn get_admin_user_by_username(
 /* ********************************************************************************************** *
  *                                             Update                                             *
  * ********************************************************************************************** */
+
+#[cfg(test)]
+mod tests {
+    use sqlx::PgPool;
+
+    use super::*;
+
+    #[sqlx::test]
+    async fn admin_lookup_preserves_case_sensitive_usernames(pool: PgPool) -> Result<()> {
+        let id = sqlx::query_scalar!(
+            "INSERT INTO admin_users (username, password_hash) VALUES ($1, $2) RETURNING id",
+            "TestAdmin",
+            "test-hash",
+        )
+        .fetch_one(&pool)
+        .await?;
+        assert_eq!(
+            get_admin_user_by_username(&pool, "TestAdmin")
+                .await?
+                .map(|user| user.id),
+            Some(id)
+        );
+        assert!(
+            get_admin_user_by_username(&pool, "testadmin")
+                .await?
+                .is_none()
+        );
+        assert_eq!(
+            get_admin_user_by_id(&pool, id)
+                .await?
+                .map(|user| user.password_hash),
+            Some("test-hash".into())
+        );
+        assert!(get_admin_user_by_id(&pool, i64::MAX).await?.is_none());
+        Ok(())
+    }
+}

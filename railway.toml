@@ -1,10 +1,12 @@
 [build]
 builder = "RAILPACK"
-buildCommand = "cargo build --release --locked && cp target/release/ixirsii-tech ixirsii-tech"
+buildCommand = "SQLX_OFFLINE=true cargo build --release --locked && cp target/release/ixirsii-tech ixirsii-tech"
 watchPatterns = [
     "src/**",
     "templates/**",
     "migrations/**",
+    ".sqlx/**",
+    ".cargo/config.toml",
     "Cargo.toml",
     "Cargo.lock",
     "build.rs",
@@ -14,7 +16,7 @@ watchPatterns = [
 ]
 
 [deploy]
-startCommand = "./ixirsii-tech"
+startCommand = "env AUTH_CLIENT_IP_MODE=railway ./ixirsii-tech"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"

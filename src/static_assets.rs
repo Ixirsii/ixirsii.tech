@@ -80,14 +80,6 @@ const STATIC_ASSETS: &[(&str, &str)] = &[
         "main.css",
         concat!("/static/main.", env!("ASSET_HASH_main.css"), ".css"),
     ),
-    (
-        "site.webmanifest",
-        concat!(
-            "/static/site.",
-            env!("ASSET_HASH_site.webmanifest"),
-            ".webmanifest"
-        ),
-    ),
 ];
 
 /// Returns the fingerprinted URL, or `/static/missing` for an unknown asset.

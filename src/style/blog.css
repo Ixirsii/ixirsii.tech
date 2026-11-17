@@ -3,9 +3,14 @@
 .metadata {
   @apply gap-x-2;
   @apply grid;
-  @apply grid-cols-[max-content_1fr];
+  @apply grid-cols-[max-content_minmax(0,1fr)];
+  overflow-wrap: anywhere;
   @apply text-muted;
   @apply text-sm;
+}
+
+p.metadata {
+  display: block;
 }
 
 .home-post + .home-post {
@@ -14,3 +19,14 @@
   @apply mt-8;
   @apply pt-8;
 }
+
+.article-layout {
+  @apply grid gap-8 items-start lg:grid-cols-[minmax(0,1fr)_15rem];
+}
+
+.article-sidebar { @apply flex flex-col gap-4 min-w-0; }
+.article-sidebar .card { @apply p-4; }
+.article-sidebar h2 { @apply text-lg; }
+.article-sidebar .metadata { @apply grid-cols-1 gap-y-1; }
+.article-sidebar .metadata > div:nth-child(even) { @apply mb-3; }
+.related-posts { @apply flex flex-col gap-3; }

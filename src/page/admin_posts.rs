@@ -4,12 +4,12 @@ use std::collections::HashSet;
 
 use askama::Template;
 use axum::{
-    Form,
     extract::{Path, Query, State},
     http::StatusCode,
     response::{Html, IntoResponse, Redirect, Response},
 };
-use chrono::{Local, NaiveDateTime};
+use axum_extra::extract::Form;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::Deserialize;
 
 use crate::{
@@ -20,7 +20,12 @@ use crate::{
         get_post_by_id, list_posts, list_tags_for_post, list_tags_with_count, slug_exists,
         slug_exists_for_other_post, update_post_with_tags,
     },
-    page::{PAGE_SIZE, render_markdown, slugify},
+    page::{
+        PAGE_SIZE, render_markdown, slugify,
+        validation::{
+            POST_PREVIEW_MAX, POST_SLUG_MAX, POST_TITLE_MAX, body_error, slug_error, text_error,
+        },
+    },
 };
 
 /* ********************************************************************************************** *
@@ -60,11 +65,11 @@ struct AdminPostFormPage {
 #[template(path = "admin_markdown_preview.html")]
 struct AdminMarkdownPreview {
     html: String,
-    empty_message: &'static str,
+    empty_message: String,
 }
 
 struct AdminPostListItemView {
-    id: u64,
+    id: i64,
     title: String,
     slug: String,
     status_label: &'static str,
@@ -80,7 +85,7 @@ struct TagChipView {
 }
 
 struct TagOptionView {
-    id: u64,
+    id: i64,
     name: String,
     slug: String,
     selected: bool,
@@ -91,6 +96,7 @@ struct PostFormErrors {
     title: Option<String>,
     slug: Option<String>,
     body: Option<String>,
+    preview: Option<String>,
     published_at: Option<String>,
     security: Option<String>,
 }
@@ -100,6 +106,7 @@ impl PostFormErrors {
         self.title.is_some()
             || self.slug.is_some()
             || self.body.is_some()
+            || self.preview.is_some()
             || self.published_at.is_some()
             || self.security.is_some()
     }
@@ -129,7 +136,7 @@ pub struct PostFormInput {
     #[serde(default)]
     published_at: String,
     #[serde(default)]
-    tag_ids: Vec<u64>,
+    tag_ids: Vec<i64>,
     #[serde(default)]
     csrf_token: String,
 }
@@ -282,7 +289,7 @@ pub async fn create_post(
     }
 
     let tag_ids = filter_known_tag_ids(&state, &form.tag_ids).await?;
-    let post_id = create_post_with_tags(
+    let result = create_post_with_tags(
         &state.db_pool,
         &title,
         &slug,
@@ -291,8 +298,18 @@ pub async fn create_post(
         published_at,
         &tag_ids,
     )
-    .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    .await;
+    let post_id = match result {
+        Ok(id) => id,
+        Err(error) => {
+            let errors = post_conflict(&error, false).ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+            return render_post_form_response(
+                &build_post_form_page(&state, &auth_session, "New Post", None, false, form, errors)
+                    .await?,
+                StatusCode::CONFLICT,
+            );
+        }
+    };
 
     rotate_csrf_token(&auth_session.session)
         .await
@@ -309,7 +326,7 @@ pub async fn create_post(
 pub async fn edit_post_page(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
-    Path(post_id): Path<u64>,
+    Path(post_id): Path<i64>,
 ) -> Result<Html<String>, StatusCode> {
     let Some(post) = get_post_by_id(&(*state.db_pool), post_id)
         .await
@@ -357,7 +374,7 @@ pub async fn edit_post_page(
 pub async fn update_post(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
-    Path(post_id): Path<u64>,
+    Path(post_id): Path<i64>,
     Form(form): Form<PostFormInput>,
 ) -> Result<Response, StatusCode> {
     if !verify_csrf_token(&auth_session.session, &form.csrf_token)
@@ -428,7 +445,7 @@ pub async fn update_post(
     }
 
     let tag_ids = filter_known_tag_ids(&state, &form.tag_ids).await?;
-    update_post_with_tags(
+    if let Err(error) = update_post_with_tags(
         &state.db_pool,
         post_id,
         &title,
@@ -439,7 +456,22 @@ pub async fn update_post(
         &tag_ids,
     )
     .await
-    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    {
+        let errors = post_conflict(&error, true).ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+        return render_post_form_response(
+            &build_post_form_page(
+                &state,
+                &auth_session,
+                "Edit Post",
+                Some(post_id),
+                true,
+                form,
+                errors,
+            )
+            .await?,
+            StatusCode::CONFLICT,
+        );
+    }
 
     rotate_csrf_token(&auth_session.session)
         .await
@@ -455,7 +487,7 @@ pub async fn update_post(
 pub async fn delete_post(
     State(state): State<AppState>,
     auth_session: AdminAuthSession,
-    Path(post_id): Path<u64>,
+    Path(post_id): Path<i64>,
     Form(form): Form<CsrfForm>,
 ) -> Result<Redirect, StatusCode> {
     if !verify_csrf_token(&auth_session.session, &form.csrf_token)
@@ -495,6 +527,9 @@ pub async fn preview_post_preview(
         );
     }
 
+    if let Some(error) = text_error(&form.preview, "Preview", POST_PREVIEW_MAX) {
+        return render_markdown_preview("", &error, StatusCode::OK);
+    }
     render_markdown_preview(
         &form.preview,
         "Write preview markdown to see it rendered here.",
@@ -521,6 +556,11 @@ pub async fn preview_post_body(
         );
     }
 
+    if !form.body.trim().is_empty()
+        && let Some(error) = body_error(&form.body)
+    {
+        return render_markdown_preview("", &error, StatusCode::OK);
+    }
     render_markdown_preview(
         &form.body,
         "Write post body markdown to see it rendered here.",
@@ -528,8 +568,27 @@ pub async fn preview_post_body(
     )
 }
 
-fn validate_create_form(input: &PostFormInput) -> (PostFormErrors, String, String, String) {
+fn post_conflict(error: &crate::Error, is_edit: bool) -> Option<PostFormErrors> {
+    if error.unique_constraint() != Some("posts_slug_key") {
+        return None;
+    }
     let mut errors = PostFormErrors::default();
+    if is_edit {
+        errors.slug = Some("This slug already exists. Choose a different slug.".to_owned());
+    } else {
+        errors.title =
+            Some("The generated slug already exists. Adjust the title and try again.".to_owned());
+    }
+    Some(errors)
+}
+
+fn validate_create_form(input: &PostFormInput) -> (PostFormErrors, String, String, String) {
+    let mut errors = PostFormErrors {
+        title: text_error(input.title.trim(), "Title", POST_TITLE_MAX),
+        preview: text_error(input.preview.trim(), "Preview", POST_PREVIEW_MAX),
+        body: body_error(&input.body),
+        ..PostFormErrors::default()
+    };
     let title = input.title.trim().to_string();
     let body = input.body.trim().to_string();
 
@@ -550,6 +609,9 @@ fn validate_create_form(input: &PostFormInput) -> (PostFormErrors, String, Strin
                     .into(),
             );
         }
+        if errors.title.is_none() {
+            errors.title = slug_error(&s, POST_SLUG_MAX);
+        }
         s
     };
 
@@ -557,17 +619,20 @@ fn validate_create_form(input: &PostFormInput) -> (PostFormErrors, String, Strin
 }
 
 fn validate_edit_form(input: &PostFormInput) -> (PostFormErrors, String, String, String) {
-    let mut errors = PostFormErrors::default();
+    let mut errors = PostFormErrors {
+        title: text_error(input.title.trim(), "Title", POST_TITLE_MAX),
+        preview: text_error(input.preview.trim(), "Preview", POST_PREVIEW_MAX),
+        body: body_error(&input.body),
+        ..PostFormErrors::default()
+    };
     let title = input.title.trim().to_string();
-    let slug = input.slug.trim().to_string();
+    let slug = input.slug.clone();
     let body = input.body.trim().to_string();
 
     if title.is_empty() {
         errors.title = Some("Title is required.".into());
     }
-    if slug.is_empty() {
-        errors.slug = Some("Slug is required when editing a post.".into());
-    }
+    errors.slug = slug_error(&slug, POST_SLUG_MAX);
     if body.is_empty() {
         errors.body = Some("Body is required.".into());
     }
@@ -613,7 +678,7 @@ async fn build_post_form_page(
     state: &AppState,
     auth_session: &AdminAuthSession,
     heading: &'static str,
-    post_id: Option<u64>,
+    post_id: Option<i64>,
     is_edit: bool,
     form: PostFormInput,
     errors: PostFormErrors,
@@ -636,8 +701,16 @@ async fn build_post_form_page(
         form: PostFormView {
             title: form.title,
             slug: form.slug,
-            preview_html: render_markdown(&form.preview),
-            body_html: render_markdown(&form.body),
+            preview_html: if errors.preview.is_none() {
+                render_markdown(&form.preview)
+            } else {
+                String::new()
+            },
+            body_html: if errors.body.is_none() {
+                render_markdown(&form.body)
+            } else {
+                String::new()
+            },
             preview: form.preview,
             body: form.body,
             published_at: form.published_at,
@@ -648,8 +721,8 @@ async fn build_post_form_page(
 }
 
 async fn build_tag_options(
-    pool: &sqlx::MySqlPool,
-    selected_ids: &[u64],
+    pool: &sqlx::PgPool,
+    selected_ids: &[i64],
 ) -> Result<Vec<TagOptionView>, StatusCode> {
     let selected: HashSet<_> = selected_ids.iter().copied().collect();
     let tags = list_tags_with_count(pool)
@@ -667,7 +740,7 @@ async fn build_tag_options(
         .collect())
 }
 
-async fn filter_known_tag_ids(state: &AppState, tag_ids: &[u64]) -> Result<Vec<u64>, StatusCode> {
+async fn filter_known_tag_ids(state: &AppState, tag_ids: &[i64]) -> Result<Vec<i64>, StatusCode> {
     let tags = list_tags_with_count(&(*state.db_pool))
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -723,28 +796,24 @@ const fn sort_value(sort: &PostSort) -> &'static str {
     }
 }
 
-fn post_status(published_at: Option<NaiveDateTime>) -> (&'static str, &'static str) {
+fn post_status(published_at: Option<DateTime<Utc>>) -> (&'static str, &'static str) {
     match published_at {
         None => ("Unscheduled", "status-unscheduled"),
-        Some(timestamp) if timestamp > Local::now().naive_local() => {
-            ("Scheduled", "status-scheduled")
-        }
+        Some(timestamp) if timestamp > Utc::now() => ("Scheduled", "status-scheduled"),
         Some(_) => ("Published", "status-published"),
     }
 }
 
-fn format_datetime(datetime: NaiveDateTime) -> String {
-    datetime.format("%B %e, %Y %l:%M %p").to_string()
+fn format_datetime(datetime: DateTime<Utc>) -> String {
+    datetime.format("%B %e, %Y %l:%M %p UTC").to_string()
 }
 
-fn format_optional_datetime(datetime: Option<NaiveDateTime>, fallback: &str) -> String {
+fn format_optional_datetime(datetime: Option<DateTime<Utc>>, fallback: &str) -> String {
     datetime.map_or_else(|| fallback.to_string(), format_datetime)
 }
 
-fn format_datetime_input(datetime: Option<NaiveDateTime>) -> String {
-    datetime
-        .map(|value| value.format("%Y-%m-%dT%H:%M").to_string())
-        .unwrap_or_default()
+fn format_datetime_input(datetime: Option<DateTime<Utc>>) -> String {
+    datetime.map_or_default(|value| value.format("%Y-%m-%dT%H:%M").to_string())
 }
 
 fn optional_text(text: &str) -> Option<&str> {
@@ -757,7 +826,7 @@ fn optional_text(text: &str) -> Option<&str> {
     }
 }
 
-fn parse_published_at(value: &str) -> Result<Option<NaiveDateTime>, String> {
+fn parse_published_at(value: &str) -> Result<Option<DateTime<Utc>>, String> {
     let trimmed = value.trim();
 
     if trimmed.is_empty() {
@@ -765,7 +834,7 @@ fn parse_published_at(value: &str) -> Result<Option<NaiveDateTime>, String> {
     }
 
     NaiveDateTime::parse_from_str(trimmed, "%Y-%m-%dT%H:%M")
-        .map(Some)
+        .map(|value| Some(value.and_utc()))
         .map_err(|_| String::from("Publish date must use the browser date-time picker value."))
 }
 
@@ -785,12 +854,12 @@ fn render_post_form_response(
 
 fn render_markdown_preview(
     text: &str,
-    empty_message: &'static str,
+    empty_message: &str,
     status: StatusCode,
 ) -> Result<Response, StatusCode> {
     let preview = AdminMarkdownPreview {
         html: render_markdown(text),
-        empty_message,
+        empty_message: empty_message.to_owned(),
     };
 
     Ok((
@@ -802,4 +871,143 @@ fn render_markdown_preview(
         ),
     )
         .into_response())
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::{
+        body::Body,
+        extract::FromRequest,
+        http::{Request, StatusCode, header::CONTENT_TYPE},
+    };
+
+    use super::{Form, PostFormInput, format_datetime_input, parse_published_at, post_status};
+
+    #[tokio::test]
+    async fn post_form_extracts_multiple_single_and_omitted_tags()
+    -> Result<(), Box<dyn std::error::Error>> {
+        for (tag_fields, expected_ids) in [
+            ("&tag_ids=11&tag_ids=12", vec![11, 12]),
+            ("&tag_ids=11", vec![11]),
+            ("", vec![]),
+        ] {
+            let request = Request::builder()
+                .method("POST")
+                .uri("/admin/posts")
+                .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(Body::from(format!(
+                    "title=Test+Post&body=First%0ASecond&csrf_token=test-token{tag_fields}"
+                )))?;
+            let Form(form) = Form::<PostFormInput>::from_request(request, &()).await?;
+
+            assert_eq!(form.tag_ids, expected_ids);
+            assert_eq!(form.title, "Test Post");
+            assert_eq!(form.body, "First\nSecond");
+            assert_eq!(form.csrf_token, "test-token");
+        }
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn post_form_rejects_invalid_tag_ids() -> Result<(), Box<dyn std::error::Error>> {
+        for invalid_id in ["not-an-id", "9223372036854775808", ""] {
+            let request = Request::builder()
+                .method("POST")
+                .uri("/admin/posts")
+                .header(CONTENT_TYPE, "application/x-www-form-urlencoded")
+                .body(Body::from(format!("tag_ids=11&tag_ids={invalid_id}")))?;
+            let Err(rejection) = Form::<PostFormInput>::from_request(request, &()).await else {
+                return Err(format!("accepted invalid tag ID: {invalid_id}").into());
+            };
+            assert_eq!(rejection.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn form_validation_enforces_lengths_and_slug_format() {
+        let form = PostFormInput {
+            title: "Valid title".into(),
+            slug: "valid-title".into(),
+            body: "Body".into(),
+            ..PostFormInput::default()
+        };
+        assert!(!super::validate_edit_form(&form).0.has_errors());
+        let oversized = PostFormInput {
+            title: "a".repeat(256),
+            preview: "é".repeat(513),
+            body: "a".repeat(65_536),
+            slug: "bad/slug".into(),
+            ..form
+        };
+        let errors = super::validate_edit_form(&oversized).0;
+        assert!(errors.title.is_some());
+        assert!(errors.preview.is_some());
+        assert!(errors.body.is_some());
+        assert!(errors.slug.is_some());
+        assert!(super::validate_create_form(&oversized).0.has_errors());
+    }
+
+    #[sqlx::test]
+    async fn database_slug_conflicts_map_to_the_correct_form_field(
+        pool: sqlx::PgPool,
+    ) -> crate::Result<()> {
+        use crate::database::{create_post_with_tags, update_post_with_tags};
+        let first = create_post_with_tags(&pool, "First", "taken", "Body", None, None, &[]).await?;
+        let second =
+            create_post_with_tags(&pool, "Second", "available", "Body", None, None, &[]).await?;
+        let Err(error) =
+            create_post_with_tags(&pool, "Duplicate", "taken", "Body", None, None, &[]).await
+        else {
+            return Err(crate::Error::System("duplicate insert succeeded".into()));
+        };
+        assert!(super::post_conflict(&error, false).is_some_and(|errors| errors.title.is_some()));
+        let Err(error) =
+            update_post_with_tags(&pool, second, "Second", "taken", "Body", None, None, &[]).await
+        else {
+            return Err(crate::Error::System("duplicate update succeeded".into()));
+        };
+        assert!(super::post_conflict(&error, true).is_some_and(|errors| errors.slug.is_some()));
+        assert_eq!(
+            crate::database::get_post_by_id(&pool, first)
+                .await?
+                .map(|post| post.slug),
+            Some("taken".to_owned())
+        );
+        assert_eq!(
+            crate::database::get_post_by_id(&pool, second)
+                .await?
+                .map(|post| post.slug),
+            Some("available".to_owned())
+        );
+        assert!(
+            super::post_conflict(&crate::Error::Database(sqlx::Error::PoolClosed), false).is_none()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn publication_input_round_trips_as_utc() -> Result<(), String> {
+        let value = parse_published_at("2026-09-23T14:30")?;
+        let timestamp = value.ok_or("expected publication time")?;
+        assert_eq!(timestamp.to_rfc3339(), "2026-09-23T14:30:00+00:00");
+        assert_eq!(format_datetime_input(value), "2026-09-23T14:30");
+        Ok(())
+    }
+
+    #[test]
+    fn publication_input_distinguishes_drafts_and_invalid_dates() -> Result<(), String> {
+        assert_eq!(parse_published_at("  ")?, None);
+        assert!(parse_published_at("2026-02-30T14:30").is_err());
+        assert_eq!(post_status(None).0, "Unscheduled");
+        assert_eq!(
+            post_status(parse_published_at("2000-01-01T00:00")?).0,
+            "Published"
+        );
+        assert_eq!(
+            post_status(parse_published_at("2999-01-01T00:00")?).0,
+            "Scheduled"
+        );
+        Ok(())
+    }
 }

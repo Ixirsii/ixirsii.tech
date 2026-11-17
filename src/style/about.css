@@ -63,11 +63,11 @@
 .about-links {
   @apply gap-3;
   @apply grid;
-  @apply grid-cols-2;
+  @apply grid-cols-1 sm:grid-cols-2;
 }
 
 .about-link-group-wide .about-links {
-  @apply md:grid-cols-3;
+  @apply lg:grid-cols-3;
 }
 
 .about-links a {

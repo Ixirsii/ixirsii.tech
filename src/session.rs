@@ -9,7 +9,8 @@ use axum::{
     middleware::Next,
     response::{IntoResponse, Redirect, Response},
 };
-use sqlx::{MySqlPool, mysql::MySqlQueryResult};
+use chrono::{DateTime, Utc};
+use sqlx::PgPool;
 use time::{Duration, OffsetDateTime};
 use tokio::task::JoinHandle;
 use tower_sessions::{
@@ -27,27 +28,28 @@ const ADMIN_MAX_LIFETIME: Duration = Duration::hours(12);
 const CLEANUP_INTERVAL: StdDuration = StdDuration::from_mins(5);
 
 #[derive(Clone, Debug)]
-pub struct MySqlSessionStore {
-    pool: MySqlPool,
+pub struct PostgresSessionStore {
+    pool: PgPool,
 }
 
-impl MySqlSessionStore {
-    pub const fn new(pool: MySqlPool) -> Self {
+impl PostgresSessionStore {
+    pub const fn new(pool: PgPool) -> Self {
         Self { pool }
     }
 }
 
 #[async_trait]
-impl SessionStore for MySqlSessionStore {
+impl SessionStore for PostgresSessionStore {
     async fn create(&self, record: &mut Record) -> session_store::Result<()> {
         loop {
-            let result =
-                sqlx::query("INSERT INTO tower_sessions (id, data, expiry_date) VALUES (?, ?, ?)")
-                    .bind(record.id.to_string())
-                    .bind(encode_record(record)?)
-                    .bind(record.expiry_date)
-                    .execute(&self.pool)
-                    .await;
+            let result = sqlx::query!(
+                "INSERT INTO tower_sessions (id, data, expiry_date) VALUES ($1, $2, $3)",
+                record.id.to_string(),
+                encode_record(record)?,
+                database_expiry(record.expiry_date)?,
+            )
+            .execute(&self.pool)
+            .await;
 
             match result {
                 Ok(_) => return Ok(()),
@@ -64,37 +66,30 @@ impl SessionStore for MySqlSessionStore {
     }
 
     async fn save(&self, record: &Record) -> session_store::Result<()> {
-        let result: MySqlQueryResult =
-            sqlx::query("UPDATE tower_sessions SET data = ?, expiry_date = ? WHERE id = ?")
-                .bind(encode_record(record)?)
-                .bind(record.expiry_date)
-                .bind(record.id.to_string())
-                .execute(&self.pool)
-                .await
-                .map_err(backend_error)?;
+        let result = sqlx::query!(
+            "UPDATE tower_sessions SET data = $1, expiry_date = $2 WHERE id = $3",
+            encode_record(record)?,
+            database_expiry(record.expiry_date)?,
+            record.id.to_string(),
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(backend_error)?;
 
         if result.rows_affected() == 0 {
-            let exists: bool =
-                sqlx::query_scalar("SELECT EXISTS(SELECT 1 FROM tower_sessions WHERE id = ?)")
-                    .bind(record.id.to_string())
-                    .fetch_one(&self.pool)
-                    .await
-                    .map_err(backend_error)?;
-            if !exists {
-                return Err(session_store::Error::Backend(
-                    "session no longer exists".to_string(),
-                ));
-            }
+            return Err(session_store::Error::Backend(
+                "session no longer exists".to_string(),
+            ));
         }
 
         Ok(())
     }
 
     async fn load(&self, session_id: &Id) -> session_store::Result<Option<Record>> {
-        let data: Option<Vec<u8>> = sqlx::query_scalar(
-            "SELECT data FROM tower_sessions WHERE id = ? AND expiry_date > UTC_TIMESTAMP(6)",
+        let data = sqlx::query_scalar!(
+            "SELECT data FROM tower_sessions WHERE id = $1 AND expiry_date > CURRENT_TIMESTAMP",
+            session_id.to_string(),
         )
-        .bind(session_id.to_string())
         .fetch_optional(&self.pool)
         .await
         .map_err(backend_error)?;
@@ -107,19 +102,21 @@ impl SessionStore for MySqlSessionStore {
     }
 
     async fn delete(&self, session_id: &Id) -> session_store::Result<()> {
-        sqlx::query("DELETE FROM tower_sessions WHERE id = ?")
-            .bind(session_id.to_string())
-            .execute(&self.pool)
-            .await
-            .map_err(backend_error)?;
+        sqlx::query!(
+            "DELETE FROM tower_sessions WHERE id = $1",
+            session_id.to_string(),
+        )
+        .execute(&self.pool)
+        .await
+        .map_err(backend_error)?;
         Ok(())
     }
 }
 
 #[async_trait]
-impl ExpiredDeletion for MySqlSessionStore {
+impl ExpiredDeletion for PostgresSessionStore {
     async fn delete_expired(&self) -> session_store::Result<()> {
-        sqlx::query("DELETE FROM tower_sessions WHERE expiry_date <= UTC_TIMESTAMP(6)")
+        sqlx::query!("DELETE FROM tower_sessions WHERE expiry_date <= CURRENT_TIMESTAMP")
             .execute(&self.pool)
             .await
             .map_err(backend_error)?;
@@ -129,6 +126,13 @@ impl ExpiredDeletion for MySqlSessionStore {
 
 fn encode_record(record: &Record) -> session_store::Result<Vec<u8>> {
     rmp_serde::to_vec(record).map_err(|error| session_store::Error::Encode(error.to_string()))
+}
+
+// SQLx's checked macros use chrono for TIMESTAMPTZ when both date libraries
+// are enabled; retain input type checking when binding tower_sessions' time type.
+fn database_expiry(expiry_date: OffsetDateTime) -> session_store::Result<DateTime<Utc>> {
+    DateTime::from_timestamp(expiry_date.unix_timestamp(), expiry_date.nanosecond())
+        .ok_or_else(|| backend_error("session expiry is outside the supported timestamp range"))
 }
 
 fn backend_error(error: impl std::fmt::Display) -> session_store::Error {
@@ -152,7 +156,7 @@ pub async fn mark_admin_login(session: &Session) -> Result<(), session::Error> {
         .await
 }
 
-pub fn spawn_cleanup(store: MySqlSessionStore) -> JoinHandle<()> {
+pub fn spawn_cleanup(store: PostgresSessionStore) -> JoinHandle<()> {
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(CLEANUP_INTERVAL);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -253,6 +257,98 @@ fn is_admin_path(path: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    type TestResult = Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+    fn record(expiry_date: OffsetDateTime) -> Record {
+        Record {
+            id: Id::default(),
+            data: std::collections::HashMap::default(),
+            expiry_date,
+        }
+    }
+
+    #[test]
+    fn expiry_conversion_preserves_subseconds_before_epoch() -> TestResult {
+        let expiry = database_expiry(OffsetDateTime::UNIX_EPOCH - Duration::nanoseconds(1))?;
+        assert_eq!(expiry.timestamp(), -1);
+        assert_eq!(expiry.timestamp_subsec_nanos(), 999_999_999);
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn sessions_persist_across_store_instances(pool: PgPool) -> TestResult {
+        let store = PostgresSessionStore::new(pool.clone());
+        let another_store = PostgresSessionStore::new(pool);
+        let mut record = record(OffsetDateTime::now_utc() + Duration::hours(1));
+        record.data.insert("user_id".to_owned(), 42.into());
+
+        store.create(&mut record).await?;
+        assert_eq!(another_store.load(&record.id).await?, Some(record.clone()));
+
+        // Updating an unchanged record must succeed as well.
+        store.save(&record).await?;
+        record.data.insert("user_id".to_owned(), 43.into());
+        record.expiry_date += Duration::hours(1);
+        store.save(&record).await?;
+        assert_eq!(another_store.load(&record.id).await?, Some(record.clone()));
+
+        another_store.delete(&record.id).await?;
+        assert_eq!(store.load(&record.id).await?, None);
+        store.delete(&record.id).await?;
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn saving_a_deleted_session_cannot_recreate_it(pool: PgPool) -> TestResult {
+        let store = PostgresSessionStore::new(pool);
+        let mut record = record(OffsetDateTime::now_utc() + Duration::hours(1));
+        store.create(&mut record).await?;
+        store.delete(&record.id).await?;
+
+        assert!(matches!(
+            store.save(&record).await,
+            Err(session_store::Error::Backend(_))
+        ));
+        assert_eq!(store.load(&record.id).await?, None);
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn create_retries_colliding_session_ids(pool: PgPool) -> TestResult {
+        let store = PostgresSessionStore::new(pool);
+        let mut original = record(OffsetDateTime::now_utc() + Duration::hours(1));
+        store.create(&mut original).await?;
+
+        let mut collision = original.clone();
+        collision.data.insert("user_id".to_owned(), 42.into());
+        store.create(&mut collision).await?;
+
+        assert_ne!(collision.id, original.id);
+        assert_eq!(store.load(&original.id).await?, Some(original.clone()));
+        assert_eq!(store.load(&collision.id).await?, Some(collision.clone()));
+        Ok(())
+    }
+
+    #[sqlx::test]
+    async fn expired_sessions_are_rejected_and_cleaned_up(pool: PgPool) -> TestResult {
+        let store = PostgresSessionStore::new(pool.clone());
+        let now = OffsetDateTime::now_utc();
+        let mut expired = record(now - Duration::hours(1));
+        let mut active = record(now + Duration::hours(1));
+        store.create(&mut expired).await?;
+        store.create(&mut active).await?;
+
+        assert_eq!(store.load(&expired.id).await?, None);
+        store.delete_expired().await?;
+        store.delete_expired().await?;
+        let remaining = sqlx::query_scalar!("SELECT id FROM tower_sessions")
+            .fetch_all(&pool)
+            .await?;
+        assert_eq!(remaining, vec![active.id.to_string()]);
+        assert_eq!(store.load(&active.id).await?, Some(active.clone()));
+        Ok(())
+    }
 
     #[test]
     fn idle_expiry_is_capped_by_max_lifetime() {

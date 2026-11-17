@@ -8,7 +8,7 @@
   <article class="card">
     <h3><a href="/blog/{{ post.slug }}">{{ post.title }}</a></h3>
 
-    {{ post.preview|safe }}
+    <div class="prose-content mb-4">{{ post.preview|safe }}</div>
 
     <div class="metadata mt-auto">
       {% if post.published_at.len() != 0 %}
@@ -29,4 +29,11 @@
   <p>No posts with this tag.</p>
 {% endfor %}
 </div>
+{% if total_pages > 1 %}
+<nav class="pagination" aria-label="Tag pages">
+  {% if current_page > 1 %}<a href="/tags/{{ tag_slug }}?page={{ current_page - 1 }}">&larr; Previous</a>{% endif %}
+  <span>Page {{ current_page }} of {{ total_pages }}</span>
+  {% if current_page < total_pages %}<a href="/tags/{{ tag_slug }}?page={{ current_page + 1 }}">Next &rarr;</a>{% endif %}
+</nav>
+{% endif %}
 {% endblock %}

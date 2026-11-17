@@ -1,0 +1,145 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT p.id AS \"id!\", p.title AS \"title!\", p.slug AS \"slug!\", '' AS \"body!\",\n                p.preview, p.published_at, p.created_at AS \"created_at!\", p.updated_at,\n                t.id AS \"tag_id?\", t.name AS \"tag_name?\", t.slug AS \"tag_slug?\"\n         FROM (\n             SELECT p.id, p.title, p.slug, p.preview, p.published_at, p.created_at, p.updated_at\n             FROM posts p\n             JOIN post_tags pt ON pt.post_id = p.id\n             JOIN tags t ON t.id = pt.tag_id\n             WHERE t.slug = $1 AND p.published_at <= NOW()\n             ORDER BY p.published_at DESC, p.id\n             LIMIT $2 OFFSET $3\n         ) p\n         LEFT JOIN post_tags pt ON pt.post_id = p.id\n         LEFT JOIN tags t ON t.id = pt.tag_id\n         ORDER BY p.published_at DESC, p.id, t.name",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "title!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "slug!",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "slug"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "body!",
+        "type_info": "Text",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "preview",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "preview"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "published_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "published_at"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "posts",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "tag_id?",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "tags",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "tag_name?",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tags",
+            "name": "name"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "tag_slug?",
+        "type_info": "Varchar",
+        "origin": {
+          "Table": {
+            "table": "tags",
+            "name": "slug"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      null,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "8b91d719550911c34f52a3dada972a2ae150161c87a43ec3ccd699ad581bc85b"
+}

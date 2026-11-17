@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO login_csrf_key (singleton, key) VALUES (TRUE, $1) ON CONFLICT (singleton) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Bytea"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8ebf626a6b26ad3af91a17e2b96401a675b3ecf812150e75e073b7ec99a5eecf"
+}

@@ -1,9 +1,9 @@
 {% extends "base.html" %} {% block content %}
 {% for post in posts %}
-  <article class="home-post">
+  <article class="home-post reading-column">
     <h2><a href="/blog/{{ post.slug }}">{{ post.title }}</a></h2>
 
-    {{ post.body|safe }}
+    <div class="prose-content mb-4">{{ post.body|safe }}</div>
 
     <div class="metadata">
       <div>Published:</div>

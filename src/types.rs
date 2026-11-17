@@ -5,7 +5,7 @@ use std::{
 };
 
 use axum_login::{AuthSession, AuthnBackend};
-use sqlx::{Error as SqlxError, MySqlPool, migrate::MigrateError};
+use sqlx::{Error as SqlxError, PgPool, migrate::MigrateError};
 
 use crate::{
     auth::{AuthSecurity, ClientIdentity},
@@ -25,9 +25,16 @@ pub type AdminAuthSession = AuthSession<AppState>;
 /// Shared application state.
 #[derive(Clone)]
 pub struct AppState {
+    pub(crate) login_csrf_key: axum_extra::extract::cookie::Key,
     pub(crate) auth_security: Arc<AuthSecurity>,
-    pub(crate) db_pool: Arc<MySqlPool>,
+    pub(crate) db_pool: Arc<PgPool>,
     pub(crate) allowed_origins: Vec<String>,
+}
+
+impl axum::extract::FromRef<AppState> for axum_extra::extract::cookie::Key {
+    fn from_ref(state: &AppState) -> Self {
+        state.login_csrf_key.clone()
+    }
 }
 
 impl AuthnBackend for AppState {
@@ -52,7 +59,7 @@ impl AuthnBackend for AppState {
         let user = get_admin_user_by_username(&(*self.db_pool), &username).await?;
         if !self
             .auth_security
-            .allow_account(user.as_ref().map(|user| user.id), &username)
+            .allow_account(user.as_ref().map(|user| user.id), &username, client)
             .await
         {
             return Ok(None);
@@ -70,7 +77,7 @@ impl AuthnBackend for AppState {
         }
     }
 
-    async fn get_user(&self, user_id: &u64) -> Result<Option<Self::User>> {
+    async fn get_user(&self, user_id: &i64) -> Result<Option<Self::User>> {
         get_admin_user_by_id(&(*self.db_pool), *user_id).await
     }
 }
@@ -127,6 +134,20 @@ impl std::error::Error for Error {
             Self::Database(error) => Some(error),
             Self::DatabaseMigration(error) => Some(error),
             Self::Network(error) => Some(error),
+        }
+    }
+}
+
+impl Error {
+    pub(crate) fn unique_constraint(&self) -> Option<&str> {
+        match self {
+            Self::Database(error) => error.as_database_error().and_then(|error| {
+                error
+                    .is_unique_violation()
+                    .then(|| error.constraint())
+                    .flatten()
+            }),
+            _ => None,
         }
     }
 }

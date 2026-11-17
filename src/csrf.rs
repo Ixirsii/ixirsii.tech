@@ -97,7 +97,7 @@ fn referer_matches_origin(referer: &str, allowed_origins: &[String]) -> bool {
     allowed_origins.iter().any(|allowed| allowed == &origin)
 }
 
-fn generate_token() -> String {
+pub fn generate_token() -> String {
     let mut bytes = [0_u8; 32];
     OsRng.fill_bytes(&mut bytes);
     let mut token = String::with_capacity(bytes.len() * 2);

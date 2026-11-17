@@ -16,6 +16,7 @@ pub use admin_tags::*;
 pub use blog::*;
 pub use code::*;
 pub use error::*;
+pub use feed::*;
 pub use hall_of_fame::*;
 pub use home::*;
 pub use tag::*;
@@ -27,9 +28,30 @@ mod admin_tags;
 mod blog;
 mod code;
 mod error;
+mod feed;
 mod hall_of_fame;
 mod home;
 mod tag;
+mod validation;
+
+/// Invalid or unavailable public pages consistently return a styled 404.
+fn public_page(
+    page: Option<&str>,
+    total: u32,
+    show_admin_link: bool,
+) -> Result<(u32, u32), PageError> {
+    let current = match page {
+        None => 1,
+        Some(value) => value
+            .parse::<u32>()
+            .map_err(|_| PageError::not_found(show_admin_link))?,
+    };
+    let total_pages = total.div_ceil(PAGE_SIZE).max(1);
+    if current == 0 || current > total_pages {
+        return Err(PageError::not_found(show_admin_link));
+    }
+    Ok((current, total_pages))
+}
 
 /* ********************************************************************************************** *
  *                                           Constants                                            *
@@ -192,18 +214,13 @@ impl From<Post> for PostView {
             slug: post.slug,
             title: post.title,
             body: render_markdown(&post.body),
-            preview: post
-                .preview
-                .map(|p| render_markdown(&p))
-                .unwrap_or_default(),
+            preview: post.preview.map_or_default(|p| render_markdown(&p)),
             published_at: post
                 .published_at
-                .map(|d| d.format("%B %e, %Y").to_string())
-                .unwrap_or_default(),
+                .map_or_default(|d| d.format("%B %e, %Y").to_string()),
             updated_at: post
                 .updated_at
-                .map(|d| d.format("%B %e, %Y").to_string())
-                .unwrap_or_default(),
+                .map_or_default(|d| d.format("%B %e, %Y").to_string()),
             tags: post.tags.into_iter().map(TagView::from).collect(),
         }
     }
@@ -310,8 +327,18 @@ pub fn slugify(text: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::redirect_target;
+    use super::{public_page, redirect_target};
     use crate::ADMIN_ROUTE;
+
+    #[test]
+    fn public_pagination_rejects_invalid_and_missing_pages() {
+        assert_eq!(public_page(None, 0, false).ok(), Some((1, 1)));
+        assert_eq!(public_page(Some("2"), 9, false).ok(), Some((2, 2)));
+        for page in ["0", "-1", "abc", "", "3", "4294967295", "4294967296"] {
+            assert!(public_page(Some(page), 9, false).is_err(), "{page}");
+        }
+        assert!(public_page(Some("2"), 0, false).is_err());
+    }
 
     #[test]
     fn redirect_target_rejects_external_and_malformed_targets() {
