@@ -72,8 +72,6 @@ The application loads a local `.env` when present and reports a startup error if
 | `AUTH_CLIENT_ATTEMPTS` | No | `20` | Login attempts allowed per trusted client window |
 | `AUTH_CLIENT_WINDOW_SECONDS` | No | `300` | Per-client rate-limit window |
 | `AUTH_RATE_LIMIT_MAX_IDENTITIES` | No | `10000` | Maximum account and client keys retained by each limiter |
-| `RUST_LOG` | No | `info` | Tracing filter |
-| `OTEL_EXPORTER_OTLP_ENDPOINT` | No | Disabled | OTLP HTTP/protobuf trace endpoint |
 
 Startup connects to PostgreSQL and runs embedded schema-only SQLx migrations, including the `tower_sessions` table, before binding the listener. The `/health` endpoint acquires a pool connection and runs `SELECT 1`; failures or timeouts return `503 Service Unavailable`.
 
@@ -88,7 +86,7 @@ Startup connects to PostgreSQL and runs embedded schema-only SQLx migrations, in
 - **Database**: `src/database/` is split into posts, tags, post-tag joins, transactions, users, and shared types. Public database operations use tracing instrumentation and SQLx checked query macros. IDs use `i64`; timestamps use PostgreSQL `TIMESTAMPTZ` and Rust `DateTime<Utc>`. Usernames, tag names, and slugs use case-sensitive PostgreSQL comparisons and uniqueness.
 - **Migrations**: Four embedded PostgreSQL migrations create content tables and indexes, admin users, the session store, and the singleton login challenge signing-key table. They do not seed any content or users. The old MySQL migrations and `seed_initial_content` have been removed.
 - **Errors**: `src/types.rs` defines the internal `Error` and `Result<T>` types. `src/page/error.rs` renders styled public 404 and 500 responses.
-- **Observability**: `src/observability.rs` always enables console tracing. It adds an OTLP HTTP/protobuf exporter when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. Request spans record method, raw request path, and response status.
+- **Tracing**: Logging calls and instrumentation remain, but no subscriber or exporter is installed, so they produce no output. `src/observability.rs` defines request spans recording method, raw request path, and response status.
 
 ## Routes and pages
 

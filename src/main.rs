@@ -54,7 +54,6 @@ static STATIC_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/static")
 #[tokio::main]
 async fn main() -> Result<()> {
     load_local_dotenv(std::path::Path::new(".env"))?;
-    observability::init_tracing()?;
 
     let port = configured_port()?;
     let allowed_origins = configured_allowed_origins()?;

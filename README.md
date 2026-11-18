@@ -219,7 +219,7 @@ and uncacheable.
   - Clean up database
   - Clean up pages
   - Clean up CSRF
-  - Clean up observability
+- Re-add observability with Grafana Cloud
 
 [1]: https://discord.gg/KTgshSbEUU
 [2]: https://opensource.org/license/bsd-3-clause
