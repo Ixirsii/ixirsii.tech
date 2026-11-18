@@ -6,14 +6,22 @@ on:
 
 jobs:
   rust:
-    name: Rust quality checks and build
+    name: Rust built
     runs-on: ci-rust
     timeout-minutes: 20
-    steps:
-      - name: Install workflow prerequisites
-        run: |
-          pkg install -y postgresql18-server
 
+    env:
+      DATABASE_URL: postgres://ixirsii_teset:ixirsii_test@postgres:5432/ixirsii_tech
+
+    services:
+      postgres:
+        image: git.9dev.tech/9-developers/ci-postgres:18
+        env:
+          POSTGRES_USER: ixirsii_test
+          POSTGRES_PASSWORD: ixirsii_test
+          POSTGRES_DB: ixirsii_tech
+
+    steps:
       - name: Check out repository
         uses: https://data.forgejo.org/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
