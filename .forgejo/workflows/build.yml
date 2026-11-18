@@ -43,7 +43,7 @@ jobs:
         run: SQLX_OFFLINE=true cargo clippy --locked --all-targets -- -D warnings
 
       - name: Test with isolated PostgreSQL
-        run: sh .forgejo/scripts/test-postgres.sh
+        run: SQLX_OFFLINE=true cargo test --locked --all-targets
 
       - name: Build
         run: SQLX_OFFLINE=true cargo build --locked
