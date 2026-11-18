@@ -11,13 +11,13 @@ jobs:
     timeout-minutes: 20
 
     env:
-      DATABASE_URL: postgres://ixirsii_teset:ixirsii_test@postgres:5432/ixirsii_tech
+      DATABASE_URL: postgres://ixirsii:ixirsii_test@postgres:5432/ixirsii_tech
 
     services:
       postgres:
         image: git.9dev.tech/9-developers/ci-postgres:18
         env:
-          POSTGRES_USER: ixirsii_test
+          POSTGRES_USER: ixirsii
           POSTGRES_PASSWORD: ixirsii_test
           POSTGRES_DB: ixirsii_tech
 

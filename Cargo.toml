@@ -1,6 +1,6 @@
 [package]
 name = "ixirsii-tech"
-version = "1.0.0"
+version = "1.0.1"
 edition = "2024"
 authors = ["Ryan Porterfield <ixirsii@9dev.tech>"]
 description = "ixirsii.tech website"
