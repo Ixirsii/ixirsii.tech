@@ -1,9 +1,9 @@
 [package]
 name = "ixirsii-tech"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2024"
 authors = ["Ryan Porterfield <ixirsii@9dev.tech>"]
-description = "ixirsii.tech HTMX website"
+description = "ixirsii.tech website"
 license = "BSD-3-Clause"
 repository = "https://codeberg.org/Ixirsii/ixirsii.tech"
 readme = "README.md"
@@ -19,7 +19,10 @@ argon2 = "0.5.3"
 askama = "0.16.0"
 async-trait = "0.1"
 axum = "0.8.9"
-axum-extra = { version = "0.12.6", default-features = false, features = ["form", "cookie-signed"] }
+axum-extra = { version = "0.12.6", default-features = false, features = [
+  "form",
+  "cookie-signed",
+] }
 axum-login = "0.18.0"
 chrono = "0.4"
 dotenvy = "0.15.7"
