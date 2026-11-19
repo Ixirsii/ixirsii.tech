@@ -16,9 +16,7 @@ fi
 registry=${FORGEJO_API_URL#https://}
 registry=${registry%%/*}
 repo="$registry/${FORGEJO_REPOSITORY,,}"
-owner=${FORGEJO_REPOSITORY%%/*}
 sha=$(git rev-parse HEAD)
-record="$FORGEJO_API_URL/packages/$owner/generic/${repo##*/}-staging"
 work=$(mktemp -d)
 tunnel=
 cleanup() {
@@ -33,11 +31,19 @@ export DOCKER_CONFIG="$work/docker" CARGO_TARGET_DIR="$work/target"
 mkdir -p "$DOCKER_CONFIG"
 printf '%s' "$REGISTRY_TOKEN" | crane auth login "$registry" -u "$REGISTRY_USER" --password-stdin
 if [[ $RAILWAY_ENVIRONMENT == production ]]; then
-	staged_run=$(node .forgejo/scripts/deploy.mjs verify-staging)
-	curl -fsS -u "$REGISTRY_USER:$REGISTRY_TOKEN" "$record/$staged_run/image" -o "$work/image"
-	read -r staged_sha digest <"$work/image"
-	[[ $staged_sha == "$sha" && $digest =~ ^sha256:[0-9a-f]{64}$ ]]
+	run=$(node .forgejo/scripts/deploy.mjs verify-staging)
+else
+	run=$RELEASE_RUN_ID
+fi
+digest=$(node .forgejo/scripts/receipt.mjs read "$run" "$sha")
+build_image=false
+if [[ -n $digest ]]; then
 	[[ $(crane digest "$repo@$digest") == "$digest" ]]
+elif [[ $RAILWAY_ENVIRONMENT == staging ]]; then
+	build_image=true
+else
+	echo "Missing image receipt for staging run $run" >&2
+	exit 1
 fi
 
 # The CLI prints connection credentials to stderr. Consume its local URL
@@ -67,7 +73,7 @@ if [[ $ready != true ]]; then
 fi
 export DATABASE_URL
 cargo sqlx migrate run
-if [[ $RAILWAY_ENVIRONMENT == staging ]]; then
+if [[ $build_image == true ]]; then
 	cargo build --release --locked
 else
 	cargo check --release --locked
@@ -77,15 +83,13 @@ kill -- "-$tunnel"
 wait "$tunnel" || true
 tunnel=
 
-if [[ $RAILWAY_ENVIRONMENT == staging ]]; then
+if [[ $build_image == true ]]; then
 	tag="$repo:staging-$sha-$RELEASE_RUN_ID"
 	bash .forgejo/scripts/package-image.sh "$CARGO_TARGET_DIR/release/ixirsii-tech" "$tag"
 	digest=$(crane digest "$tag")
 	[[ $digest =~ ^sha256:[0-9a-f]{64}$ ]]
 fi
 RELEASE_IMAGE="$repo@$digest" node .forgejo/scripts/deploy.mjs deploy
-if [[ $RAILWAY_ENVIRONMENT == staging ]]; then
-	printf '%s %s\n' "$sha" "$digest" >"$work/image"
-	curl -fsS -u "$REGISTRY_USER:$REGISTRY_TOKEN" --upload-file "$work/image" \
-		"$record/$RELEASE_RUN_ID/image"
+if [[ $build_image == true ]]; then
+	node .forgejo/scripts/receipt.mjs publish "$run" "$sha" "$digest"
 fi

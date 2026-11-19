@@ -2,7 +2,7 @@
 
 [![Discord][badge-discord]][link-discord]
 [![License][badge-bsd-3]][link-bsd-3]
-[![Staging][badge-workflow-staging]][link-workflow-deploy]
+[![Staging][badge-workflow-staging]][link-workflow-staging]
 
 ## Links
 

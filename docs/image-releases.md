@@ -18,4 +18,6 @@
 
 ## Release ordering
 
+A staging retry checks for a receipt from the same run before building. If one exists, it validates the commit and registry digest, checks the live schema, and redeploys that exact image through the health check. This also recovers an upload that Forgejo accepted before the runner lost the response.
+
 Both jobs run migrations before compiling against a live schema. Staging publishes and deploys a release binary; production runs `cargo check --release --locked`, then deploys the recorded digest without rebuilding. Failed checks stop deployment. Migrations already applied remain in place. Design migrations for the previous binary as well as the new one; reverting an image does not revert the schema.
