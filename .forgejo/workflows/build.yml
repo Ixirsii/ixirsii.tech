@@ -33,29 +33,14 @@ jobs:
           npm install --no-save --no-package-lock @tailwindcss/cli@4.3.3 tailwindcss@4.3.3
           echo "$PWD/node_modules/.bin" >> "$FORGEJO_PATH"
 
+      - name: Test deployment script
+        run: node --test .forgejo/scripts/deploy.test.mjs
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Test deployment health-check wait
-        run: node --test .forgejo/scripts/deploy.test.mjs
-
       - name: Clippy
         run: SQLX_OFFLINE=true cargo clippy --locked --all-targets -- -D warnings
-
-      - name: Check PostgreSQL service connectivity
-        shell: sh
-        run: |
-          set -eu
-          pkg install -y postgresql18-client
-          export PGCONNECT_TIMEOUT=2
-          for attempt in $(jot 30); do
-            if [ "$(psql -XAt "$DATABASE_URL" -c 'SELECT 1')" = 1 ]; then
-              exit 0
-            fi
-            sleep 1
-          done
-          getent hosts postgres || true
-          exit 1
 
       - name: Test with isolated PostgreSQL
         run: SQLX_OFFLINE=true cargo test --locked --all-targets
