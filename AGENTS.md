@@ -5,7 +5,7 @@
 - Rust 1.95.0, pinned by `rust-toolchain.toml`.
 - PostgreSQL reachable through `DATABASE_URL` for running the app and database tests. Local development uses PostgreSQL 18 through Docker Compose/OrbStack.
 - Tailwind CSS CLI on `PATH` as `tailwindcss`. Railway installs Tailwind 4.3.3 through `railpack.json`; Forgejo installs it in the build workflow. Local environments must provide it separately.
-- SQLx CLI 0.9.0 for applying migrations and refreshing query metadata.
+- SQLx CLI 0.9.0 for applying migrations and refreshing query metadata. Install with `cargo install sqlx-cli --version 0.9.0 --locked`.
 
 There is no Node.js project or JavaScript package-manager setup.
 
@@ -50,6 +50,9 @@ Database queries use SQLx's compile-time validated macros. Commit `.sqlx/` metad
 cargo sqlx migrate run
 SQLX_OFFLINE=false cargo sqlx prepare -- --all-targets
 SQLX_OFFLINE=false cargo sqlx prepare --check -- --all-targets
+cargo fmt --check
+cargo clippy --locked --all-targets -- -D warnings
+cargo test --locked --all-targets
 ```
 
 Offline compilation does not make database tests offline: `cargo test` still needs the development database at runtime. Production uses a new PostgreSQL database and its own `DATABASE_URL`; there is no MySQL data-import tool, and the fresh migrations do not upgrade an existing MySQL database.
@@ -95,7 +98,7 @@ Public routes include Home, About, Blog, Code projects, Hall of Fame, Tags, logi
 - `PAGE_SIZE` is 8. Home shows the first eight published posts with full rendered bodies and no pagination.
 - Blog and tag indexes show eight previews per page with Previous/Next navigation. Invalid or unavailable pages return 404; empty indexes allow page one. Tag previews do not fetch full Markdown bodies. Blog detail pages render complete posts with metadata and up to four published posts sharing tags in a sidebar.
 - Public post pagination selects posts before joining tags and orders by publication date descending, then ID ascending. Admin publication inputs and displayed dates use UTC.
-- Admin slug format is lowercase ASCII letters/numbers separated by single hyphens. Character limits match PostgreSQL VARCHAR columns; bodies are limited to 65,535 UTF-8 bytes. Unique constraint races return field-level 409 responses.
+- Admin slugs use lowercase ASCII letters/numbers separated by single hyphens. Post titles and slugs allow 255 characters, previews 512, and tag names and slugs 127. Bodies are limited to 65,535 UTF-8 bytes. Unique constraint races return field-level 409 responses.
 - Markdown uses default `pulldown-cmark` parsing followed by `ammonia` sanitization.
 - The tag index uses HTMX search at `/tags/search`; tag sizes and colors are recalculated from the filtered result.
 - Code project data is hard-coded in `src/page/code.rs`, not stored in PostgreSQL.
@@ -110,9 +113,10 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 - Password verification uses Argon2 hashes stored in `admin_users`.
 - Login limits are process-local and reset on restart; each application replica maintains independent account and client limits.
 - Direct identity mode ignores forwarding headers. Trusted-proxy mode walks `X-Forwarded-For` only when the TCP peer matches `AUTH_TRUSTED_PROXY_CIDRS`; missing, malformed, or entirely trusted chains are rejected.
-- Railway startup explicitly selects `AUTH_CLIENT_IP_MODE=railway`, requiring a single valid edge-generated `X-Real-IP`. All untrusted login traffic must traverse the public HTTP edge; private/TCP bypasses cannot be trusted. See README for deployment verification, including Cloudflare IPv6 behavior.
+- Railway startup explicitly selects `AUTH_CLIENT_IP_MODE=railway`, requiring a single valid edge-generated `X-Real-IP`. All untrusted login traffic must traverse the public HTTP edge; private/TCP bypasses cannot be trusted. The application does not read `CF-Connecting-IP` directly. See [Railway's networking specifications](https://docs.railway.com/networking/public-networking/specs-and-limits) and [forwarding-header clarification](https://station.railway.com/questions/need-authoritative-client-ip-proxy-tru-090eac86).
 - Account limits are scoped to account/client pairs, preventing another IP from exhausting an administrator's account budget. Distributed guessing gets independent budgets; actual shared public IPs still share client limits. Recovery is window expiry or another network; rejected attempts do not extend the window.
 - Unknown usernames are checked against a fixed Argon2id dummy hash, and concurrent password checks are bounded.
+- Known and unknown accounts reserve rate-limit capacity before password verification, including attempts that succeed. A full identity map rejects new identities until entries expire.
 - Sessions use a shared PostgreSQL store, `SameSite=Lax`, and secure cookies outside debug builds. They survive application restarts and work across replicas connected to the same database.
 - Login and admin activity refreshes a 30-minute idle lifetime capped at a hard 12-hour maximum from successful login. Public-page activity does not extend an admin session.
 - Each replica deletes expired session rows every five minutes. Cleanup is idempotent across replicas and retries after database errors.
@@ -120,11 +124,21 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 - Admin POST handlers verify a token stored in the session. Tokens rotate after successful login and successful post/tag mutations.
 - Admin session token verification uses ordinary string equality and does not use per-form tokens. Login cookie/form challenge comparison uses constant-time equality.
 - Admin state-changing requests additionally check `Origin` or `Referer` against `CSRF_ALLOWED_ORIGINS`. This middleware check is skipped when no origins are configured. Login is outside that middleware and relies on its signed cookie/form challenge.
+- The login challenge cookie uses `SameSite=Strict`. Successful login clears it and rotates the session ID. Treat the shared 64-byte signing key as secret; rotate it with a coordinated restart to invalidate outstanding login forms.
+- All routes set `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin`.
+
+### Verifying Railway login identity
+
+1. With controlled clients behind Cloudflare, confirm distinct public client IPs receive independent login budgets. Check IPv4 and IPv6 origin connections separately.
+2. On both the custom and generated Railway domains, confirm caller-supplied `X-Real-IP`, `X-Forwarded-For`, and `CF-Connecting-IP` cannot override the edge identity.
+3. When a controlled account reaches its limit on one client, verify it can still log in from another and that the original client recovers after the window expires.
+4. Confirm untrusted clients cannot reach login over private networking or a TCP proxy.
 
 ## Static assets and CSS
 
 - `src/static/` is embedded into the executable with `include_dir`; it is not served from the filesystem with `ServeDir`.
 - `/site.webmanifest` is generated from the asset table at runtime with `no-cache`; its icon URLs are fingerprinted. `/feed.xml` provides the newest 20 published posts as RSS with a five-minute cache lifetime.
+- Every page links to the RSS feed. Feed item IDs survive slug changes, links use the canonical `https://ixirsii.tech` origin, and descriptions use previews when available or sanitized Markdown bodies otherwise.
 - Normal assets are available only through fingerprinted `/static/*` paths defined in `src/static_assets.rs` and receive a one-year immutable cache header.
 - When adding or renaming an asset, update the table in `src/static_assets.rs`. Its unit tests check coverage of all embedded files, URL hashes, and reverse lookups.
 - Templates resolve asset paths through `crate::static_assets::static_url()`.
