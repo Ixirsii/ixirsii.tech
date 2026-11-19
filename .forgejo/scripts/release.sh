@@ -48,6 +48,10 @@ fi
 
 # The CLI prints connection credentials to stderr. Consume its local URL
 # privately and keep both the CLI and its ssh child in a dedicated group.
+if ! command -v psql >/dev/null; then
+	echo "Cannot check tunnel to $db: psql unavailable; tunnel not started, probe not attempted" >&2
+	exit 1
+fi
 eval "$(ssh-agent -s)" >/dev/null
 printf '%s\n' "$TUNNEL_SSH_KEY" | ssh-add - >/dev/null 2>&1
 unset TUNNEL_SSH_KEY
@@ -57,18 +61,29 @@ env -u RAILWAY_TOKEN RAILWAY_API_TOKEN="$TUNNEL_API_TOKEN" setsid railway connec
 tunnel=$!
 unset TUNNEL_API_TOKEN
 ready=false
+url_seen=no
+probe_attempted=no
 for ((i = 0; i < 60; i++)); do
 	kill -0 "$tunnel" 2>/dev/null || break
 	DATABASE_URL=$(awk '$1=="URL:" && $2 ~ /^postgres(ql)?:\/\// {print $2; exit}' "$work/tunnel")
-	if [[ -n $DATABASE_URL ]] && PGCONNECT_TIMEOUT=2 PGDATABASE="$DATABASE_URL" \
-		psql -XAtqc 'SELECT 1' >/dev/null 2>&1; then
-		ready=true
-		break
+	if [[ -n $DATABASE_URL ]]; then
+		url_seen=yes
+		probe_attempted=yes
+		if PGCONNECT_TIMEOUT=2 PGDATABASE="$DATABASE_URL" psql -XAtqc 'SELECT 1' >/dev/null 2>&1; then
+			ready=true
+			break
+		fi
 	fi
 	sleep 1
 done
 if [[ $ready != true ]]; then
-	echo "Could not open authenticated tunnel to $db" >&2
+	cli_state="still running at timeout"
+	if ! kill -0 "$tunnel" 2>/dev/null; then
+		status=0
+		wait "$tunnel" || status=$?
+		cli_state="exited with status $status"
+	fi
+	echo "Tunnel to $db not ready: Railway CLI $cli_state; URL recognized=$url_seen; psql available=yes; probe attempted=$probe_attempted" >&2
 	exit 1
 fi
 export DATABASE_URL
