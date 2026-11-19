@@ -20,9 +20,6 @@ jobs:
           POSTGRES_USER: ixirsii
           POSTGRES_PASSWORD: ixirsii_test
           POSTGRES_DB: ixirsii_tech
-        options: >-
-          --health-cmd "pg_isready -U ixirsii -d ixirsii_tech"
-          --health-interval 2s --health-timeout 5s --health-retries 30
 
     steps:
       - name: Check out repository
@@ -41,6 +38,21 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+      - name: Wait for PostgreSQL over the job network
+        shell: sh
+        run: |
+          set -eu
+          pkg install -y postgresql18-client
+          export PGCONNECT_TIMEOUT=2
+          for attempt in $(jot 30); do
+            if [ "$(psql -XAt "$DATABASE_URL" -c 'SELECT 1')" = 1 ]; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "PostgreSQL did not answer SELECT 1 after 30 attempts" >&2
+          exit 1
 
       - name: Prepare database for SQLx compile-time checks
         run: |
