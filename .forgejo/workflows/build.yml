@@ -42,7 +42,7 @@ jobs:
       - name: Clippy
         run: SQLX_OFFLINE=true cargo clippy --locked --all-targets -- -D warnings
 
-      - name: Test with isolated PostgreSQL
+      - name: Test
         run: SQLX_OFFLINE=true cargo test --locked --all-targets
 
       - name: Build
