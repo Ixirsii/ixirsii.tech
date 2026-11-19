@@ -6,13 +6,6 @@ on:
       environment:
         required: true
         type: string
-    secrets:
-      RAILWAY_SERVICE: { required: true }
-      RAILWAY_TOKEN: { required: true }
-      TUNNEL_API_TOKEN: { required: true }
-      TUNNEL_SSH_KEY: { required: true }
-      REGISTRY_USER: { required: true }
-      REGISTRY_TOKEN: { required: true }
 
 concurrency:
   group: railway-${{ inputs.environment }}
