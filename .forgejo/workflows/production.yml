@@ -39,19 +39,19 @@ jobs:
           FORGEJO_REPOSITORY: ${{ forgejo.repository }}
           FORGEJO_TOKEN: ${{ forgejo.token }}
 
-  build:
-    needs: validate
-    uses: ./.forgejo/workflows/build.yml
-
   security:
     needs: validate
     uses: ./.forgejo/workflows/security.yml
 
   railway:
-    needs: [build, security]
+    needs: security
     uses: ./.forgejo/workflows/railway.yml
     with:
       environment: production
     secrets:
       RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      TUNNEL_API_TOKEN: ${{ secrets.TUNNEL_API_TOKEN }}
+      TUNNEL_SSH_KEY: ${{ secrets.TUNNEL_SSH_KEY }}
+      REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+      REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}

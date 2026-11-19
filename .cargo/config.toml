@@ -1,4 +1,0 @@
-[env]
-# Use committed query metadata for ordinary builds, including release builds.
-# Override with SQLX_OFFLINE=false when validating against a development database.
-SQLX_OFFLINE = "true"

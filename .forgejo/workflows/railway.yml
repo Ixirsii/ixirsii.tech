@@ -1,4 +1,4 @@
-name: Railway deploy
+name: Railway image deployment
 
 on:
   workflow_call:
@@ -6,6 +6,13 @@ on:
       environment:
         required: true
         type: string
+    secrets:
+      RAILWAY_SERVICE: { required: true }
+      RAILWAY_TOKEN: { required: true }
+      TUNNEL_API_TOKEN: { required: true }
+      TUNNEL_SSH_KEY: { required: true }
+      REGISTRY_USER: { required: true }
+      REGISTRY_TOKEN: { required: true }
 
 concurrency:
   group: railway-${{ inputs.environment }}
@@ -13,34 +20,26 @@ concurrency:
 
 jobs:
   railway:
-    name: Railway
-    runs-on: node-24
-    timeout-minutes: 30
-    env:
-      RAILWAY_ENVIRONMENT: ${{ inputs.environment }}
-      RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
-      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    runs-on: ci-railway
+    timeout-minutes: 60
     steps:
-      - name: Check out repository
-        uses: https://data.forgejo.org/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - uses: https://data.forgejo.org/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
           ref: ${{ forgejo.sha }}
 
-      - name: Install Railway CLI
+      - name: Migrate, validate and deploy image
+        run: bash .forgejo/scripts/release.sh
         env:
-          RAILWAY_CLI_SHA256: 57911c6d61881e8f47d00df42f02b94d85b5e82dcd96b8bc84bd121be58a8332
-          RAILWAY_CLI_VERSION: 5.74.1
-        run: |
-          archive="$RUNNER_TEMP/railway.tar.gz"
-          curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location \
-            "https://github.com/railwayapp/cli/releases/download/v${RAILWAY_CLI_VERSION}/railway-v${RAILWAY_CLI_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-            --output "$archive"
-          printf '%s  %s\n' "$RAILWAY_CLI_SHA256" "$archive" | sha256sum --check --strict
-          tar --extract --gzip --file "$archive" --directory "$RUNNER_TEMP"
-          "$RUNNER_TEMP/railway" --version
-
-      - name: Deploy and wait for health check
-        run: node .forgejo/scripts/deploy.mjs deploy
-        env:
-          RAILWAY_BIN: ${{ runner.temp }}/railway
+          RAILWAY_ENVIRONMENT: ${{ inputs.environment }}
+          RAILWAY_PROJECT_ID: ${{ vars.RAILWAY_PROJECT_ID }}
+          RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          TUNNEL_API_TOKEN: ${{ secrets.TUNNEL_API_TOKEN }}
+          TUNNEL_SSH_KEY: ${{ secrets.TUNNEL_SSH_KEY }}
+          REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+          FORGEJO_API_URL: ${{ forgejo.api_url }}
+          FORGEJO_REPOSITORY: ${{ forgejo.repository }}
+          FORGEJO_TOKEN: ${{ forgejo.token }}
+          RELEASE_RUN_ID: ${{ forgejo.run_id }}

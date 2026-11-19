@@ -2,22 +2,22 @@
 
 ## Prerequisites
 
-- Rust 1.95.0, pinned by `rust-toolchain.toml`.
+- Rust 1.100.0, pinned by `rust-toolchain.toml`.
 - PostgreSQL reachable through `DATABASE_URL` for running the app and database tests. Local development uses PostgreSQL 18 through Docker Compose/OrbStack.
-- Tailwind CSS CLI on `PATH` as `tailwindcss`. Railway installs Tailwind 4.3.3 through `railpack.json`; Forgejo installs it in the build workflow. Local environments must provide it separately.
+- Tailwind CSS CLI 4.3.3 on `PATH` as `tailwindcss`. The release runner provides it; ordinary Forgejo builds install it in the workflow.
 - SQLx CLI 0.9.0 for applying migrations and refreshing query metadata. Install with `cargo install sqlx-cli --version 0.9.0 --locked`.
 
 There is no Node.js project or JavaScript package-manager setup.
 
 ## Build and run
 
-| Command | Purpose |
-|---|---|
-| `cargo run` | Build and run on `0.0.0.0:${PORT:-3000}` |
-| `cargo build` | Compile the application |
-| `cargo check` | Type-check the application |
-| `cargo clippy` | Lint with the strict configuration in `Cargo.toml` |
-| `cargo fmt` | Format using Rust 2024 edition rules |
+| Command                             | Purpose                                                                          |
+| ----------------------------------- | -------------------------------------------------------------------------------- |
+| `cargo run`                         | Build and run on `0.0.0.0:${PORT:-3000}`                                         |
+| `cargo build`                       | Compile the application                                                          |
+| `cargo check`                       | Type-check the application                                                       |
+| `cargo clippy`                      | Lint with the strict configuration in `Cargo.toml`                               |
+| `cargo fmt`                         | Format using Rust 2024 edition rules                                             |
 | `cargo test --locked --all-targets` | Run unit and isolated PostgreSQL database tests; requires a local `DATABASE_URL` |
 
 Cargo build, check, run, and Clippy commands execute `build.rs`. It runs:
@@ -44,12 +44,12 @@ cargo run
 
 Compose binds PostgreSQL 18 to `127.0.0.1:55432` and stores data in a named volume. The optional seed service connects only to the Compose `postgres` service, ignores `DATABASE_URL`, and checks its development database and role. `dev/seed.sql` is rerunnable without resetting data or overwriting edits. It supplies twelve published posts, tied publication dates, tagged/untagged posts, draft/future posts, unused tags, and the local login `developer` / `local-development-only`. It is never run by migrations or application startup. Preserve existing `.env` files; `.env.example` documents the local settings.
 
-Database queries use SQLx's compile-time validated macros. Commit `.sqlx/` metadata so builds do not need a database. `.cargo/config.toml` defaults `SQLX_OFFLINE=true`; SQLx enables only Chrono for date/time types. Session expiry values are converted from `time::OffsetDateTime` before binding. After changing SQL or migrations, use the local database above:
+Database queries use SQLx's compile-time validated macros. When `DATABASE_URL` is set, compilation checks queries against that database. Commit `.sqlx/` metadata for builds without a database URL. SQLx enables only Chrono for date/time types. Session expiry values are converted from `time::OffsetDateTime` before binding. After changing SQL or migrations, use the local database above:
 
 ```sh
 cargo sqlx migrate run
-SQLX_OFFLINE=false cargo sqlx prepare -- --all-targets
-SQLX_OFFLINE=false cargo sqlx prepare --check -- --all-targets
+cargo sqlx prepare -- --all-targets
+cargo sqlx prepare --check -- --all-targets
 cargo fmt --check
 cargo clippy --locked --all-targets -- -D warnings
 cargo test --locked --all-targets
@@ -61,20 +61,20 @@ Offline compilation does not make database tests offline: `cargo test` still nee
 
 The application loads a local `.env` when present and reports a startup error if it cannot be parsed. Exported environment variables take precedence. Supplied invalid values fail startup rather than silently using defaults. The application uses these variables:
 
-| Variable | Required | Default | Purpose |
-|---|---:|---|---|
-| `DATABASE_URL` | Yes | None | PostgreSQL connection URL |
-| `DATABASE_MAX_CONNECTIONS` | No | `5` | Positive SQLx pool size |
-| `PORT` | No | `3000` | Listen port; the host is fixed to `0.0.0.0` |
-| `CSRF_ALLOWED_ORIGINS` | No | Origin check disabled | Comma-separated allowed origins for admin state-changing requests |
-| `AUTH_CLIENT_IP_MODE` | No | `trusted-proxy` if CIDRs supplied, otherwise `direct` | `direct`, `trusted-proxy`, or `railway`; release builds warn when unset |
-| `AUTH_TRUSTED_PROXY_CIDRS` | No | Forwarded headers ignored | Required in trusted-proxy mode; comma-separated proxy CIDRs allowed to supply `X-Forwarded-For`; `/0` rejected |
-| `AUTH_ARGON2_MAX_CONCURRENT` | No | `2` | Maximum concurrent Argon2 password checks |
-| `AUTH_ACCOUNT_ATTEMPTS` | No | `5` | Login attempts allowed per account/client pair |
-| `AUTH_ACCOUNT_WINDOW_SECONDS` | No | `300` | Per-account/client rate-limit window |
-| `AUTH_CLIENT_ATTEMPTS` | No | `20` | Login attempts allowed per trusted client window |
-| `AUTH_CLIENT_WINDOW_SECONDS` | No | `300` | Per-client rate-limit window |
-| `AUTH_RATE_LIMIT_MAX_IDENTITIES` | No | `10000` | Maximum account and client keys retained by each limiter |
+| Variable                         | Required | Default                                               | Purpose                                                                                                        |
+| -------------------------------- | -------: | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                   |      Yes | None                                                  | PostgreSQL connection URL                                                                                      |
+| `DATABASE_MAX_CONNECTIONS`       |       No | `5`                                                   | Positive SQLx pool size                                                                                        |
+| `PORT`                           |       No | `3000`                                                | Listen port; the host is fixed to `0.0.0.0`                                                                    |
+| `CSRF_ALLOWED_ORIGINS`           |       No | Origin check disabled                                 | Comma-separated allowed origins for admin state-changing requests                                              |
+| `AUTH_CLIENT_IP_MODE`            |       No | `trusted-proxy` if CIDRs supplied, otherwise `direct` | `direct`, `trusted-proxy`, or `railway`; release builds warn when unset                                        |
+| `AUTH_TRUSTED_PROXY_CIDRS`       |       No | Forwarded headers ignored                             | Required in trusted-proxy mode; comma-separated proxy CIDRs allowed to supply `X-Forwarded-For`; `/0` rejected |
+| `AUTH_ARGON2_MAX_CONCURRENT`     |       No | `2`                                                   | Maximum concurrent Argon2 password checks                                                                      |
+| `AUTH_ACCOUNT_ATTEMPTS`          |       No | `5`                                                   | Login attempts allowed per account/client pair                                                                 |
+| `AUTH_ACCOUNT_WINDOW_SECONDS`    |       No | `300`                                                 | Per-account/client rate-limit window                                                                           |
+| `AUTH_CLIENT_ATTEMPTS`           |       No | `20`                                                  | Login attempts allowed per trusted client window                                                               |
+| `AUTH_CLIENT_WINDOW_SECONDS`     |       No | `300`                                                 | Per-client rate-limit window                                                                                   |
+| `AUTH_RATE_LIMIT_MAX_IDENTITIES` |       No | `10000`                                               | Maximum account and client keys retained by each limiter                                                       |
 
 Startup connects to PostgreSQL and runs embedded schema-only SQLx migrations, including the `tower_sessions` table, before binding the listener. The `/health` endpoint acquires a pool connection and runs `SELECT 1`; failures or timeouts return `503 Service Unavailable`.
 
@@ -151,9 +151,11 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 
 `Cargo.toml` denies unsafe code and enables Clippy `cargo`, `nursery`, and `pedantic` warnings. It denies `expect_used`, `unwrap_used`, `missing_errors_doc`, and `missing_panics_doc`.
 
-Forgejo CI uses `.forgejo/workflows/build.yml` and `security.yml`. Pull requests and pushes to `main` run the build workflow; pushes to `main` independently run Gitleaks, Semgrep, and Trivy. The `ci-rust` FreeBSD runner installs Tailwind 4.3.3 and runs `SQLX_OFFLINE=true cargo build --locked`. The workflow also checks formatting, tests deployment gates and the health-check wait with Node.js, runs Clippy for all targets with warnings denied, and runs locked tests against a disposable PostgreSQL 18 cluster over a private Unix socket. It does not run online SQLx metadata validation; run that locally after query changes. Pushes to `main` deploy to staging through `deploy.yml` after build and security checks. Release tags use `release.yml`, require successful staging deployment of the exact commit, and run build and security checks before production deployment. Both use reusable `railway.yml` on `node-24`, Railway CLI 5.74.1, per-environment concurrency, and deployment health waits. Both environments use `RAILWAY_SERVICE`; staging uses `RAILWAY_STAGING_TOKEN`, and production keeps `RAILWAY_TOKEN`. Provision staging with its own database and runtime variables.
+Forgejo `checks.yml` runs on pull requests and before staging on pushes to `main`. It checks formatting, tests the deployment script, migrates disposable PostgreSQL 18, and runs Clippy and locked tests on `ci-rust`. Check committed SQLx metadata locally after query changes. Staging requires both checks and security scans. Production requires a successful staging run for the exact tagged commit on `main` and a fresh security scan.
 
-Railway uses the Railpack builder configured by `railway.toml` and `railpack.json`. It builds with `SQLX_OFFLINE=true cargo build --release --locked`, copies the executable to the project root, starts `./ixirsii-tech`, checks `/health`, and restarts on failure.
+`railway.yml` serializes releases per environment on `ci-railway`. The job opens a private Railway SSH tunnel, migrates the target database, and uses a fresh Cargo target directory for online SQLx query validation. Staging builds a Linux/amd64 release image; production checks the release queries and deploys the exact image digest recorded after the staging health check. Railway pulls the image rather than building from source. See [release runner setup and first-run checks](docs/image-releases.md).
+
+**Migration compatibility:** the previous binary continues serving after migrations run. If compilation, image publication or deployment fails, the database stays migrated. Make schema changes compatible with both releases: add new structures first, backfill and switch readers/writers, then remove obsolete structures in a later release after the rollback window. Do not rename/drop a column still used by a running or rollback-eligible binary.
 
 There are no pre-commit hooks.
 
@@ -171,7 +173,7 @@ There are no pre-commit hooks.
 - If any Cargo command fails while running `build.rs`, verify that a compatible `tailwindcss` executable is on `PATH`, then inspect `src/style/main.css` and its imports.
 - If CSS or an asset URL is stale, inspect `build.rs`, the generated `src/static/main.css`, and the table in `src/static_assets.rs`.
 - If startup fails before listening, verify `DATABASE_URL`, PostgreSQL connectivity, and the migrations in `migrations/`.
-- If SQLx macros report missing or stale offline metadata, migrate the local development database and run `SQLX_OFFLINE=false cargo sqlx prepare -- --all-targets`; commit the resulting `.sqlx/` files.
+- If SQLx macros report missing or stale offline metadata, migrate the local development database and run `cargo sqlx prepare -- --all-targets`; commit the resulting `.sqlx/` files.
 - If admin state-changing requests return `403`, verify the session token and `CSRF_ALLOWED_ORIGINS` values, including scheme and port.
 - If login fails, verify that `admin_users` contains the expected case-sensitive username and a valid Argon2 password hash. Local fixtures are available through `docker compose run --rm seed`; there is no production provisioning command.
 - Check `src/main.rs` for the authoritative route and middleware layout.

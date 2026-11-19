@@ -1,4 +1,4 @@
-name: Build
+name: Checks
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   rust:
-    name: Rust build
+    name: Rust checks
     runs-on: ci-rust
     timeout-minutes: 20
 
@@ -20,6 +20,9 @@ jobs:
           POSTGRES_USER: ixirsii
           POSTGRES_PASSWORD: ixirsii_test
           POSTGRES_DB: ixirsii_tech
+        options: >-
+          --health-cmd "pg_isready -U ixirsii -d ixirsii_tech"
+          --health-interval 2s --health-timeout 5s --health-retries 30
 
     steps:
       - name: Check out repository
@@ -39,11 +42,13 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
+      - name: Prepare database for SQLx compile-time checks
+        run: |
+          cargo install sqlx-cli --version 0.9.0 --locked --no-default-features --features postgres
+          cargo sqlx migrate run
+
       - name: Clippy
-        run: SQLX_OFFLINE=true cargo clippy --locked --all-targets -- -D warnings
+        run: cargo clippy --locked --all-targets -- -D warnings
 
       - name: Test
-        run: SQLX_OFFLINE=true cargo test --locked --all-targets
-
-      - name: Build
-        run: SQLX_OFFLINE=true cargo build --locked
+        run: cargo test --locked --all-targets

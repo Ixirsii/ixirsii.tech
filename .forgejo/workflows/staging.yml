@@ -6,17 +6,21 @@ on:
       - main
 
 jobs:
-  build:
-    uses: ./.forgejo/workflows/build.yml
+  checks:
+    uses: ./.forgejo/workflows/checks.yml
 
   security:
     uses: ./.forgejo/workflows/security.yml
 
   staging:
-    needs: [build, security]
+    needs: [checks, security]
     uses: ./.forgejo/workflows/railway.yml
     with:
       environment: staging
     secrets:
       RAILWAY_SERVICE: ${{ secrets.RAILWAY_SERVICE }}
       RAILWAY_TOKEN: ${{ secrets.RAILWAY_STAGING_TOKEN }}
+      TUNNEL_API_TOKEN: ${{ secrets.TUNNEL_API_TOKEN }}
+      TUNNEL_SSH_KEY: ${{ secrets.TUNNEL_SSH_KEY }}
+      REGISTRY_USER: ${{ secrets.REGISTRY_USER }}
+      REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
