@@ -69,7 +69,8 @@ for ((i = 0; i < 60; i++)); do
 	if [[ -n $DATABASE_URL ]]; then
 		url_seen=yes
 		probe_attempted=yes
-		if PGCONNECT_TIMEOUT=2 PGDATABASE="$DATABASE_URL" psql -XAtqc 'SELECT 1' >/dev/null 2>&1; then
+		if DATABASE_URL="$DATABASE_URL" PROBE_SERVICE_FILE="$work/probe.conf" \
+			node .forgejo/scripts/probe-postgres.mjs >/dev/null 2>&1; then
 			ready=true
 			break
 		fi
