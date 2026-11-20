@@ -11,7 +11,7 @@ keywords = ["web", "axum", "htmx", "blog"]
 categories = ["web-programming"]
 
 [build-dependencies]
-sha2 = "0.11.0"
+nine_dev_site_build = "0.1.1"
 
 [dependencies]
 ammonia = "4.1.2"

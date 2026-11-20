@@ -6,7 +6,7 @@ use axum::{
     Router,
     body::Body,
     extract::{Path, State},
-    http::{HeaderValue, StatusCode, header},
+    http::{HeaderValue, StatusCode, Uri, header},
     middleware,
     response::{IntoResponse, Response},
     routing::{get, post},
@@ -335,8 +335,8 @@ async fn well_known_asset(Path(path): Path<String>) -> Response {
     response
 }
 
-async fn static_asset(Path(path): Path<String>) -> Response {
-    let Some(source_path) = static_assets::source_path_for_request(&path) else {
+async fn static_asset(uri: Uri) -> Response {
+    let Some(source_path) = static_assets::source_path_for_request(uri.path()) else {
         return StatusCode::NOT_FOUND.into_response();
     };
     let Some(file) = STATIC_DIR.get_file(source_path) else {

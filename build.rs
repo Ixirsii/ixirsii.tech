@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
-use sha2::{Digest, Sha256};
+use nine_dev_site_build::assets::fingerprint;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR")?);
@@ -28,18 +28,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         return Err(format!("tailwindcss build failed:\n{stdout}\n{stderr}").into());
     }
 
-    emit_static_asset_hashes(&static_dir, &static_dir)?;
+    emit_asset_urls(&static_dir, &static_dir)?;
 
     Ok(())
 }
 
-fn emit_static_asset_hashes(root: &Path, dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
-    const HEX_DIGITS: &[u8; 16] = b"0123456789abcdef";
-
+fn emit_asset_urls(root: &Path, dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
     for entry in std::fs::read_dir(dir)? {
         let path = entry?.path();
         if path.is_dir() {
-            emit_static_asset_hashes(root, &path)?;
+            emit_asset_urls(root, &path)?;
             continue;
         }
 
@@ -48,18 +46,8 @@ fn emit_static_asset_hashes(root: &Path, dir: &Path) -> Result<(), Box<dyn std::
             .to_str()
             .ok_or("static asset paths must be valid UTF-8")?
             .replace('\\', "/");
-        let digest = Sha256::digest(std::fs::read(&path)?);
-        let mut fingerprint = String::with_capacity(12);
-        for byte in &digest[..8] {
-            fingerprint.push(char::from(HEX_DIGITS[usize::from(byte >> 4)]));
-            fingerprint.push(char::from(HEX_DIGITS[usize::from(byte & 0x0f)]));
-        }
-
-        // Keep the path's case and punctuation so different filenames have distinct keys.
-        println!(
-            "cargo:rustc-env=ASSET_HASH_{source_path}={}",
-            &fingerprint[..16]
-        );
+        let asset = fingerprint(&source_path, &std::fs::read(&path)?);
+        println!("cargo:rustc-env=ASSET_URL_{source_path}={}", asset.url);
     }
 
     Ok(())

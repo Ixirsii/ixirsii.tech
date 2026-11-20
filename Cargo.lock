@@ -1222,6 +1222,7 @@ dependencies = [
  "include_dir",
  "ipnet",
  "mime_guess",
+ "nine_dev_site_build",
  "pulldown-cmark",
  "rand 0.10.3",
  "reqwest",
@@ -1440,6 +1441,16 @@ name = "new_debug_unreachable"
 version = "1.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "650eef8c711430f1a879fdd01d4745a7deea475becfb90269c06775983bbf086"
+
+[[package]]
+name = "nine_dev_site_build"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f31f44c2eedead2287b7a5f826bd309d80c8d1e5bb7afa48ead0d0e8a2ccd10b"
+dependencies = [
+ "percent-encoding",
+ "sha2 0.11.0",
+]
 
 [[package]]
 name = "num-conv"
@@ -1690,7 +1701,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -1912,7 +1923,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -2958,7 +2969,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
