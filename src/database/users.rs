@@ -34,6 +34,23 @@ impl AuthUser for User {
  *                                             Create                                             *
  * ********************************************************************************************** */
 
+/// Insert a new admin; a username conflict leaves the existing account untouched.
+pub async fn insert_admin_user(
+    executor: impl PgExecutor<'_>,
+    username: &str,
+    password_hash: &str,
+) -> Result<bool> {
+    let result = sqlx::query!(
+        "INSERT INTO admin_users (username, password_hash) VALUES ($1, $2)
+         ON CONFLICT (username) DO NOTHING",
+        username,
+        password_hash
+    )
+    .execute(executor)
+    .await?;
+    Ok(result.rows_affected() == 1)
+}
+
 /* ********************************************************************************************** *
  *                                             Delete                                             *
  * ********************************************************************************************** */

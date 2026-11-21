@@ -20,6 +20,22 @@
 | HTML templates | [Askama](https://docs.rs/askama/) |
 | Javascript     | [HTMX](https://htmx.org)          |
 
+## Create an admin account
+
+With `DATABASE_URL` set to the intended, migrated PostgreSQL database, run this
+from an interactive terminal using the release executable:
+
+```sh
+ixirsii-tech admin create <username>
+```
+
+Replace `<username>` with the case-sensitive login name. The command prompts
+twice without echoing the password and exits after creating the account. An
+existing username is an error; its password is never changed. Sign in at `/login`.
+
+From a checkout, use `cargo run -- admin create <username>`. Plain `cargo run`
+starts the local server.
+
 ## Todo
 
 - Code review (un-vibe the code)

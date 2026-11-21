@@ -22,6 +22,7 @@ use tracing::{error, info, instrument, warn};
 
 pub use types::*;
 
+mod admin_cli;
 mod auth;
 mod browser;
 mod csrf;
@@ -54,6 +55,21 @@ static STATIC_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/static")
 #[tokio::main]
 async fn main() -> Result<()> {
     load_local_dotenv(std::path::Path::new(".env"))?;
+    let args: Vec<_> = std::env::args_os().skip(1).collect();
+    match args.as_slice() {
+        [] => {}
+        [admin, create, username] if admin == "admin" && create == "create" => {
+            let username = username
+                .to_str()
+                .ok_or_else(|| Error::Configuration("username must be valid UTF-8".to_owned()))?;
+            return admin_cli::create(username).await;
+        }
+        _ => {
+            return Err(Error::Configuration(
+                "usage: ixirsii-tech [admin create <username>]".to_owned(),
+            ));
+        }
+    }
 
     let port = configured_port()?;
     let allowed_origins = configured_allowed_origins()?;

@@ -30,7 +30,7 @@ After compiling CSS, `build.rs` passes each file in `src/static/` to the pinned 
 
 Tests are colocated with the Rust modules they exercise; there is no separate `tests/` directory. Database and session `#[sqlx::test]` cases create isolated databases, apply migrations, and exercise real PostgreSQL. Their runtime `DATABASE_URL` role needs permission to create databases; the Compose development role has it. Fixtures are not required for automated tests.
 
-The repository has no production admin-user creation binary or registration flow. Production `admin_users` must be provisioned outside the application. The separate development fixture command creates a local test admin only.
+Use `ixirsii-tech admin create <username>` from an interactive terminal to provision an administrator in an already migrated database. The command needs only `DATABASE_URL`, prompts twice for a hidden password, and rejects duplicate usernames. The separate development fixture command creates a local test admin only.
 
 ## Local PostgreSQL and checked queries
 
@@ -175,5 +175,5 @@ There are no pre-commit hooks.
 - If startup fails before listening, verify `DATABASE_URL`, PostgreSQL connectivity, and the migrations in `migrations/`.
 - If SQLx macros report missing or stale offline metadata, migrate the local development database and run `cargo sqlx prepare -- --all-targets`; commit the resulting `.sqlx/` files.
 - If admin state-changing requests return `403`, verify the session token and `CSRF_ALLOWED_ORIGINS` values, including scheme and port.
-- If login fails, verify that `admin_users` contains the expected case-sensitive username and a valid Argon2 password hash. Local fixtures are available through `docker compose run --rm seed`; there is no production provisioning command.
+- If login fails, verify that `admin_users` contains the expected case-sensitive username and a valid Argon2 password hash. Local fixtures are available through `docker compose run --rm seed`.
 - Check `src/main.rs` for the authoritative route and middleware layout.

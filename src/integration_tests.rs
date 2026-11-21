@@ -166,8 +166,10 @@ async fn anonymous_login_does_not_create_sessions_and_login_still_works(
         0
     );
 
-    // The existing development password hash; this user exists only in this test database.
-    sqlx::query!("INSERT INTO admin_users (username, password_hash) VALUES ($1, $2)", "developer", "$argon2id$v=19$m=19456,t=2,p=1$aXhpcnNpaS1kZXYtb25seQ$8k8VcWHiaaBqwzl4afJ3L7QMp6nhuG4FxUX4O5Qu964").execute(&pool).await?;
+    let hash = crate::admin_cli::hash_password("local-development-only")?;
+    assert!(database::insert_admin_user(&pool, "developer", &hash).await?);
+    let other_hash = crate::admin_cli::hash_password("different-password")?;
+    assert!(!database::insert_admin_user(&pool, "developer", &other_hash).await?);
     let response = app
         .clone()
         .oneshot(login_request(&cookie, csrf, "local-development-only")?)

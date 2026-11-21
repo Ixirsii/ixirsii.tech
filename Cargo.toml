@@ -27,6 +27,7 @@ axum-login = "0.18.0"
 chrono = "0.4"
 dotenvy = "0.15.7"
 include_dir = "0.7"
+inquire = { version = "0.9.5", default-features = false, features = ["crossterm"] }
 ipnet = "2.11"
 mime_guess = "2.0.5"
 pulldown-cmark = "0.13.4"
