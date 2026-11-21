@@ -181,6 +181,7 @@ mod tests {
         for icon in [
             &icons::BLUESKY,
             &icons::DISCORD,
+            &icons::GITHUB,
             &icons::INSTAGRAM,
             &icons::MASTODON,
             &icons::SIGNAL,
@@ -191,7 +192,6 @@ mod tests {
         ] {
             assert!(links.contains(&format!("<use href=\"{}#icon\">", icon.url)));
         }
-        assert!(links.contains("class=\"about-link-service\">Codeberg</span>"));
         assert!(links.contains("href=\"/licenses\""));
         Ok(())
     }

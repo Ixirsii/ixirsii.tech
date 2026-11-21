@@ -109,6 +109,10 @@
     outline-offset: 3px;
   }
 
+  :where(:focus-visible):not(blockquote) {
+    @apply rounded-md;
+  }
+
   :not(pre) code {
     @apply bg-ctp-mantle;
     @apply font-mono;
@@ -168,7 +172,6 @@
     @apply my-4;
   }
 
-  header a,
   footer a,
   a.button {
     @apply underline decoration-ui-accent underline-offset-4;
@@ -279,7 +282,6 @@
 
   .settings > a {
     @apply flex items-center justify-center rounded-md hover:bg-ui-hover min-h-11 min-w-11;
-    @apply border-b border-dashed border-ui-accent;
   }
 
   .site-title {

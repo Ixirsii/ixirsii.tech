@@ -78,15 +78,6 @@
   @apply text-sm;
 }
 
-.section-kicker {
-  @apply font-mono;
-  @apply mb-2;
-  @apply text-accent;
-  @apply text-sm;
-  @apply tracking-wide;
-  text-transform: uppercase;
-}
-
 .button-primary {
   @apply bg-ui-action;
   @apply border;

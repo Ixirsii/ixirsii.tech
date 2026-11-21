@@ -37,7 +37,7 @@
 .hall-of-fame-callout svg {
   @apply h-6;
   @apply shrink-0;
-  @apply text-accent;
+  @apply text-ctp-blue;
   @apply w-6;
 }
 
