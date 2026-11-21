@@ -1,24 +1,10 @@
 /* ********************************** Auth ********************************** */
 
-.admin-security-alert {
-  @apply bg-ctp-peach/5;
-  @apply border;
-  @apply border-ctp-peach/40;
-  @apply mb-6;
-  @apply p-3;
-  @apply rounded-md;
-  @apply text-status-warning;
-}
-
-.admin-security-alert strong {
-  @apply font-mono;
-}
-
 .login-card {
   @apply max-w-md mx-auto w-full;
   @apply border;
-  @apply border-ctp-sapphire/30;
-  @apply shadow-ctp-sapphire;
+  @apply border-ui-accent/30;
+  @apply shadow-ui-accent;
   @apply shadow-lg/20;
 }
 
@@ -34,14 +20,20 @@
   @apply mb-0;
 }
 
-.login-error {
-  @apply bg-ctp-red/10;
-  @apply border;
-  @apply border-ctp-red/40;
-  @apply mb-6;
-  @apply p-3;
-  @apply rounded-md;
-  @apply text-status-danger;
+.form-alert {
+  @apply mb-6 flex items-start gap-2 text-ctp-text;
+}
+
+.form-alert svg {
+  @apply mt-0.5 shrink-0;
+}
+
+.security-warning-icon {
+  @apply text-ctp-surface0;
+}
+
+[data-theme="latte"] .security-warning-icon {
+  @apply text-ctp-text;
 }
 
 .login-field {
@@ -51,7 +43,7 @@
 }
 
 .login-field input {
-  @apply bg-ctp-mantle;
+  @apply bg-ui-field;
   @apply border;
   @apply border-ctp-surface2;
   @apply p-3;
@@ -65,7 +57,7 @@
 }
 
 .login-field input:focus-visible {
-  @apply border-focus;
+  @apply border-ctp-mauve;
 }
 
 .login-field label {
@@ -96,14 +88,14 @@
 }
 
 .button-primary {
-  @apply bg-ctp-sapphire/20;
+  @apply bg-ui-action;
   @apply border;
-  @apply border-ctp-sapphire/40;
+  @apply border-ui-accent;
   @apply mt-2;
   @apply text-ctp-text;
   @apply w-full;
 }
 
 .button-primary:hover {
-  @apply bg-ctp-sapphire/30;
+  @apply bg-ui-hover;
 }

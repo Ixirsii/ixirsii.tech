@@ -16,7 +16,7 @@
       <h2>Create Tag</h2>
 
       {% if let Some(message) = create_errors.security %}
-        <p class="admin-security-alert"><strong>Security Check Failed.</strong> {{ message }}</p>
+        {% include "security_alert.html" %}
       {% endif %}
 
       <form class="admin-form" action="/admin/tags" method="post">
@@ -68,7 +68,7 @@
             </div>
 
             {% if let Some(message) = tag.errors.security %}
-              <p class="admin-security-alert"><strong>Security Check Failed.</strong> {{ message }}</p>
+              {% include "security_alert.html" %}
             {% endif %}
 
             <div class="admin-actions">

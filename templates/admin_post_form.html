@@ -21,7 +21,7 @@
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
         {% if let Some(message) = errors.security %}
-          <p class="admin-security-alert"><strong>Security Check Failed.</strong> {{ message }}</p>
+          {% include "security_alert.html" %}
         {% endif %}
 
         <div class="admin-form-field{% if errors.title.is_some() %} admin-form-field-error{% endif %}">

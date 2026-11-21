@@ -18,55 +18,51 @@
   --font-sans:
     "Mulish", ui-sans-serif, system-ui, sans-serif, "Noto Color Emoji",
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  --color-link: var(--semantic-link);
-  --color-focus: var(--semantic-focus);
   --color-muted: var(--semantic-muted);
   --color-accent: var(--semantic-accent);
-  --color-status-success: var(--semantic-status-success);
-  --color-status-warning: var(--semantic-status-warning);
-  --color-status-danger: var(--semantic-status-danger);
+  --color-ui-accent: var(--ui-accent);
+  --color-ui-control: var(--ui-control);
+  --color-ui-field: var(--ui-field);
+  --color-ui-hover: var(--ui-hover);
+  --color-ui-selected: var(--ui-selected);
+  --color-ui-action: var(--ui-action);
 }
 
-@layer base {
+@layer theme {
+  :root {
+    --ui-accent: var(--ctp-sapphire);
+    --ui-control: var(--ctp-surface0);
+    --ui-field: var(--ctp-surface0);
+    --ui-hover: var(--ctp-surface1);
+    --ui-selected: var(--ctp-surface1);
+    --ui-action: var(--ctp-surface0);
+    --ui-overlay: var(--ctp-surface0);
+  }
+
   :root,
   [data-theme="mocha"] {
-    --semantic-link: var(--ctp-sapphire);
-    --semantic-focus: var(--ctp-sapphire);
     --semantic-muted: var(--ctp-subtext1);
-    --semantic-accent: var(--ctp-sapphire);
-    --semantic-status-success: var(--ctp-green);
-    --semantic-status-warning: var(--ctp-peach);
-    --semantic-status-danger: oklch(0.7873 0.1082 2.889);
+    --semantic-accent: var(--ui-accent);
   }
 
   [data-theme="latte"] {
-    --semantic-link: oklch(0.4343 0.0714 212.4482);
-    --semantic-focus: oklch(0.4343 0.0714 212.4482);
+    --ui-hover: var(--ctp-mantle);
+    --ui-selected: var(--ctp-surface0);
+    --ui-field: var(--ctp-base);
+    --ui-overlay: var(--ctp-base);
     --semantic-muted: var(--ctp-text);
     --semantic-accent: oklch(0.4343 0.0714 212.4482);
-    --semantic-status-success: oklch(0.4173 0.1179 140.5665);
-    --semantic-status-warning: oklch(0.4627 0.1364 42.5291);
-    --semantic-status-danger: oklch(0.3694 0.1445 19.8968);
   }
 
   [data-theme="frappe"] {
-    --semantic-link: var(--ctp-sapphire);
-    --semantic-focus: var(--ctp-sapphire);
+    /* Keep small, muted text readable on interactive surfaces. */
+    --ui-hover: color-mix(in srgb, var(--ctp-surface0) 65%, var(--ctp-surface1));
+    --ui-selected: var(--ui-hover);
     --semantic-muted: var(--ctp-subtext1);
-    --semantic-accent: var(--ctp-sapphire);
-    --semantic-status-success: oklch(0.8349 0.0895 133.2391);
-    --semantic-status-warning: oklch(0.8293 0.0759 44.3932);
-    --semantic-status-danger: oklch(0.8242 0.0689 17.5298);
   }
 
   [data-theme="macchiato"] {
-    --semantic-link: var(--ctp-sapphire);
-    --semantic-focus: var(--ctp-sapphire);
     --semantic-muted: var(--ctp-subtext1);
-    --semantic-accent: var(--ctp-sapphire);
-    --semantic-status-success: var(--ctp-green);
-    --semantic-status-warning: var(--ctp-peach);
-    --semantic-status-danger: oklch(0.8343 0.0715 9.9829);
   }
 }
 
@@ -83,7 +79,7 @@
 
   blockquote {
     @apply bg-ctp-surface0;
-    @apply border-ctp-sapphire;
+    @apply border-ui-accent;
     @apply border-l-2;
     @apply mb-4;
     @apply px-6;
@@ -99,16 +95,17 @@
   }
 
   button {
-    @apply bg-ctp-surface0;
-    @apply hover:bg-ctp-surface2;
+    @apply bg-ui-control;
+    @apply hover:bg-ui-hover;
     @apply cursor-pointer;
     @apply px-3 py-2;
     @apply rounded-md;
     @apply transition-colors;
   }
 
-  :focus-visible {
-    outline: 2px solid var(--semantic-focus);
+  :focus-visible,
+  .search:focus-within {
+    outline: 2px solid var(--ctp-mauve);
     outline-offset: 3px;
   }
 
@@ -167,13 +164,23 @@
   }
 
   hr {
-    @apply border-ctp-sapphire;
+    @apply border-ui-accent;
     @apply my-4;
   }
 
-  main a {
-    @apply hover:underline;
-    @apply text-link;
+  header a,
+  footer a,
+  a.button {
+    @apply underline decoration-ui-accent underline-offset-4;
+  }
+
+  main a:where(:not(.tags a, .button)) {
+    @apply border-b border-dashed border-ui-accent;
+  }
+
+  main a[target="_blank"]:not(.about-links a)::after,
+  .about-links a[target="_blank"] .about-link-service::after {
+    content: "\00a0↗";
   }
 
   p {
@@ -201,7 +208,7 @@
   header {
     @apply bg-ctp-mantle;
     @apply mb-8;
-    @apply shadow-ctp-sapphire;
+    @apply shadow-ui-accent;
     @apply shadow-lg/30;
   }
 
@@ -230,25 +237,20 @@
     @apply max-w-5xl mx-auto px-4 sm:px-6 py-4;
   }
 
-  .site-footer a {
-    @apply text-link underline underline-offset-4;
-  }
-
   .site-nav {
     @apply flex flex-wrap gap-1 items-center justify-center;
     grid-area: navigation;
   }
 
   .site-nav a {
-    @apply hover:bg-ctp-surface0 rounded-md px-3 py-2 min-h-11 font-semibold;
+    @apply hover:bg-ui-hover rounded-md px-3 py-2 min-h-11 font-semibold;
   }
 
   .button {
-    @apply bg-ctp-surface0;
-    @apply hover:bg-ctp-surface2;
+    @apply bg-ui-action;
+    @apply hover:bg-ui-hover;
     @apply inline-block;
     @apply px-3 py-2;
-    @apply text-ctp-text hover:no-underline;
     @apply rounded-md;
     @apply transition-colors;
   }
@@ -269,14 +271,15 @@
   }
 
   .settings {
-    --nd-theme-surface: var(--ctp-mantle);
+    --nd-theme-surface: var(--ui-overlay);
     --nd-theme-text: var(--ctp-text);
     @apply flex flex-wrap gap-1 items-center justify-center;
     grid-area: settings;
   }
 
   .settings > a {
-    @apply flex items-center justify-center rounded-md hover:bg-ctp-surface0 min-h-11 min-w-11;
+    @apply flex items-center justify-center rounded-md hover:bg-ui-hover min-h-11 min-w-11;
+    @apply border-b border-dashed border-ui-accent;
   }
 
   .site-title {
@@ -356,7 +359,7 @@
   }
 
   .button-danger {
-    @apply bg-ctp-red/10 hover:bg-ctp-red/20 border border-status-danger text-status-danger;
+    @apply bg-ctp-red/10 hover:bg-ctp-red/20 border border-ctp-red text-ctp-text;
   }
 
   .pagination {
@@ -379,13 +382,16 @@
   @apply min-h-11 text-left;
 }
 
-.settings .nd-theme :is(summary, button):hover,
 .settings .nd-theme button[aria-pressed="true"] {
-  @apply bg-ctp-surface0;
+  @apply bg-ui-selected;
+}
+
+.settings .nd-theme :is(summary, button):hover {
+  @apply bg-ui-hover;
 }
 
 .settings .nd-theme :is(summary, button):focus-visible {
-  outline: 2px solid var(--semantic-focus);
+  outline-color: var(--ctp-mauve);
   outline-offset: 3px;
 }
 

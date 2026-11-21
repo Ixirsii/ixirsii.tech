@@ -9,11 +9,10 @@
   @apply items-center;
   @apply mb-6;
   @apply rounded-md;
-  @apply transition-colors;
 }
 
-.search:focus-within {
-  @apply border-focus;
+.search input:focus-visible {
+  outline: none;
 }
 
 .search label {
@@ -24,7 +23,7 @@
 }
 
 .search input {
-  @apply bg-ctp-surface0;
+  @apply bg-ui-field;
   @apply grow;
   @apply min-w-0;
   @apply p-2;
@@ -45,6 +44,5 @@
 }
 
 .tags a {
-  @apply border-b-2;
-  color: var(--semantic-link);
+  @apply border-b-2 text-accent hover:underline;
 }

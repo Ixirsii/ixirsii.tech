@@ -34,20 +34,17 @@
 .admin-panel {
   @apply bg-ctp-surface0;
   @apply border;
-  @apply border-ctp-sapphire/20;
+  @apply border-ui-accent/20;
   @apply p-6;
   @apply rounded-md;
-  @apply shadow-ctp-sapphire;
+  @apply shadow-ui-accent;
   @apply shadow-lg/10;
 }
 
 .admin-link-card {
-  @apply hover:bg-ctp-surface1;
+  @apply border-b-ui-accent hover:bg-ui-hover;
+  border-bottom-style: dashed;
   @apply transition-colors;
-}
-
-.admin-link-card:hover {
-  @apply no-underline;
 }
 
 .admin-toolbar {
@@ -77,7 +74,7 @@
 .admin-form-field input,
 .admin-form-field select,
 .admin-form-field textarea {
-  @apply bg-ctp-mantle;
+  @apply bg-ui-field;
   @apply border;
   @apply border-ctp-surface2;
   @apply p-3;
@@ -95,7 +92,7 @@
 .admin-form-field input:focus-visible,
 .admin-form-field select:focus-visible,
 .admin-form-field textarea:focus-visible {
-  @apply border-focus;
+  @apply border-ctp-mauve;
 }
 
 .admin-form {
@@ -202,7 +199,7 @@
 }
 
 .admin-tag-option input {
-  @apply accent-ctp-sapphire;
+  @apply accent-ui-accent;
 }
 
 .status-badge {
@@ -213,16 +210,27 @@
   @apply text-sm;
 }
 
+.status-published,
+.status-scheduled {
+  @apply inline-flex w-fit items-center gap-1.5 text-ctp-text;
+}
+
 .status-published {
-  @apply bg-ctp-green/10;
+  background-color: color-mix(in srgb, var(--ctp-green) 10%, var(--ctp-base));
   @apply border-ctp-green/40;
-  @apply text-status-success;
 }
 
 .status-scheduled {
-  @apply bg-ctp-peach/5;
-  @apply border-ctp-peach/40;
-  @apply text-status-warning;
+  background-color: color-mix(in srgb, var(--ctp-yellow) 10%, var(--ctp-base));
+  @apply border-ctp-yellow/40;
+}
+
+.status-scheduled svg {
+  @apply stroke-ctp-base;
+}
+
+[data-theme="latte"] :is(.status-published, .status-scheduled) svg {
+  @apply stroke-ctp-text;
 }
 
 .status-unscheduled {
@@ -270,11 +278,11 @@
 .admin-form-field-error input,
 .admin-form-field-error textarea,
 .admin-form-field-error select {
-  @apply border-status-danger;
+  @apply border-ctp-red;
 }
 
 .admin-form-field-error-message {
-  @apply text-status-danger;
+  @apply text-ctp-text;
   @apply font-mono;
   @apply text-sm;
   @apply mt-1;

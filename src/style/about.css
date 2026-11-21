@@ -25,7 +25,7 @@
 
 .hall-of-fame-callout {
   @apply bg-ctp-surface0;
-  @apply border-ctp-sapphire;
+  @apply border-ui-accent;
   @apply border-l-2;
   @apply flex;
   @apply gap-3;
@@ -71,18 +71,16 @@
 }
 
 .about-links a {
-  @apply bg-ctp-surface0;
+  @apply bg-ui-control;
   @apply gap-x-2;
   @apply grid;
   @apply grid-cols-[1.5rem_minmax(0,1fr)];
-  @apply hover:bg-ctp-surface1;
-  @apply hover:no-underline;
+  @apply hover:bg-ui-hover;
   @apply items-center;
   @apply p-2;
   @apply rounded-md;
   @apply sm:gap-x-3;
   @apply sm:p-3;
-  @apply text-ctp-text;
 }
 
 .about-links svg {

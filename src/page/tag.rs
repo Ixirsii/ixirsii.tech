@@ -29,7 +29,7 @@ const TAG_CLOUD_COLORS: [&str; 12] = [
     "border-ctp-green",
     "border-ctp-teal",
     "border-ctp-sky",
-    "border-ctp-sapphire",
+    "border-ui-accent",
     "border-ctp-blue",
     "border-ctp-lavender",
 ];
