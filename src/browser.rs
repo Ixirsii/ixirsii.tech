@@ -16,7 +16,11 @@ pub async fn security_headers(request: Request, next: Next) -> Response {
     let headers = response.headers_mut();
     headers.insert(
         header::CONTENT_SECURITY_POLICY,
-        HeaderValue::from_static("frame-ancestors 'none'"),
+        HeaderValue::from_static(
+            "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; \
+             img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; \
+             frame-ancestors 'none'; form-action 'self'",
+        ),
     );
     headers.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
     headers.insert(

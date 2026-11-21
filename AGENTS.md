@@ -121,7 +121,7 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 - Admin session token verification uses ordinary string equality and does not use per-form tokens. Login cookie/form challenge comparison uses constant-time equality.
 - Admin state-changing requests additionally check `Origin` or `Referer` against `CSRF_ALLOWED_ORIGINS`. This middleware check is skipped when no origins are configured. Login is outside that middleware and relies on its signed cookie/form challenge.
 - The login challenge cookie uses `SameSite=Strict`. Successful login clears it and rotates the session ID. Treat the shared 64-byte signing key as secret; rotate it with a coordinated restart to invalidate outstanding login forms.
-- All routes set `Content-Security-Policy: frame-ancestors 'none'`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin`.
+- All routes use a same-origin CSP for resources and form actions; objects, base URLs, and framing are disabled. Keep scripts and styles in local assets. Other response headers include `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, and `Referrer-Policy: strict-origin-when-cross-origin`.
 
 ### Verifying Railway login identity
 

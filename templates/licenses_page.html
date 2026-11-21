@@ -3,6 +3,8 @@
 {% block content %}
 <article class="reading-column">
   <h1>{{ title }}</h1>
+  <p>Self-hosted fonts: <a href="{{ crate::static_assets::static_url("fonts/mulish-OFL.txt") }}">Mulish license</a>
+    and <a href="{{ crate::static_assets::static_url("fonts/sourcecodepro-OFL.txt") }}">Source Code Pro license</a>.</p>
   <p>These notices cover the icons, themes, and other browser assets shared by this site.</p>
   <pre class="asset-licenses">{{ nine_dev_site_lib::THIRD_PARTY_NOTICES }}</pre>
 </article>

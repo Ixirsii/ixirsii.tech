@@ -20,6 +20,11 @@
 | HTML templates | [Askama](https://docs.rs/askama/) |
 | Javascript     | [HTMX](https://htmx.org)          |
 
+## Images in Markdown
+
+Blog posts and admin Markdown previews can display only images served from the
+site’s own origin. Use ordinary Markdown links for images hosted elsewhere.
+
 ## Create an admin account
 
 With `DATABASE_URL` set to the intended, migrated PostgreSQL database, run this

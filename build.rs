@@ -1,4 +1,8 @@
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::Write,
+    fs,
+    path::{Path, PathBuf},
+};
 
 use nine_dev_site_build::{assets, tailwind};
 
@@ -15,6 +19,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let out = PathBuf::from(std::env::var_os("OUT_DIR").ok_or("missing OUT_DIR")?);
     let static_dir = Path::new("src/static");
+    let mut faces = String::new();
+    for (family, stem) in [("Mulish", "mulish"), ("Source Code Pro", "sourcecodepro")] {
+        for style in ["normal", "italic"] {
+            let path = format!("fonts/{stem}-{style}.woff2");
+            let url = assets::fingerprint(&path, &fs::read(static_dir.join(&path))?).url;
+            writeln!(
+                faces,
+                "@font-face {{ font-family: '{family}'; font-style: {style}; font-weight: 200 900; \
+                 font-display: swap; src: url('{url}') format('woff2'); }}"
+            )?;
+        }
+    }
+    let faces_path = Path::new("src/style/fonts.generated.css");
+    if fs::read_to_string(faces_path).ok().as_ref() != Some(&faces) {
+        fs::write(faces_path, faces)?;
+    }
     tailwind::write_catppuccin_aliases(Path::new("src/style/catppuccin.aliases.css"))?;
     tailwind::compile(
         Path::new("src/style/main.css"),

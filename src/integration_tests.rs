@@ -87,7 +87,12 @@ fn login_request(
 
 fn assert_security_headers(response: &Response) {
     for (name, expected) in [
-        (header::CONTENT_SECURITY_POLICY, "frame-ancestors 'none'"),
+        (
+            header::CONTENT_SECURITY_POLICY,
+            "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self'; \
+             img-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; \
+             frame-ancestors 'none'; form-action 'self'",
+        ),
         (header::X_FRAME_OPTIONS, "DENY"),
         (header::X_CONTENT_TYPE_OPTIONS, "nosniff"),
         (header::REFERRER_POLICY, "strict-origin-when-cross-origin"),

@@ -1,4 +1,5 @@
 {% extends "base.html" %} {% block content %}
+<script defer src="{{ crate::static_assets::static_url("admin-confirm.js") }}"></script>
 <section class="admin-shell">
   <div class="admin-header">
     <div>
@@ -72,7 +73,7 @@
 
             <div class="admin-actions">
               <button type="submit">Save Tag</button>
-              <button class="button-danger" formaction="/admin/tags/{{ tag.id }}/delete" formmethod="post" formnovalidate onclick="return confirm('Delete this tag?');" type="submit">Delete Tag</button>
+              <button class="button-danger" formaction="/admin/tags/{{ tag.id }}/delete" formmethod="post" formnovalidate data-confirm="Delete this tag?" type="submit">Delete Tag</button>
             </div>
           </form>
         {% else %}

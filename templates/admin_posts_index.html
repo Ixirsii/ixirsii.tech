@@ -1,4 +1,5 @@
 {% extends "base.html" %} {% block content %}
+<script defer src="{{ crate::static_assets::static_url("admin-confirm.js") }}"></script>
 <section class="admin-shell">
   <div class="admin-header">
     <div>
@@ -48,7 +49,7 @@
 
           <div class="admin-actions">
             <a class="button" href="/admin/posts/{{ post.id }}/edit">Edit</a>
-            <form action="/admin/posts/{{ post.id }}/delete" method="post" onsubmit="return confirm('Delete this post?');">
+            <form action="/admin/posts/{{ post.id }}/delete" method="post" data-confirm="Delete this post?">
               <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
               <button type="submit">Delete</button>
             </form>
