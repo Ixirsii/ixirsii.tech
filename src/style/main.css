@@ -1,5 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..900;1,200..900&display=swap');
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap");
 @import "tailwindcss";
 
 @import "./about.css" layer(components);
@@ -9,7 +9,7 @@
 @import "./tag.css" layer(components);
 
 @theme inline {
-  --font-mono: "JetBrains Mono", monospace;
+  --font-mono: "Source Code Pro", monospace;
   --font-sans:
     "Mulish", ui-sans-serif, system-ui, sans-serif, "Noto Color Emoji",
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
