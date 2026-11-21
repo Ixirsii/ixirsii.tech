@@ -66,7 +66,7 @@
 .admin-form-field label,
 .admin-tag-fieldset legend {
   @apply font-mono;
-  @apply text-muted;
+  @apply text-ui-muted;
   @apply text-sm;
 }
 
@@ -166,7 +166,7 @@
 
 .admin-slug {
   @apply font-mono;
-  @apply text-muted;
+  @apply text-ui-muted;
   @apply text-sm;
 }
 
@@ -236,11 +236,11 @@
 .status-unscheduled {
   @apply bg-ctp-overlay0/10;
   @apply border-ctp-overlay0/40;
-  @apply text-muted;
+  @apply text-ui-muted;
 }
 
 .admin-empty {
-  @apply text-muted;
+  @apply text-ui-muted;
 }
 
 .admin-tag-row {
@@ -268,7 +268,7 @@
   @apply px-3;
   @apply py-3;
   @apply rounded-md;
-  @apply text-muted;
+  @apply text-ui-muted;
 }
 
 .admin-inline-delete {

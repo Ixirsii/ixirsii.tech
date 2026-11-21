@@ -62,7 +62,7 @@
 
 .login-field label {
   @apply font-mono;
-  @apply text-muted;
+  @apply text-ui-muted;
   @apply text-sm;
 }
 
@@ -74,7 +74,7 @@
 
 .form-hint {
   @apply font-mono;
-  @apply text-muted;
+  @apply text-ui-muted;
   @apply text-sm;
 }
 

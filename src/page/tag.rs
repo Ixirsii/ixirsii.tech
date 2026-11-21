@@ -16,26 +16,6 @@ use crate::{
 };
 
 /* ********************************************************************************************** *
- *                                           Constants                                            *
- * ********************************************************************************************** */
-
-const TAG_CLOUD_COLORS: [&str; 12] = [
-    "border-ctp-pink",
-    "border-ctp-mauve",
-    "border-ctp-red",
-    "border-ctp-maroon",
-    "border-ctp-peach",
-    "border-ctp-yellow",
-    "border-ctp-green",
-    "border-ctp-teal",
-    "border-ctp-sky",
-    "border-ui-accent",
-    "border-ctp-blue",
-    "border-ctp-lavender",
-];
-const TAG_CLOUD_COLOR_COUNT: i64 = 12;
-
-/* ********************************************************************************************** *
  *                                             Types                                              *
  * ********************************************************************************************** */
 
@@ -43,7 +23,7 @@ struct TagCloudEntry {
     name: String,
     slug: String,
     count: i64,
-    class: String,
+    class: &'static str,
 }
 
 #[derive(Template)]
@@ -188,36 +168,27 @@ async fn get_tag_cloud(
 
     Ok(tags
         .into_iter()
-        .map(|tag| {
-            let size = get_tag_size(tag.count, max_count);
-            let color_index = usize::try_from(tag.id % TAG_CLOUD_COLOR_COUNT).unwrap_or_default();
-            let color = TAG_CLOUD_COLORS[color_index];
-            let class = format!("{size} {color}");
-            TagCloudEntry {
-                name: tag.name,
-                slug: tag.slug,
-                count: tag.count,
-                class,
-            }
+        .map(|tag| TagCloudEntry {
+            name: tag.name,
+            slug: tag.slug,
+            count: tag.count,
+            class: tag_tier_class(tag.count, max_count),
         })
         .collect())
 }
 
-fn get_tag_size(count: i64, max_count: i64) -> &'static str {
-    if max_count == 0 {
-        return "text-sm";
-    }
+fn tag_tier_class(count: i64, max_count: i64) -> &'static str {
     let scaled_count = i128::from(count) * 10;
     let max_count = i128::from(max_count);
     if scaled_count >= max_count * 9 {
-        "text-4xl"
+        "text-4xl text-ctp-blue"
     } else if scaled_count >= max_count * 7 {
-        "text-2xl"
+        "text-3xl text-ctp-teal"
     } else if scaled_count >= max_count * 5 {
-        "text-xl"
+        "text-2xl text-ctp-maroon"
     } else if scaled_count >= max_count * 2 {
-        "text-base"
+        "text-xl text-ctp-red"
     } else {
-        "text-sm"
+        "text-base text-ctp-mauve"
     }
 }

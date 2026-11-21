@@ -18,8 +18,7 @@
   --font-sans:
     "Mulish", ui-sans-serif, system-ui, sans-serif, "Noto Color Emoji",
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  --color-muted: var(--semantic-muted);
-  --color-accent: var(--semantic-accent);
+  --color-ui-muted: var(--ui-muted);
   --color-ui-accent: var(--ui-accent);
   --color-ui-control: var(--ui-control);
   --color-ui-field: var(--ui-field);
@@ -41,8 +40,7 @@
 
   :root,
   [data-theme="mocha"] {
-    --semantic-muted: var(--ctp-subtext1);
-    --semantic-accent: var(--ui-accent);
+    --ui-muted: var(--ctp-subtext1);
   }
 
   [data-theme="latte"] {
@@ -50,19 +48,21 @@
     --ui-selected: var(--ctp-surface0);
     --ui-field: var(--ctp-base);
     --ui-overlay: var(--ctp-base);
-    --semantic-muted: var(--ctp-text);
-    --semantic-accent: oklch(0.4343 0.0714 212.4482);
+    --ui-muted: var(--ctp-text);
   }
 
   [data-theme="frappe"] {
-    /* Keep small, muted text readable on interactive surfaces. */
-    --ui-hover: color-mix(in srgb, var(--ctp-surface0) 65%, var(--ctp-surface1));
+    --ui-hover: color-mix(
+      in srgb,
+      var(--ctp-surface0) 65%,
+      var(--ctp-surface1)
+    );
+    --ui-muted: var(--ctp-subtext1);
     --ui-selected: var(--ui-hover);
-    --semantic-muted: var(--ctp-subtext1);
   }
 
   [data-theme="macchiato"] {
-    --semantic-muted: var(--ctp-subtext1);
+    --ui-muted: var(--ctp-subtext1);
   }
 }
 
@@ -290,7 +290,7 @@
   }
 
   .tagline {
-    @apply mb-0 mt-1 text-muted text-sm whitespace-normal;
+    @apply mb-0 mt-1 text-ui-muted text-sm whitespace-normal;
     overflow-wrap: anywhere;
   }
 
@@ -370,7 +370,7 @@
 
   .tagline-note {
     @apply italic;
-    @apply text-muted;
+    @apply text-ui-muted;
     @apply text-xs;
   }
 }

@@ -14,7 +14,7 @@
 
 .quote figcaption {
   @apply pr-6;
-  @apply text-muted;
+  @apply text-ui-muted;
   @apply text-right;
   @apply text-sm;
 }
@@ -101,7 +101,7 @@
 
 .about-link-handle {
   @apply row-start-2;
-  @apply text-muted;
+  @apply text-ui-muted;
   @apply text-sm;
   overflow-wrap: anywhere;
 }

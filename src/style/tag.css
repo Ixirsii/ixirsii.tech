@@ -19,7 +19,7 @@
   @apply flex;
   @apply h-fit;
   @apply p-2;
-  @apply text-muted;
+  @apply text-ui-muted;
 }
 
 .search input {
@@ -44,5 +44,5 @@
 }
 
 .tags a {
-  @apply border-b-2 text-accent hover:underline;
+  @apply hover:underline;
 }
