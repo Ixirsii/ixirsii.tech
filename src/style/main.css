@@ -77,7 +77,7 @@
 @layer base {
   body {
     @apply bg-ctp-base;
-    @apply min-h-screen;
+    @apply flex min-h-dvh flex-col;
     @apply text-ctp-text;
   }
 
@@ -214,6 +214,7 @@
   }
 
   main {
+    @apply grow;
     @apply max-w-5xl;
     @apply mx-auto;
     @apply px-4 sm:px-6;
@@ -222,7 +223,11 @@
   }
 
   .site-footer {
-    @apply max-w-5xl mx-auto px-4 sm:px-6 pb-8 text-sm;
+    @apply bg-ctp-mantle text-sm;
+  }
+
+  .footer-inner {
+    @apply max-w-5xl mx-auto px-4 sm:px-6 py-4;
   }
 
   .site-footer a {
