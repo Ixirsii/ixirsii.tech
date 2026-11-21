@@ -1,25 +1,23 @@
 //! Main executable.
 
-use std::{env::VarError, future::Future, net::SocketAddr, sync::Arc, time::Duration};
+use std::{future::Future, net::SocketAddr, sync::Arc, time::Duration};
 
 use axum::{
     Router,
-    body::Body,
-    extract::{Path, State},
-    http::{HeaderValue, StatusCode, Uri, header},
+    extract::State,
+    http::StatusCode,
     middleware,
-    response::{IntoResponse, Response},
     routing::{get, post},
     serve,
 };
 use axum_login::{AuthManagerLayerBuilder, login_required};
-use dotenvy::from_path;
-use include_dir::{Dir, include_dir};
+use nine_dev_site_lib::{startup, telemetry::RequestMetrics};
 use sqlx::{PgPool, migrate, postgres::PgPoolOptions};
 use tokio::net::TcpListener;
 use tower_sessions::{SessionManagerLayer, cookie::SameSite};
-use tracing::{error, info, instrument, warn};
+use tracing::{error, info, warn};
 
+use static_assets::{static_asset, well_known_asset};
 pub use types::*;
 
 mod admin_cli;
@@ -45,16 +43,13 @@ pub mod static_assets;
 pub const ADMIN_ROUTE: &str = "/admin";
 pub const LOGIN_ROUTE: &str = "/login";
 const HEALTH_CHECK_TIMEOUT: Duration = Duration::from_secs(2);
-static STATIC_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/static");
 
 /* ********************************************************************************************** *
  *                                              Main                                              *
  * ********************************************************************************************** */
 
-#[instrument]
-#[tokio::main]
-async fn main() -> Result<()> {
-    load_local_dotenv(std::path::Path::new(".env"))?;
+fn main() -> Result<()> {
+    load_local_dotenv()?;
     let args: Vec<_> = std::env::args_os().skip(1).collect();
     match args.as_slice() {
         [] => {}
@@ -62,7 +57,7 @@ async fn main() -> Result<()> {
             let username = username
                 .to_str()
                 .ok_or_else(|| Error::Configuration("username must be valid UTF-8".to_owned()))?;
-            return admin_cli::create(username).await;
+            return create_admin(username);
         }
         _ => {
             return Err(Error::Configuration(
@@ -71,49 +66,97 @@ async fn main() -> Result<()> {
         }
     }
 
+    let telemetry = observability::init()?;
+    let server_result = run(telemetry.requests());
+    telemetry.shutdown();
+    server_result
+}
+
+#[tokio::main(flavor = "current_thread")]
+async fn create_admin(username: &str) -> Result<()> {
+    admin_cli::create(username).await
+}
+
+#[tokio::main]
+async fn run(requests: RequestMetrics) -> Result<()> {
     let port = configured_port()?;
     let allowed_origins = configured_allowed_origins()?;
     let auth_security = Arc::new(auth::AuthSecurity::new(auth::AuthConfig::from_env()?));
     let db_pool: PgPool = get_db_pool().await?;
-    migrate!().run(&db_pool).await?;
-    let login_csrf_key = login_csrf::load_key(&db_pool).await?;
+
+    let server_result = run_http(&db_pool, port, allowed_origins, auth_security, requests).await;
+    db_pool.close().await;
+    server_result
+}
+
+async fn run_http(
+    db_pool: &PgPool,
+    port: u16,
+    allowed_origins: Vec<String>,
+    auth_security: Arc<auth::AuthSecurity>,
+    requests: RequestMetrics,
+) -> Result<()> {
+    migrate!().run(db_pool).await?;
+    let login_csrf_key = login_csrf::load_key(db_pool).await?;
     let session_store = session::PostgresSessionStore::new(db_pool.clone());
+
+    let address = SocketAddr::from(([0, 0, 0, 0], port));
+    let listener = TcpListener::bind(address).await?;
+    let shutdown = shutdown_signal()?;
     let cleanup_task = session::spawn_cleanup(session_store.clone());
+    info!(target: observability::LIFECYCLE_TARGET, %address, "listening");
 
-    let addr = format!("0.0.0.0:{port}");
-    let listener = TcpListener::bind(&addr).await?;
-    info!("Listening on {addr}");
-
-    let serve_result = serve(
-        listener,
+    let routes = observability::with_requests(
         get_routes(
-            db_pool,
+            db_pool.clone(),
             auth_security,
             session_store,
             login_csrf_key,
             allowed_origins,
-        )
-        .into_make_service_with_connect_info::<SocketAddr>(),
+        ),
+        requests,
     )
-    .await;
+    .into_make_service_with_connect_info::<SocketAddr>();
+    let serve_result = serve(listener, routes)
+        .with_graceful_shutdown(shutdown)
+        .await;
     cleanup_task.abort();
-    serve_result?;
+    let _ = cleanup_task.await;
+    serve_result.map_err(Error::from)
+}
 
-    Ok(())
+fn shutdown_signal() -> std::io::Result<impl Future<Output = ()>> {
+    #[cfg(unix)]
+    let (mut interrupt, mut terminate) = {
+        use tokio::signal::unix::{SignalKind, signal};
+
+        (
+            signal(SignalKind::interrupt())?,
+            signal(SignalKind::terminate())?,
+        )
+    };
+
+    Ok(async move {
+        #[cfg(unix)]
+        tokio::select! {
+            _ = interrupt.recv() => {}
+            _ = terminate.recv() => {}
+        }
+        #[cfg(not(unix))]
+        if let Err(error) = tokio::signal::ctrl_c().await {
+            error!(target: observability::LIFECYCLE_TARGET, %error, "could not listen for interrupt");
+        }
+
+        info!(target: observability::LIFECYCLE_TARGET, "shutting down HTTP server");
+    })
 }
 
 /* ********************************************************************************************** *
  *                                       Private functions                                        *
  * ********************************************************************************************** */
 
-fn load_local_dotenv(path: &std::path::Path) -> Result<()> {
-    match from_path(path) {
-        Ok(()) => Ok(()),
-        Err(error) if error.not_found() => Ok(()),
-        Err(_) => Err(Error::Configuration(
-            "could not load local .env file".to_owned(),
-        )),
-    }
+fn load_local_dotenv() -> Result<()> {
+    startup::load_local_dotenv().map_err(|error| Error::Configuration(error.to_string()))
 }
 
 async fn get_db_pool() -> Result<PgPool> {
@@ -127,7 +170,7 @@ async fn get_db_pool() -> Result<PgPool> {
     {
         Ok(db_pool) => Ok(db_pool),
         Err(err) => {
-            error!(error = %err, "Error connecting to database");
+            error!(target: observability::LIFECYCLE_TARGET, "error connecting to database");
 
             Err(Error::Database(err))
         }
@@ -153,32 +196,11 @@ fn validate_database_url(database_url: &str) -> Result<()> {
 }
 
 fn optional_config(name: &str) -> Result<Option<String>> {
-    match std::env::var(name) {
-        Ok(value) => Ok(Some(value)),
-        Err(VarError::NotPresent) => Ok(None),
-        Err(VarError::NotUnicode(_)) => Err(Error::Configuration(format!(
-            "{name} must contain valid Unicode"
-        ))),
-    }
-}
-
-fn positive_u16(name: &str, value: Option<&str>, default: u16) -> Result<u16> {
-    value.map_or_else(
-        || Ok(default),
-        |value| {
-            value
-                .parse::<u16>()
-                .ok()
-                .filter(|port| *port > 0)
-                .ok_or_else(|| {
-                    Error::Configuration(format!("{name} must be an integer from 1 to 65535"))
-                })
-        },
-    )
+    startup::optional_env(name).map_err(|error| Error::Configuration(error.to_string()))
 }
 
 fn configured_port() -> Result<u16> {
-    positive_u16("PORT", optional_config("PORT")?.as_deref(), 3000)
+    startup::port().map_err(|error| Error::Configuration(error.to_string()))
 }
 
 fn configured_max_connections() -> Result<u32> {
@@ -218,7 +240,10 @@ fn configured_allowed_origins() -> Result<Vec<String>> {
         }
         Ok(origins.into_iter().map(ToOwned::to_owned).collect())
     } else {
-        warn!("CSRF_ALLOWED_ORIGINS not set; origin check disabled");
+        warn!(
+            target: observability::LIFECYCLE_TARGET,
+            "CSRF_ALLOWED_ORIGINS not set; origin check disabled"
+        );
         Ok(Vec::new())
     }
 }
@@ -282,6 +307,7 @@ fn get_routes(
         .route("/code/randstring", get(page::code_randstring))
         .route("/hall-of-fame", get(page::hall_of_fame_page))
         .route("/health", get(health_check))
+        .route("/licenses", get(page::licenses_page))
         .route("/tags", get(page::tag_index))
         .route("/tags/search", get(page::tag_search))
         .route("/tags/{slug}", get(page::tag_posts))
@@ -296,7 +322,6 @@ fn get_routes(
         .route("/static/{*path}", get(static_asset))
         .merge(app_routes)
         .layer(middleware::from_fn(browser::security_headers))
-        .layer(middleware::from_fn(observability::trace_request))
 }
 
 async fn health_check(State(state): State<AppState>) -> StatusCode {
@@ -323,62 +348,11 @@ where
     }
 }
 
-async fn well_known_asset(Path(path): Path<String>) -> Response {
-    if path
-        .split('/')
-        .any(|segment| segment.is_empty() || segment == "." || segment == "..")
-    {
-        return StatusCode::NOT_FOUND.into_response();
-    }
-
-    let source_path = format!(".well-known/{path}");
-    let Some(file) = STATIC_DIR.get_file(&source_path) else {
-        return StatusCode::NOT_FOUND.into_response();
-    };
-
-    let mut response = Body::from(file.contents()).into_response();
-    let headers = response.headers_mut();
-    let mime = mime_guess::from_path(&source_path).first_or_octet_stream();
-    let content_type = HeaderValue::from_str(mime.as_ref())
-        .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream"));
-
-    headers.insert(header::CONTENT_TYPE, content_type);
-    headers.insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("public, max-age=3600"),
-    );
-
-    response
-}
-
-async fn static_asset(uri: Uri) -> Response {
-    let Some(source_path) = static_assets::source_path_for_request(uri.path()) else {
-        return StatusCode::NOT_FOUND.into_response();
-    };
-    let Some(file) = STATIC_DIR.get_file(source_path) else {
-        return StatusCode::NOT_FOUND.into_response();
-    };
-
-    let mut response = Body::from(file.contents()).into_response();
-    let headers = response.headers_mut();
-    let mime = mime_guess::from_path(source_path).first_or_octet_stream();
-    let content_type = HeaderValue::from_str(mime.as_ref())
-        .unwrap_or_else(|_| HeaderValue::from_static("application/octet-stream"));
-
-    headers.insert(header::CONTENT_TYPE, content_type);
-    headers.insert(
-        header::CACHE_CONTROL,
-        HeaderValue::from_static("public, max-age=31536000, immutable"),
-    );
-
-    response
-}
-
 #[cfg(test)]
 mod tests {
     use std::{
         fs, future,
-        path::{Path, PathBuf},
+        path::PathBuf,
         process::Command,
         time::{Duration, SystemTime, UNIX_EPOCH},
     };
@@ -387,7 +361,7 @@ mod tests {
 
     use super::{
         configured_allowed_origins, configured_database_url, configured_port, health_check_status,
-        load_local_dotenv, positive_u16, validate_database_url,
+        load_local_dotenv, validate_database_url,
     };
 
     struct TestDir(PathBuf);
@@ -455,7 +429,7 @@ mod tests {
         let Ok(mode) = std::env::var("IXIRSII_DOTENV_CONFIG_FIXTURE") else {
             return Ok(());
         };
-        load_local_dotenv(Path::new(".env"))?;
+        load_local_dotenv()?;
         let port = configured_port()?;
         let origins = configured_allowed_origins()?;
         // Exercise the same later read used by get_db_pool, without connecting.
@@ -479,12 +453,39 @@ mod tests {
     fn malformed_local_dotenv_returns_safe_error()
     -> std::result::Result<(), Box<dyn std::error::Error>> {
         let dir = TestDir::new()?;
-        let path = dir.0.join(".env");
-        fs::write(&path, "IXIRSII_DOTENV_BAD='unterminated\n")?;
+        for contents in [
+            "IXIRSII_DOTENV_BAD='unterminated\n",
+            "IXIRSII_DOTENV_BAD='secret\0value'\n",
+        ] {
+            fs::write(dir.0.join(".env"), contents)?;
+            assert_local_dotenv_rejected(&dir)?;
+        }
+        Ok(())
+    }
 
-        let error = load_local_dotenv(&path)
+    fn assert_local_dotenv_rejected(dir: &TestDir) -> std::io::Result<()> {
+        let output = Command::new(std::env::current_exe()?)
+            .args(["--exact", "tests::invalid_local_dotenv_child"])
+            .current_dir(&dir.0)
+            .env("IXIRSII_INVALID_DOTENV_FIXTURE", "1")
+            .output()?;
+        assert!(
+            output.status.success(),
+            "isolated invalid dotenv test failed: {}{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn invalid_local_dotenv_child() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        if std::env::var_os("IXIRSII_INVALID_DOTENV_FIXTURE").is_none() {
+            return Ok(());
+        }
+        let error = load_local_dotenv()
             .err()
-            .ok_or("malformed file was accepted")?;
+            .ok_or("invalid file was accepted")?;
         assert_eq!(
             error.to_string(),
             "configuration error: could not load local .env file"
@@ -496,11 +497,11 @@ mod tests {
     fn local_dotenv_keeps_existing_process_value()
     -> std::result::Result<(), Box<dyn std::error::Error>> {
         let dir = TestDir::new()?;
-        let path = dir.0.join(".env");
-        fs::write(&path, "IXIRSII_DOTENV_PRECEDENCE=from_file\n")?;
+        fs::write(dir.0.join(".env"), "IXIRSII_DOTENV_PRECEDENCE=from_file\n")?;
         let output = Command::new(std::env::current_exe()?)
             .args(["--exact", "tests::local_dotenv_precedence_child"])
-            .env("IXIRSII_DOTENV_PRECEDENCE_FIXTURE", path)
+            .current_dir(&dir.0)
+            .env("IXIRSII_DOTENV_PRECEDENCE_FIXTURE", "1")
             .env("IXIRSII_DOTENV_PRECEDENCE", "from_process")
             .output()?;
         assert!(
@@ -512,44 +513,67 @@ mod tests {
 
     #[test]
     fn local_dotenv_precedence_child() -> std::result::Result<(), Box<dyn std::error::Error>> {
-        let Some(path) = std::env::var_os("IXIRSII_DOTENV_PRECEDENCE_FIXTURE") else {
+        if std::env::var_os("IXIRSII_DOTENV_PRECEDENCE_FIXTURE").is_none() {
             return Ok(());
-        };
-        load_local_dotenv(Path::new(&path))?;
+        }
+        load_local_dotenv()?;
         assert_eq!(std::env::var("IXIRSII_DOTENV_PRECEDENCE")?, "from_process");
         Ok(())
     }
 
     #[cfg(unix)]
     #[test]
-    fn unreadable_local_dotenv_returns_error_when_permissions_are_enforced()
-    -> std::result::Result<(), Box<dyn std::error::Error>> {
+    fn unreadable_local_dotenv_returns_error_when_permissions_are_enforced() -> std::io::Result<()>
+    {
         use std::os::unix::fs::PermissionsExt;
 
         let dir = TestDir::new()?;
         let path = dir.0.join(".env");
         fs::write(&path, "IXIRSII_DOTENV_UNREADABLE=unexpected\n")?;
         fs::set_permissions(&path, fs::Permissions::from_mode(0o000))?;
-        let is_unreadable = fs::File::open(&path).is_err();
-        let result = if is_unreadable {
-            Some(load_local_dotenv(&path))
+        let result = if fs::File::open(&path).is_err() {
+            assert_local_dotenv_rejected(&dir)
         } else {
-            None
+            Ok(())
         };
         fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
-        if let Some(result) = result {
-            assert!(result.is_err());
+        result
+    }
+
+    #[test]
+    fn startup_configuration_checks_ports() -> std::io::Result<()> {
+        let executable = std::env::current_exe()?;
+        for port in ["", "0", "abc", "65536"] {
+            let output = Command::new(&executable)
+                .args(["--exact", "tests::invalid_port_child"])
+                .env("IXIRSII_INVALID_PORT_FIXTURE", "1")
+                .env("PORT", port)
+                .output()?;
+            assert!(
+                output.status.success(),
+                "isolated port configuration test failed: {}{}",
+                String::from_utf8_lossy(&output.stdout),
+                String::from_utf8_lossy(&output.stderr),
+            );
         }
         Ok(())
     }
 
     #[test]
-    fn startup_configuration_rejects_invalid_values() {
-        assert_eq!(positive_u16("PORT", None, 3000).ok(), Some(3000));
-        assert_eq!(positive_u16("PORT", Some("8080"), 3000).ok(), Some(8080));
-        for port in ["", "0", "abc", "65536"] {
-            assert!(positive_u16("PORT", Some(port), 3000).is_err());
+    fn invalid_port_child() {
+        if std::env::var_os("IXIRSII_INVALID_PORT_FIXTURE").is_some() {
+            assert_eq!(
+                configured_port()
+                    .err()
+                    .map(|error| error.to_string())
+                    .as_deref(),
+                Some("configuration error: PORT must be an integer from 1 to 65535"),
+            );
         }
+    }
+
+    #[test]
+    fn startup_configuration_checks_database_urls() {
         assert!(validate_database_url("postgres://localhost/db").is_ok());
         assert!(validate_database_url("postgresql://localhost/db").is_ok());
         for url in ["", "mysql://localhost/db", "https://localhost/db"] {

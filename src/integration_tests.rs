@@ -96,6 +96,25 @@ fn assert_security_headers(response: &Response) {
     }
 }
 
+async fn check_preview(app: &Router, cookie: &str, token: &str) -> TestResult {
+    for (csrf, status, expected) in [
+        (token, StatusCode::OK, "<strong>draft</strong>"),
+        ("expired", StatusCode::FORBIDDEN, "page is refreshed"),
+    ] {
+        let request = Request::builder()
+            .method("POST")
+            .uri("/admin/posts/preview/body")
+            .header(header::ORIGIN, "http://localhost")
+            .header(header::COOKIE, cookie)
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(Body::from(format!("csrf_token={csrf}&body=**draft**")))?;
+        let response = app.clone().oneshot(request).await?;
+        assert_eq!(response.status(), status);
+        assert!(html(response).await?.contains(expected));
+    }
+    Ok(())
+}
+
 #[sqlx::test]
 async fn account_attack_does_not_lock_out_another_client(pool: PgPool) -> TestResult {
     let app = app(&pool).await?;
@@ -204,6 +223,7 @@ async fn anonymous_login_does_not_create_sessions_and_login_still_works(
         csrf,
         "authenticated session gets a fresh CSRF token"
     );
+    check_preview(&app, &session_cookie, token(&body)?).await?;
     let response = app
         .oneshot(
             Request::builder()
@@ -245,6 +265,56 @@ async fn security_headers_cover_public_login_admin_errors_and_assets(pool: PgPoo
     let response = app.oneshot(request("/blog")?).await?;
     assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
     assert_security_headers(&response);
+    Ok(())
+}
+
+#[sqlx::test]
+async fn shared_browser_assets_are_reachable_from_rendered_pages(pool: PgPool) -> TestResult {
+    use nine_dev_site_lib::{assets, switcher};
+
+    let app = app(&pool).await?;
+    let page = html(app.clone().oneshot(request("/about")?).await?).await?;
+    assert!(
+        page.find(switcher::JS.url).ok_or("missing theme script")?
+            < page
+                .find("rel=\"stylesheet\"")
+                .ok_or("missing stylesheet")?
+    );
+    assert!(
+        page.find("name=\"htmx-config\"")
+            .ok_or("missing HTMX config")?
+            < page.find(assets::htmx::JS.url).ok_or("missing HTMX")?
+    );
+    assert!(page.contains(switcher::ThemeSwitcher::default().latte));
+    for asset in [
+        &switcher::JS,
+        &switcher::CSS,
+        &assets::theme::PALETTE,
+        &assets::htmx::JS,
+        &assets::icons::DISCORD,
+        &assets::icons::BLUESKY,
+    ] {
+        assert!(page.contains(asset.url));
+        let response = app.clone().oneshot(request(asset.url)?).await?;
+        assert_security_headers(&response);
+        assert_eq!(response.status(), StatusCode::OK);
+        assert_eq!(response.headers()[header::CONTENT_TYPE], asset.content_type);
+        assert_eq!(
+            response.headers()[header::CACHE_CONTROL],
+            nine_dev_site_lib::serving::IMMUTABLE
+        );
+        assert_eq!(
+            to_bytes(response.into_body(), 200_000).await?.as_ref(),
+            asset.bytes
+        );
+    }
+    let response = app.oneshot(request("/licenses")?).await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(
+        html(response)
+            .await?
+            .contains("Copyright (c) 2021 Catppuccin")
+    );
     Ok(())
 }
 

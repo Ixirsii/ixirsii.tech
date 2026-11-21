@@ -36,6 +36,18 @@ existing username is an error; its password is never changed. Sign in at `/login
 From a checkout, use `cargo run -- admin create <username>`. Plain `cargo run`
 starts the local server.
 
+## Server logging
+
+The server writes structured JSON logs to stdout. Set `RUST_LOG` to adjust
+verbosity (default: `info`). To send logs and HTTP metrics to Grafana Cloud,
+set `OTEL_EXPORTER_OTLP_ENDPOINT` to the stack's base OTLP URL and
+`OTEL_EXPORTER_OTLP_HEADERS` to the authorization header in the service's
+secret variables. Set `DEPLOYMENT_ENVIRONMENT` to `staging` or `production`.
+Without an endpoint, logging stays local. Health probes are excluded from
+request telemetry.
+
+Browser asset attributions are available at `/licenses`.
+
 ## Todo
 
 - Code review (un-vibe the code)
@@ -44,4 +56,3 @@ starts the local server.
   - Clean up database
   - Clean up pages
   - Clean up CSRF
-- Re-add observability with Grafana Cloud

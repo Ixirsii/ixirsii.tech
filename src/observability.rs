@@ -1,33 +1,28 @@
-//! Request tracing instrumentation.
-//!
-//! No subscriber is installed, so tracing events and spans produce no output.
+//! Server telemetry and request labels.
 
-use axum::{extract::Request, middleware::Next, response::Response};
-use tracing::{Instrument, Span, info_span};
+use axum::{Router, middleware};
+use nine_dev_site_lib::telemetry::{RequestMetrics, Telemetry, observe};
 
-/// Axum middleware that wraps each HTTP request in a tracing span.
-///
-/// Records:
-/// - `http.method` — the HTTP verb
-/// - `http.route` — the request path
-/// - `http.status_code` — the response status
-pub async fn trace_request(request: Request, next: Next) -> Response {
-    let method = request.method().clone();
-    let uri = request.uri().clone();
+use crate::{Error, Result};
 
-    let span = info_span!(
-        "http.request",
-        http.method = %method,
-        http.route = %uri.path(),
-        http.status_code = tracing::field::Empty,
-    );
+pub const LIFECYCLE_TARGET: &str = "ixirsii_tech::lifecycle";
 
-    async {
-        let response = next.run(request).await;
-        let status = response.status();
-        Span::current().record("http.status_code", status.as_u16());
-        response
-    }
-    .instrument(span)
-    .await
+pub fn init() -> Result<Telemetry> {
+    // Lower-level database errors may contain query data. Export only bounded
+    // request events (the library default) and reviewed application targets.
+    Telemetry::init(
+        "ixirsii.tech",
+        env!("CARGO_PKG_VERSION"),
+        &[LIFECYCLE_TARGET, "ixirsii_tech::auth"],
+    )
+    .map_err(|error| Error::Configuration(error.to_string()))
+}
+
+pub fn with_requests(router: Router, requests: RequestMetrics) -> Router {
+    router.layer(middleware::from_fn_with_state(
+        requests.with_route_override(|matched, _| {
+            (matched == Some("/site.webmanifest")).then_some("static")
+        }),
+        observe,
+    ))
 }

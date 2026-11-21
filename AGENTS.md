@@ -20,13 +20,9 @@ There is no Node.js project or JavaScript package-manager setup.
 | `cargo fmt`                         | Format using Rust 2024 edition rules                                             |
 | `cargo test --locked --all-targets` | Run unit and isolated PostgreSQL database tests; requires a local `DATABASE_URL` |
 
-Cargo build, check, run, and Clippy commands execute `build.rs`. It runs:
+Cargo build, check, run, and Clippy commands execute `build.rs`, which produces minified `src/static/main.css` from `src/style/main.css`.
 
-```text
-tailwindcss -i src/style/main.css -o src/static/main.css --minify
-```
-
-After compiling CSS, `build.rs` passes each file in `src/static/` to the pinned `nine_dev_site_build` build dependency. It emits the complete fingerprinted URL through `cargo:rustc-env` as `ASSET_URL_<source path>`, preserving path case and punctuation. `src/static_assets.rs` declares the assets and reads their URLs at compile time; no runtime configuration or generated Rust source is needed. The script watches `src/style/`, `templates/`, and `src/static/`, including added and removed files. A missing `tailwindcss` executable causes these Cargo commands to fail during the build script.
+`nine_dev_site_build` generates the Catppuccin Tailwind aliases, compiles CSS through an `OUT_DIR` scratch file, and fingerprints the final bytes under `src/static/`. The Tailwind sources include templates and the Rust tag-cloud classes. A missing `tailwindcss` executable causes the build script to fail.
 
 Tests are colocated with the Rust modules they exercise; there is no separate `tests/` directory. Database and session `#[sqlx::test]` cases create isolated databases, apply migrations, and exercise real PostgreSQL. Their runtime `DATABASE_URL` role needs permission to create databases; the Compose development role has it. Fixtures are not required for automated tests.
 
@@ -81,7 +77,7 @@ Startup connects to PostgreSQL and runs embedded schema-only SQLx migrations, in
 ## Architecture
 
 - **Backend**: Rust 2024, Axum 0.8, Askama, SQLx, and PostgreSQL.
-- **Frontend**: Askama templates, vendored HTMX 4.0.0, Tailwind CSS v4, and Catppuccin CSS custom properties.
+- **Frontend**: Askama templates and Tailwind CSS v4, with HTMX 4.0.0, Catppuccin, theme switcher, and SVG symbols served by `nine_dev_site_lib`. `/licenses` includes the shared browser asset notices.
 - **Entrypoint and routing**: `src/main.rs` initializes tracing and the database, runs migrations, builds public and protected routers, configures sessions, and serves embedded assets.
 - **Application state**: `AppState` in `src/types.rs` contains `Arc<PgPool>` and configured CSRF origins. It also implements the `axum-login` authentication backend.
 - **Page handlers**: `src/page/` contains `about.rs`, `admin.rs`, `admin_posts.rs`, `admin_tags.rs`, `blog.rs`, `code.rs`, `error.rs`, `hall_of_fame.rs`, `home.rs`, and `tag.rs`. They are re-exported by `src/page/mod.rs`.
@@ -89,7 +85,7 @@ Startup connects to PostgreSQL and runs embedded schema-only SQLx migrations, in
 - **Database**: `src/database/` is split into posts, tags, post-tag joins, transactions, users, and shared types. Public database operations use tracing instrumentation and SQLx checked query macros. IDs use `i64`; timestamps use PostgreSQL `TIMESTAMPTZ` and Rust `DateTime<Utc>`. Usernames, tag names, and slugs use case-sensitive PostgreSQL comparisons and uniqueness.
 - **Migrations**: Four embedded PostgreSQL migrations create content tables and indexes, admin users, the session store, and the singleton login challenge signing-key table. They do not seed any content or users. The old MySQL migrations and `seed_initial_content` have been removed.
 - **Errors**: `src/types.rs` defines the internal `Error` and `Result<T>` types. `src/page/error.rs` renders styled public 404 and 500 responses.
-- **Tracing**: Logging calls and instrumentation remain, but no subscriber or exporter is installed, so they produce no output. `src/observability.rs` defines request spans recording method, raw request path, and response status.
+- **Telemetry**: Server mode initializes shared telemetry before starting Tokio. It logs JSON to stdout and can export OTLP logs and metrics (see README). Request dimensions use route patterns rather than raw paths.
 
 ## Routes and pages
 
@@ -139,13 +135,12 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 - `src/static/` is embedded into the executable with `include_dir`; it is not served from the filesystem with `ServeDir`.
 - `/site.webmanifest` is generated from the asset table at runtime with `no-cache`; its icon URLs are fingerprinted. `/feed.xml` provides the newest 20 published posts as RSS with a five-minute cache lifetime.
 - Every page links to the RSS feed. Feed item IDs survive slug changes, links use the canonical `https://ixirsii.tech` origin, and descriptions use previews when available or sanitized Markdown bodies otherwise.
-- Normal assets are available only through fingerprinted `/static/*` paths defined in `src/static_assets.rs` and receive a one-year immutable cache header.
+- Both shared and site-owned assets are served at fingerprinted `/static/*` paths with one-year immutable caching. The handler checks the library first, then the site's catalog.
 - When adding or renaming an asset, update the table in `src/static_assets.rs`. Its unit tests check coverage of all embedded files, URL hashes, and reverse lookups.
-- Templates resolve asset paths through `crate::static_assets::static_url()`.
+- Templates use library URL constants for shared assets and `crate::static_assets::static_url()` for local assets.
 - Embedded `/.well-known/*` files use non-fingerprinted paths and a one-hour cache header.
 - Source CSS is split across `src/style/main.css`, `about.css`, `admin.css`, `auth.css`, `blog.css`, `code.css`, and `tag.css`. Tailwind v4 configuration lives in CSS through `@theme`; there is no JavaScript config.
-- Four complete Catppuccin flavors are defined: mocha, latte, frappe, and macchiato.
-- Explicit theme choices are stored in `localStorage`. Selecting System removes the stored choice and resolves to mocha or latte from `prefers-color-scheme` on page load or selection. There is no live listener for later system-theme changes.
+- The shared palette defines mocha, latte, frappe, and macchiato; site CSS owns semantic contrast colors. Explicit choices persist in `localStorage`. System follows live OS preference changes.
 
 ## Linting and CI
 

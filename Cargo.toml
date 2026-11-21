@@ -1,17 +1,17 @@
 [package]
-name = "ixirsii-tech"
-version = "1.0.3"
-edition = "2024"
 authors = ["Ryan Porterfield <ixirsii@9dev.tech>"]
-description = "ixirsii.tech website"
-license = "BSD-3-Clause"
-repository = "https://codeberg.org/Ixirsii/ixirsii.tech"
-readme = "README.md"
-keywords = ["web", "axum", "htmx", "blog"]
 categories = ["web-programming"]
+description = "ixirsii.tech website"
+edition = "2024"
+keywords = ["blog", "htmx", "web"]
+license = "BSD-3-Clause"
+name = "ixirsii-tech"
+readme = "README.md"
+repository = "https://github.com/Ixirsii/ixirsii.tech"
+version = "1.1.0"
 
 [build-dependencies]
-nine_dev_site_build = "0.1.1"
+nine_dev_site_build = "0.2.1"
 
 [dependencies]
 ammonia = "4.1.2"
@@ -25,11 +25,17 @@ axum-extra = { version = "0.12.6", default-features = false, features = [
 ] }
 axum-login = "0.18.0"
 chrono = "0.4"
-dotenvy = "0.15.7"
 include_dir = "0.7"
-inquire = { version = "0.9.5", default-features = false, features = ["crossterm"] }
+inquire = { version = "0.9.5", default-features = false, features = [
+  "crossterm",
+] }
 ipnet = "2.11"
-mime_guess = "2.0.5"
+nine_dev_site_lib = { version = "0.8.0", features = [
+  "axum",
+  "htmx",
+  "startup",
+  "telemetry",
+] }
 pulldown-cmark = "0.13.4"
 rand = "0.10.3"
 reqwest = { version = "0.13.5", default-features = false, features = [
@@ -53,6 +59,7 @@ time = "0.3.55"
 tokio = { version = "1.53.1", features = [
   "macros",
   "rt-multi-thread",
+  "signal",
   "sync",
   "time",
 ] }

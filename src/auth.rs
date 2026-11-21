@@ -2,7 +2,6 @@
 
 use std::{
     collections::{HashMap, VecDeque},
-    env::{VarError, var},
     fmt::Display,
     hash::Hash,
     net::IpAddr,
@@ -20,7 +19,7 @@ use tokio::{
 };
 use tracing::{error, info, warn};
 
-use crate::{Error, Result};
+use crate::{Error, Result, optional_config};
 
 const DEFAULT_ACCOUNT_ATTEMPTS: usize = 5;
 const DEFAULT_ACCOUNT_WINDOW_SECONDS: u64 = 300;
@@ -109,25 +108,19 @@ impl AuthConfig {
         let max_identities =
             positive_usize("AUTH_RATE_LIMIT_MAX_IDENTITIES", DEFAULT_MAX_IDENTITIES)?;
         let trusted_proxies = trusted_proxies()?;
-        let client_ip_mode = match var("AUTH_CLIENT_IP_MODE") {
-            Ok(value) => ClientIpMode::parse(&value)?,
-            Err(VarError::NotPresent) => {
-                if !cfg!(debug_assertions) {
-                    warn!(
-                        event = "authentication_configuration_warning",
-                        "AUTH_CLIENT_IP_MODE is unset; configure client identity explicitly in production"
-                    );
-                }
-                if trusted_proxies.is_empty() {
-                    ClientIpMode::Direct
-                } else {
-                    ClientIpMode::TrustedProxy
-                }
+        let client_ip_mode = if let Some(value) = optional_config("AUTH_CLIENT_IP_MODE")? {
+            ClientIpMode::parse(&value)?
+        } else {
+            if !cfg!(debug_assertions) {
+                warn!(
+                    event = "authentication_configuration_warning",
+                    "AUTH_CLIENT_IP_MODE is unset; configure client identity explicitly in production"
+                );
             }
-            Err(VarError::NotUnicode(_)) => {
-                return Err(Error::Configuration(
-                    "AUTH_CLIENT_IP_MODE must contain valid Unicode".to_string(),
-                ));
+            if trusted_proxies.is_empty() {
+                ClientIpMode::Direct
+            } else {
+                ClientIpMode::TrustedProxy
             }
         };
         if client_ip_mode == ClientIpMode::TrustedProxy && trusted_proxies.is_empty() {
@@ -516,34 +509,23 @@ where
     E: Display,
     T: Copy + PartialEq + From<u8>,
 {
-    match var(name) {
-        Ok(value) => {
-            let parsed = parse(&value).map_err(|error| {
-                Error::Configuration(format!("{name} must be a positive integer: {error}"))
-            })?;
-            if parsed == T::from(0) {
-                return Err(Error::Configuration(format!(
-                    "{name} must be greater than zero"
-                )));
-            }
-            Ok(parsed)
-        }
-        Err(VarError::NotPresent) => Ok(default),
-        Err(VarError::NotUnicode(_)) => Err(Error::Configuration(format!(
-            "{name} must contain valid Unicode"
-        ))),
+    let Some(value) = optional_config(name)? else {
+        return Ok(default);
+    };
+    let parsed = parse(&value).map_err(|error| {
+        Error::Configuration(format!("{name} must be a positive integer: {error}"))
+    })?;
+    if parsed == T::from(0) {
+        return Err(Error::Configuration(format!(
+            "{name} must be greater than zero"
+        )));
     }
+    Ok(parsed)
 }
 
 fn trusted_proxies() -> Result<Vec<IpNet>> {
-    let value = match var("AUTH_TRUSTED_PROXY_CIDRS") {
-        Ok(value) => value,
-        Err(VarError::NotPresent) => return Ok(Vec::new()),
-        Err(VarError::NotUnicode(_)) => {
-            return Err(Error::Configuration(
-                "AUTH_TRUSTED_PROXY_CIDRS must contain valid Unicode".to_string(),
-            ));
-        }
+    let Some(value) = optional_config("AUTH_TRUSTED_PROXY_CIDRS")? else {
+        return Ok(Vec::new());
     };
 
     value

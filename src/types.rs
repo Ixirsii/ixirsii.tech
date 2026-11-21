@@ -101,8 +101,6 @@ pub struct Credentials {
 pub enum Error {
     /// A system error (reading file, etc.).
     System(String),
-    /// An error reading environment variables.
-    Environment(dotenvy::Error),
     /// Invalid application configuration.
     Configuration(String),
     /// A database query or connection error.
@@ -117,7 +115,6 @@ impl Display for Error {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::System(error) => write!(f, "system error: {error}"),
-            Self::Environment(error) => write!(f, "environment error: {error}"),
             Self::Configuration(error) => write!(f, "configuration error: {error}"),
             Self::Database(error) => write!(f, "database error: {error}"),
             Self::DatabaseMigration(error) => write!(f, "database migration error: {error}"),
@@ -130,7 +127,6 @@ impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::System(_) | Self::Configuration(_) => None,
-            Self::Environment(error) => Some(error),
             Self::Database(error) => Some(error),
             Self::DatabaseMigration(error) => Some(error),
             Self::Network(error) => Some(error),
@@ -149,12 +145,6 @@ impl Error {
             }),
             _ => None,
         }
-    }
-}
-
-impl From<dotenvy::Error> for Error {
-    fn from(error: dotenvy::Error) -> Self {
-        Self::Environment(error)
     }
 }
 

@@ -1,6 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..900;1,200..900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Mulish:ital,wght@0,200..900;1,200..900&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&display=swap");
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+@import "./catppuccin.aliases.css";
 
 @import "./about.css" layer(components);
 @import "./admin.css" layer(components);
@@ -8,37 +9,16 @@
 @import "./blog.css" layer(components);
 @import "./tag.css" layer(components);
 
+@source "../../templates";
+@source "../page/tag.rs";
+
+/*! Third-party license texts and copyright notices: /licenses */
+
 @theme inline {
   --font-mono: "Source Code Pro", monospace;
   --font-sans:
     "Mulish", ui-sans-serif, system-ui, sans-serif, "Noto Color Emoji",
     "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
-  --color-ctp-rosewater: var(--ctp-rosewater);
-  --color-ctp-flamingo: var(--ctp-flamingo);
-  --color-ctp-pink: var(--ctp-pink);
-  --color-ctp-mauve: var(--ctp-mauve);
-  --color-ctp-red: var(--ctp-red);
-  --color-ctp-maroon: var(--ctp-maroon);
-  --color-ctp-peach: var(--ctp-peach);
-  --color-ctp-yellow: var(--ctp-yellow);
-  --color-ctp-green: var(--ctp-green);
-  --color-ctp-teal: var(--ctp-teal);
-  --color-ctp-sky: var(--ctp-sky);
-  --color-ctp-sapphire: var(--ctp-sapphire);
-  --color-ctp-blue: var(--ctp-blue);
-  --color-ctp-lavender: var(--ctp-lavender);
-  --color-ctp-text: var(--ctp-text);
-  --color-ctp-subtext1: var(--ctp-subtext1);
-  --color-ctp-subtext0: var(--ctp-subtext0);
-  --color-ctp-overlay2: var(--ctp-overlay2);
-  --color-ctp-overlay1: var(--ctp-overlay1);
-  --color-ctp-overlay0: var(--ctp-overlay0);
-  --color-ctp-surface2: var(--ctp-surface2);
-  --color-ctp-surface1: var(--ctp-surface1);
-  --color-ctp-surface0: var(--ctp-surface0);
-  --color-ctp-base: var(--ctp-base);
-  --color-ctp-mantle: var(--ctp-mantle);
-  --color-ctp-crust: var(--ctp-crust);
   --color-link: var(--semantic-link);
   --color-focus: var(--semantic-focus);
   --color-muted: var(--semantic-muted);
@@ -49,33 +29,8 @@
 }
 
 @layer base {
-  :root, [data-theme="mocha"] {
-    --ctp-rosewater: oklch(0.9226 0.0238 30.4919);
-    --ctp-flamingo: oklch(0.8797 0.0418 17.975);
-    --ctp-pink: oklch(0.87 0.0752 336.3041);
-    --ctp-mauve: oklch(0.7871 0.1187 304.7693);
-    --ctp-red: oklch(0.7556 0.1297 2.7642);
-    --ctp-maroon: oklch(0.7821 0.0903 8.8482);
-    --ctp-peach: oklch(0.8237 0.1015 52.6294);
-    --ctp-yellow: oklch(0.9193 0.0704 86.5281);
-    --ctp-green: oklch(0.8577 0.1092 142.7153);
-    --ctp-teal: oklch(0.8585 0.0792 182.7495);
-    --ctp-sky: oklch(0.8467 0.0833 210.2545);
-    --ctp-sapphire: oklch(0.7906 0.0965 228.6527);
-    --ctp-blue: oklch(0.7664 0.1113 259.885);
-    --ctp-lavender: oklch(0.8166 0.091 277.3092);
-    --ctp-text: oklch(0.8787 0.0426 272.2767);
-    --ctp-subtext1: oklch(0.8168 0.0403 272.8622);
-    --ctp-subtext0: oklch(0.751 0.0396 273.932);
-    --ctp-overlay2: oklch(0.6865 0.0374 274.7253);
-    --ctp-overlay1: oklch(0.6176 0.0367 276.0047);
-    --ctp-overlay0: oklch(0.5497 0.0345 277.0951);
-    --ctp-surface2: oklch(0.4765 0.034 278.643);
-    --ctp-surface1: oklch(0.4037 0.032 280.152);
-    --ctp-surface0: oklch(0.324 0.0319 281.9784);
-    --ctp-base: oklch(0.2429 0.0304 283.911);
-    --ctp-mantle: oklch(0.2155 0.0254 284.0647);
-    --ctp-crust: oklch(0.1828 0.0204 284.2038);
+  :root,
+  [data-theme="mocha"] {
     --semantic-link: var(--ctp-sapphire);
     --semantic-focus: var(--ctp-sapphire);
     --semantic-muted: var(--ctp-subtext1);
@@ -86,32 +41,6 @@
   }
 
   [data-theme="latte"] {
-    --ctp-rosewater: oklch(0.7141 0.1045 33.0967);
-    --ctp-flamingo: oklch(0.6856 0.1259 20.867);
-    --ctp-pink: oklch(0.7256 0.1739 338.4333);
-    --ctp-mauve: oklch(0.5547 0.2503 297.0156);
-    --ctp-red: oklch(0.5505 0.2155 19.8095);
-    --ctp-maroon: oklch(0.6252 0.1967 20.2724);
-    --ctp-peach: oklch(0.692 0.2041 42.4293);
-    --ctp-yellow: oklch(0.714 0.1494 67.7767);
-    --ctp-green: oklch(0.625 0.1772 140.4448);
-    --ctp-teal: oklch(0.6023 0.0981 201.1047);
-    --ctp-sky: oklch(0.682 0.1448 235.3822);
-    --ctp-sapphire: oklch(0.6477 0.1068 212.8893);
-    --ctp-blue: oklch(0.5586 0.2255 262.0867);
-    --ctp-lavender: oklch(0.6638 0.1751 273.1346);
-    --ctp-text: oklch(0.4355 0.043 279.325);
-    --ctp-subtext1: oklch(0.492 0.0385 279.2992);
-    --ctp-subtext0: oklch(0.5471 0.0343 279.0837);
-    --ctp-overlay2: oklch(0.6009 0.0305 278.6944);
-    --ctp-overlay1: oklch(0.6536 0.0269 278.1208);
-    --ctp-overlay0: oklch(0.7077 0.0237 274.6008);
-    --ctp-surface2: oklch(0.7584 0.0205 273.1536);
-    --ctp-surface1: oklch(0.8083 0.0174 271.1982);
-    --ctp-surface0: oklch(0.8575 0.0145 268.4756);
-    --ctp-base: oklch(0.9578 0.0058 264.5322);
-    --ctp-mantle: oklch(0.9335 0.0087 264.5206);
-    --ctp-crust: oklch(0.906 0.0117 264.5071);
     --semantic-link: oklch(0.4343 0.0714 212.4482);
     --semantic-focus: oklch(0.4343 0.0714 212.4482);
     --semantic-muted: var(--ctp-text);
@@ -122,32 +51,6 @@
   }
 
   [data-theme="frappe"] {
-    --ctp-rosewater: oklch(0.8955 0.0335 31.5996);
-    --ctp-flamingo: oklch(0.8439 0.0553 18.3066);
-    --ctp-pink: oklch(0.8504 0.0892 336.2633);
-    --ctp-mauve: oklch(0.7648 0.1108 311.7436);
-    --ctp-red: oklch(0.7171 0.1244 19.3859);
-    --ctp-maroon: oklch(0.7646 0.0976 17.1771);
-    --ctp-peach: oklch(0.7727 0.1106 47.7264);
-    --ctp-yellow: oklch(0.8443 0.0795 83.4717);
-    --ctp-green: oklch(0.8124 0.1071 133.3919);
-    --ctp-teal: oklch(0.783 0.073 184.645);
-    --ctp-sky: oklch(0.8255 0.0592 209.7561);
-    --ctp-sapphire: oklch(0.7796 0.0727 227.8797);
-    --ctp-blue: oklch(0.742 0.1044 265.6632);
-    --ctp-lavender: oklch(0.8099 0.0759 283.7405);
-    --ctp-text: oklch(0.8619 0.0526 273.3474);
-    --ctp-subtext1: oklch(0.8084 0.0507 272.678);
-    --ctp-subtext0: oklch(0.7524 0.0483 274.4726);
-    --ctp-overlay2: oklch(0.697 0.0464 273.7769);
-    --ctp-overlay1: oklch(0.6401 0.043 272.6137);
-    --ctp-overlay0: oklch(0.5809 0.0421 275.1982);
-    --ctp-surface2: oklch(0.5211 0.0386 273.9992);
-    --ctp-surface1: oklch(0.4601 0.0367 272.9658);
-    --ctp-surface0: oklch(0.3949 0.0342 275.8999);
-    --ctp-base: oklch(0.3291 0.0324 274.758);
-    --ctp-mantle: oklch(0.2973 0.0294 276.2144);
-    --ctp-crust: oklch(0.272 0.0264 275.1154);
     --semantic-link: var(--ctp-sapphire);
     --semantic-focus: var(--ctp-sapphire);
     --semantic-muted: var(--ctp-subtext1);
@@ -158,32 +61,6 @@
   }
 
   [data-theme="macchiato"] {
-    --ctp-rosewater: oklch(0.9105 0.0286 31.1326);
-    --ctp-flamingo: oklch(0.8629 0.0479 18.1203);
-    --ctp-pink: oklch(0.8608 0.083 336.1799);
-    --ctp-mauve: oklch(0.7715 0.1259 303.8984);
-    --ctp-red: oklch(0.737 0.1252 11.1943);
-    --ctp-maroon: oklch(0.7702 0.1024 14.3707);
-    --ctp-peach: oklch(0.7988 0.1061 49.6376);
-    --ctp-yellow: oklch(0.879 0.0744 84.751);
-    --ctp-green: oklch(0.835 0.1079 138.1503);
-    --ctp-teal: oklch(0.8214 0.0755 184.1);
-    --ctp-sky: oklch(0.8369 0.0719 209.3658);
-    --ctp-sapphire: oklch(0.7851 0.0845 228.378);
-    --ctp-blue: oklch(0.7497 0.1101 263.8103);
-    --ctp-lavender: oklch(0.8144 0.0834 279.8537);
-    --ctp-text: oklch(0.8708 0.0481 273.6651);
-    --ctp-subtext1: oklch(0.812 0.0459 274.2672);
-    --ctp-subtext0: oklch(0.7513 0.0441 273.5327);
-    --ctp-overlay2: oklch(0.6905 0.0433 274.5388);
-    --ctp-overlay1: oklch(0.6272 0.0415 273.7328);
-    --ctp-overlay0: oklch(0.5608 0.0407 276.4748);
-    --ctp-surface2: oklch(0.4939 0.0389 275.6833);
-    --ctp-surface1: oklch(0.4259 0.0385 276.9477);
-    --ctp-surface0: oklch(0.3538 0.0369 275.9851);
-    --ctp-base: oklch(0.2788 0.0353 276.9368);
-    --ctp-mantle: oklch(0.2493 0.0305 278.435);
-    --ctp-crust: oklch(0.2188 0.0255 280.6572);
     --semantic-link: var(--ctp-sapphire);
     --semantic-focus: var(--ctp-sapphire);
     --semantic-muted: var(--ctp-subtext1);
@@ -322,39 +199,6 @@
  * ************************************************************************** */
 
 @layer components {
-  #theme-switcher {
-    @apply relative;
-  }
-
-  #theme-switcher summary {
-    @apply border border-ctp-sapphire list-none px-3 py-2 rounded-md whitespace-nowrap;
-    @apply cursor-pointer flex gap-2 items-center min-h-11;
-  }
-
-  #theme-switcher summary::-webkit-details-marker {
-    display: none;
-  }
-
-  #theme-switcher ul {
-    @apply absolute bg-ctp-mantle border border-ctp-surface2 rounded-md min-w-max mt-2 p-1 right-0 shadow-lg z-10;
-  }
-
-  #theme-switcher button {
-    @apply bg-transparent hover:bg-ctp-surface0 flex gap-2 items-center text-left w-full min-h-11;
-  }
-
-  #theme-switcher button[aria-pressed="true"] {
-    @apply bg-ctp-surface0;
-  }
-
-  #theme-switcher .expand-icon {
-    @apply transition-transform duration-300;
-  }
-
-  #theme-switcher[open] .expand-icon {
-    @apply -rotate-90;
-  }
-
   header {
     @apply bg-ctp-mantle;
     @apply mb-8;
@@ -376,6 +220,14 @@
     @apply px-4 sm:px-6;
     @apply pb-12;
     @apply w-full;
+  }
+
+  .site-footer {
+    @apply max-w-5xl mx-auto px-4 sm:px-6 pb-8 text-sm;
+  }
+
+  .site-footer a {
+    @apply text-link underline underline-offset-4;
   }
 
   .site-nav {
@@ -406,18 +258,6 @@
     @apply rounded-md;
   }
 
-  .construction-banner {
-    @apply bg-ctp-peach/10;
-    @apply border-b;
-    @apply border-ctp-peach/30;
-    @apply font-mono;
-    @apply px-4;
-    @apply py-1.5;
-    @apply text-center;
-    @apply text-status-warning;
-    @apply text-xs;
-  }
-
   .header-inner {
     @apply grid gap-x-4 gap-y-3 max-w-5xl mx-auto px-4 sm:px-6 py-4 w-full;
     grid-template-areas: "title" "navigation" "settings";
@@ -425,7 +265,9 @@
   }
 
   .settings {
-    @apply flex flex-wrap gap-2 items-center justify-center;
+    --nd-theme-surface: var(--ctp-mantle);
+    --nd-theme-text: var(--ctp-text);
+    @apply flex flex-wrap gap-1 items-center justify-center;
     grid-area: settings;
   }
 
@@ -448,9 +290,15 @@
       grid-template-areas: "title settings" "navigation navigation";
       grid-template-columns: minmax(0, 1fr) auto;
     }
-    .site-title { text-align: left; }
-    .settings { justify-content: end; }
-    .site-nav { justify-content: start; }
+    .site-title {
+      text-align: left;
+    }
+    .settings {
+      justify-content: end;
+    }
+    .site-nav {
+      justify-content: start;
+    }
   }
 
   @media (width >= 64rem) {
@@ -472,17 +320,36 @@
     overflow-wrap: anywhere;
   }
 
-  .prose-content ul, .prose-content ol {
+  .prose-content ul,
+  .prose-content ol {
     @apply pl-6 mb-4;
   }
 
-  .prose-content ul { list-style: disc; }
-  .prose-content ol { list-style: decimal; }
-  .prose-content li + li { margin-top: 0.375rem; }
-  .prose-content li > ul, .prose-content li > ol { margin-block: 0.5rem; }
-  .prose-content pre { margin-bottom: 1rem; }
-  .prose-content img { max-width: 100%; height: auto; }
-  .prose-content > :last-child, .card > :last-child, .admin-panel > :last-child { margin-bottom: 0; }
+  .prose-content ul {
+    list-style: disc;
+  }
+  .prose-content ol {
+    list-style: decimal;
+  }
+  .prose-content li + li {
+    margin-top: 0.375rem;
+  }
+  .prose-content li > ul,
+  .prose-content li > ol {
+    margin-block: 0.5rem;
+  }
+  .prose-content pre {
+    margin-bottom: 1rem;
+  }
+  .prose-content img {
+    max-width: 100%;
+    height: auto;
+  }
+  .prose-content > :last-child,
+  .card > :last-child,
+  .admin-panel > :last-child {
+    margin-bottom: 0;
+  }
 
   .button-danger {
     @apply bg-ctp-red/10 hover:bg-ctp-red/20 border border-status-danger text-status-danger;
@@ -492,13 +359,43 @@
     @apply flex flex-wrap justify-center items-center gap-4 mt-8;
   }
 
-  @media (prefers-reduced-motion: reduce) {
-    #theme-switcher .expand-icon { transition: none; }
-  }
-
   .tagline-note {
     @apply italic;
     @apply text-muted;
     @apply text-xs;
+  }
+}
+
+/* The shared theme switcher rules are unlayered. */
+.settings .nd-theme-panel {
+  @apply border-ctp-surface2 shadow-lg;
+}
+
+.settings .nd-theme-panel button {
+  @apply min-h-11 text-left;
+}
+
+.settings .nd-theme :is(summary, button):hover,
+.settings .nd-theme button[aria-pressed="true"] {
+  @apply bg-ctp-surface0;
+}
+
+.settings .nd-theme :is(summary, button):focus-visible {
+  outline: 2px solid var(--semantic-focus);
+  outline-offset: 3px;
+}
+
+@media (width < 48rem) {
+  .settings {
+    position: relative;
+  }
+
+  .settings .nd-theme {
+    position: static;
+  }
+
+  .settings .nd-theme-panel {
+    inset-inline: 0;
+    margin-inline: auto;
   }
 }

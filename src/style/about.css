@@ -107,3 +107,13 @@
   @apply text-sm;
   overflow-wrap: anywhere;
 }
+
+.about-attribution {
+  @apply mt-6;
+}
+
+.asset-licenses {
+  @apply text-sm;
+  @apply whitespace-pre-wrap;
+  overflow-wrap: anywhere;
+}

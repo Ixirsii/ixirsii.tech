@@ -12,6 +12,10 @@
 
 ## Verify before the first release
 
+The Linux runner also needs `pkg-config` and Bookworm's `libssl-dev` to
+build the telemetry exporter. Image packaging includes the matching
+`libssl.so.3` and `libcrypto.so.3` runtime libraries alongside the CA bundle.
+
 1. Dispatch **Linux image smoke test** from a trusted ref. It compiles on the actual release runner against disposable PostgreSQL, packages the binary with `crane`, and starts the published image as a Linux service alongside another disposable database. `/health` verifies that the binary loads, starts, and can query PostgreSQL. No Railway environment is involved.
 2. Run a staging deployment to verify unattended SSH authentication and Railway's ability to pull a digest-qualified image from the registry. The workflow fails if Railway rejects the reference or the deployment fails health checks. Do not substitute `latest`.
 3. After a successful staging run, Forgejo stores the commit and image digest in a generic package named `<repository>-staging`, versioned by staging run ID. A production tag resolves the successful run for that exact commit, reads its receipt and checks the image before touching production. Missing receipts (including commits staged only by the old workflow) require a successful new staging run.
