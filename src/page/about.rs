@@ -24,7 +24,7 @@ struct ProfileLink {
     href: &'static str,
     service: &'static str,
     handle: &'static str,
-    icon: Option<&'static Asset>,
+    icon: &'static Asset,
 }
 
 impl ProfileLink {
@@ -38,7 +38,7 @@ impl ProfileLink {
             href,
             service,
             handle,
-            icon: Some(icon),
+            icon,
         }
     }
 }
@@ -86,10 +86,10 @@ const LINK_GROUPS: &[LinkGroup] = &[
         wide: false,
         profiles: &[
             ProfileLink {
-                href: "https://codeberg.org/Ixirsii",
-                service: "Codeberg",
+                href: "https://github.com/Ixirsii",
+                service: "GitHub",
                 handle: "Ixirsii",
-                icon: None,
+                icon: &icons::GITHUB,
             },
             ProfileLink::shared(
                 "https://9dev.tech",
