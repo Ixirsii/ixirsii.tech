@@ -26,7 +26,7 @@ const DOTFILES: Project = Project {
         "All configurations are optimized for my daily workflow and designed to be",
         " easily reproducible on a new system.",
     ),
-    repo_url: "https://codeberg.org/Ixirsii/dotfiles",
+    repo_url: "https://github.com/Ixirsii/dotfiles",
     website_url: None,
     tech_tags: &["Lua", "Shell", "Zsh", "Neovim"],
 };
@@ -44,7 +44,7 @@ const IXIRSII_TECH: Project = Project {
         "- [Tailwind CSS](https://tailwindcss.com/) v4 with Catppuccin Mocha theme\n",
         "- Dark/light theme switcher with multiple Catppuccin flavors\n",
     ),
-    repo_url: "https://codeberg.org/Ixirsii/ixirsii.tech",
+    repo_url: "https://github.com/Ixirsii/ixirsii.tech",
     website_url: Some("https://ixirsii.tech"),
     tech_tags: &["Rust", "Axum", "HTMX", "Tailwind CSS", "MySQL"],
 };
@@ -58,7 +58,7 @@ const RANDSTRING: Project = Project {
         "Supports configurable character sets, length, and multiple generation modes.\n",
         "Designed to be simple, fast, and easy to integrate into any Odin project.",
     ),
-    repo_url: "https://codeberg.org/Ixirsii/randstring",
+    repo_url: "https://github.com/Ixirsii/Randstring",
     website_url: None,
     tech_tags: &["Odin"],
 };
