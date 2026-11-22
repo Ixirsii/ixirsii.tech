@@ -32,6 +32,8 @@ p.metadata {
 .article-contents h2, .article-sidebar h2 { @apply text-lg; }
 .article-contents ul { @apply grid gap-1; overflow-wrap: anywhere; }
 .article-contents ul ul { @apply mt-1 pl-4; }
+.all-posts-link { @apply w-fit; }
+:is(.article-contents a, .all-posts-link):not(:hover, :focus-visible) { @apply border-transparent; }
 .article-sidebar .metadata { @apply grid-cols-1 gap-y-1; }
 .article-sidebar .metadata > div:nth-child(even) { @apply mb-3; }
 .related-posts { @apply flex flex-col gap-3; }
