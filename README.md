@@ -20,7 +20,10 @@
 | HTML templates | [Askama](https://docs.rs/askama/) |
 | Javascript     | [HTMX](https://htmx.org)          |
 
-## Images in Markdown
+## Writing blog posts
+
+Use `##` for sections and `###` for subsections. Individual posts link to these
+headings in an **On this page** sidebar, shown above the article on small screens.
 
 Blog posts and admin Markdown previews can display only images served from the
 site’s own origin. Use ordinary Markdown links for images hosted elsewhere.

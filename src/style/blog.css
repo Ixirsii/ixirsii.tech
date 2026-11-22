@@ -25,8 +25,13 @@ p.metadata {
 }
 
 .article-sidebar { @apply flex flex-col gap-4 min-w-0; }
-.article-sidebar .card { @apply p-4; }
-.article-sidebar h2 { @apply text-lg; }
+.article-layout > article { @apply lg:col-start-1 lg:row-start-1 lg:row-span-2; }
+.article-layout:has(.article-contents) { @apply lg:grid-rows-[auto_1fr] lg:gap-y-4; }
+.article-contents, .article-sidebar { @apply lg:col-start-2; }
+.article-contents, .article-sidebar .card { @apply p-4; }
+.article-contents h2, .article-sidebar h2 { @apply text-lg; }
+.article-contents ul { @apply grid gap-1; overflow-wrap: anywhere; }
+.article-contents ul ul { @apply mt-1 pl-4; }
 .article-sidebar .metadata { @apply grid-cols-1 gap-y-1; }
 .article-sidebar .metadata > div:nth-child(even) { @apply mb-3; }
 .related-posts { @apply flex flex-col gap-3; }

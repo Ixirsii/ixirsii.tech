@@ -7,6 +7,9 @@ use axum::{
 };
 use std::collections::HashMap;
 
+mod contents;
+use contents::{Section, add_heading_anchors};
+
 use crate::{
     AdminAuthSession, AppState,
     database::{
@@ -32,6 +35,7 @@ struct BlogPostPage<'a> {
     show_admin_link: bool,
     post: &'a PostView,
     related: Vec<RelatedPost>,
+    contents: Vec<Section>,
 }
 
 /// Renders the blog page with paginated post cards.
@@ -90,11 +94,14 @@ pub async fn blog_post(
     let related = related_posts(&(*state.db_pool), post.id)
         .await
         .map_err(|_| PageError::internal_server_error(show_admin_link))?;
+    let mut post = PostView::from(post);
+    let contents = add_heading_anchors(&mut post.body);
     let page = BlogPostPage {
         related,
-        title: &post.title.clone(),
+        contents,
+        title: &post.title,
         show_admin_link,
-        post: &PostView::from(post),
+        post: &post,
     };
 
     Ok(Html(page.render().map_err(|_| {

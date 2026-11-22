@@ -1,5 +1,22 @@
 {% extends "base.html" %} {% block content %}
 <div class="article-layout">
+  {% if !contents.is_empty() %}
+  <nav class="card article-contents" aria-labelledby="post-contents-title">
+    <h2 id="post-contents-title">On this page</h2>
+    <ul>
+      {% for section in contents %}
+      <li>
+        <a href="#{{ section.heading.id }}">{{ section.heading.label }}</a>
+        {% if !section.children.is_empty() %}
+        <ul>
+          {% for child in section.children %}<li><a href="#{{ child.id }}">{{ child.label }}</a></li>{% endfor %}
+        </ul>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </nav>
+  {% endif %}
   <article class="reading-column">
     <h1>{{ post.title }}</h1>
     <div class="prose-content">{{ post.body|safe }}</div>
