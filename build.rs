@@ -11,14 +11,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "src/style",
         "templates",
         "migrations",
-        "src/static",
+        "public",
         "src/page/tag.rs",
     ] {
         println!("cargo:rerun-if-changed={input}");
     }
 
     let out = PathBuf::from(std::env::var_os("OUT_DIR").ok_or("missing OUT_DIR")?);
-    let static_dir = Path::new("src/static");
+    let static_dir = Path::new("public");
     let mut faces = String::new();
     for (family, stem) in [("Mulish", "mulish"), ("Source Code Pro", "sourcecodepro")] {
         for style in ["normal", "italic"] {

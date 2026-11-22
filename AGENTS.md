@@ -20,9 +20,9 @@ There is no Node.js project or JavaScript package-manager setup.
 | `cargo fmt`                         | Format using Rust 2024 edition rules                                             |
 | `cargo test --locked --all-targets` | Run unit and isolated PostgreSQL database tests; requires a local `DATABASE_URL` |
 
-Cargo build, check, run, and Clippy commands execute `build.rs`, which produces minified `src/static/main.css` from `src/style/main.css`.
+Cargo build, check, run, and Clippy commands execute `build.rs`, which produces minified `public/main.css` from `src/style/main.css`.
 
-`nine_dev_site_build` generates the Catppuccin Tailwind aliases, compiles CSS through an `OUT_DIR` scratch file, and fingerprints the final bytes under `src/static/`. The Tailwind sources include templates and the Rust tag-cloud classes. A missing `tailwindcss` executable causes the build script to fail.
+`nine_dev_site_build` generates the Catppuccin Tailwind aliases, compiles CSS through an `OUT_DIR` scratch file, and fingerprints the final bytes under `public/`. The Tailwind sources include templates and the Rust tag-cloud classes. A missing `tailwindcss` executable causes the build script to fail.
 
 Tests are colocated with the Rust modules they exercise; there is no separate `tests/` directory. Database and session `#[sqlx::test]` cases create isolated databases, apply migrations, and exercise real PostgreSQL. Their runtime `DATABASE_URL` role needs permission to create databases; the Compose development role has it. Fixtures are not required for automated tests.
 
@@ -132,7 +132,7 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 
 ## Static assets and CSS
 
-- `src/static/` is embedded into the executable with `include_dir`; it is not served from the filesystem with `ServeDir`.
+- `public/` is embedded into the executable with `include_dir`; it is not served from the filesystem with `ServeDir`.
 - `/site.webmanifest` is generated from the asset table at runtime with `no-cache`; its icon URLs are fingerprinted. `/feed.xml` provides the newest 20 published posts as RSS with a five-minute cache lifetime.
 - Every page links to the RSS feed. Feed item IDs survive slug changes, links use the canonical `https://ixirsii.tech` origin, and descriptions use previews when available or sanitized Markdown bodies otherwise.
 - Both shared and site-owned assets are served at fingerprinted `/static/*` paths with one-year immutable caching. The handler checks the library first, then the site's catalog.
@@ -166,7 +166,7 @@ There are no pre-commit hooks.
 ## If stuck
 
 - If any Cargo command fails while running `build.rs`, verify that a compatible `tailwindcss` executable is on `PATH`, then inspect `src/style/main.css` and its imports.
-- If CSS or an asset URL is stale, inspect `build.rs`, the generated `src/static/main.css`, and the table in `src/static_assets.rs`.
+- If CSS or an asset URL is stale, inspect `build.rs`, the generated `public/main.css`, and the table in `src/static_assets.rs`.
 - If startup fails before listening, verify `DATABASE_URL`, PostgreSQL connectivity, and the migrations in `migrations/`.
 - If SQLx macros report missing or stale offline metadata, migrate the local development database and run `cargo sqlx prepare -- --all-targets`; commit the resulting `.sqlx/` files.
 - If admin state-changing requests return `403`, verify the session token and `CSRF_ALLOWED_ORIGINS` values, including scheme and port.

@@ -38,7 +38,7 @@ snapshot = root / "content/dotfiles"
 snapshot.mkdir(parents=True, exist_ok=True)
 (snapshot / "README.md").write_bytes(readme)
 (snapshot / "revision").write_text(commit + "\n")
-assets = root / "src/static/dotfiles"
+assets = root / "public/dotfiles"
 for path, data in images.items():
     target = assets / path
     target.parent.mkdir(parents=True, exist_ok=True)

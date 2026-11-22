@@ -12,7 +12,7 @@ use nine_dev_site_lib::{
     serving::{self, IMMUTABLE, content_type},
 };
 
-static STATIC_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/src/static");
+static STATIC_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/public");
 const WELL_KNOWN_CACHE: &str = "public, max-age=3600";
 
 macro_rules! asset {
@@ -28,7 +28,7 @@ macro_rules! asset {
     };
 }
 
-// Paths are relative to src/static and case-sensitive. Tests check full coverage.
+// Paths are relative to public and case-sensitive. Tests check full coverage.
 const STATIC_ASSETS: Catalog = Catalog(&[
     asset!(".well-known/bimi/logo.svg"),
     asset!(".well-known/security.txt"),
