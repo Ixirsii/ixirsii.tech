@@ -1,7 +1,9 @@
 {% extends "base.html" %} {% block content %}
 <article class="mb-6 reading-column">
+  {% if !project.has_readme_heading %}
   <h1>{{ project.name }}</h1>
   <p class="text-ui-muted text-lg">{{ project.tagline }}</p>
+  {% endif %}
 
   <div class="prose-content mb-4">{{ project.description|safe }}</div>
 

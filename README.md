@@ -25,6 +25,14 @@
 Blog posts and admin Markdown previews can display only images served from the
 site’s own origin. Use ordinary Markdown links for images hosted elsewhere.
 
+## Refresh the dotfiles project page
+
+`/code/dotfiles` displays the dotfiles README with local screenshots and no
+badges. To refresh it, run `scripts/sync-dotfiles-readme ~/git/dotfiles HEAD`
+with Python 3.8+ and Git. Replace `HEAD` with a tag or commit to select another
+revision. Review and commit the updated snapshot, screenshots, and asset catalog
+before deploying. Builds do not need the dotfiles checkout.
+
 ## Create an admin account
 
 With `DATABASE_URL` set to the intended, migrated PostgreSQL database, run this

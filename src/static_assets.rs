@@ -36,6 +36,13 @@ const STATIC_ASSETS: Catalog = Catalog(&[
     asset!("android-chrome-192x192.png"),
     asset!("android-chrome-512x512.png"),
     asset!("apple-touch-icon.png"),
+    // BEGIN dotfiles screenshots
+    asset!("dotfiles/screenshots/common/neovim.png"),
+    asset!("dotfiles/screenshots/freebsd/desktop.png"),
+    asset!("dotfiles/screenshots/freebsd/waybar.png"),
+    asset!("dotfiles/screenshots/macos/desktop.png"),
+    asset!("dotfiles/screenshots/macos/sketchybar.png"),
+    // END dotfiles screenshots
     asset!("favicon-16x16.png"),
     asset!("favicon-32x32.png"),
     asset!("favicon.ico"),

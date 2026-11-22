@@ -2,6 +2,7 @@
 
 use askama::Template;
 use axum::{extract::State, response::Html};
+use pulldown_cmark::{Event, Parser, Tag, html};
 
 use crate::{
     AdminAuthSession, AppState,
@@ -16,16 +17,7 @@ const DOTFILES: Project = Project {
     slug: "dotfiles",
     name: "Dotfiles",
     tagline: "Personal configuration files.",
-    description: concat!(
-        "My personal dotfiles managed with GNU Stow.\n\n",
-        "Includes configurations for:\n\n",
-        "- **Neovim** — Custom LSP setup, keybindings, and plugin configuration\n",
-        "- **WezTerm** — Terminal emulator configuration with Catppuccin theme\n",
-        "- **zsh** — Shell aliases, functions, and prompt customization\n",
-        "- **Git** — Global gitconfig and aliases\n\n",
-        "All configurations are optimized for my daily workflow and designed to be",
-        " easily reproducible on a new system.",
-    ),
+    description: include_str!("../../content/dotfiles/README.md"),
     repo_url: "https://github.com/Ixirsii/dotfiles",
     website_url: None,
     tech_tags: &["Lua", "Shell", "Zsh", "Neovim"],
@@ -94,6 +86,7 @@ struct Project {
 }
 
 struct ProjectView {
+    has_readme_heading: bool,
     name: &'static str,
     tagline: &'static str,
     description: String,
@@ -104,15 +97,51 @@ struct ProjectView {
 
 impl From<Project> for ProjectView {
     fn from(project: Project) -> Self {
+        let has_readme_heading = project.slug == DOTFILES.slug;
         Self {
+            has_readme_heading,
             name: project.name,
-            description: render_markdown(project.description),
+            description: if has_readme_heading {
+                render_dotfiles_readme(project.description)
+            } else {
+                render_markdown(project.description)
+            },
             repo_url: project.repo_url,
             tech_tags: project.tech_tags,
             tagline: project.tagline,
             website_url: project.website_url,
         }
     }
+}
+
+fn render_dotfiles_readme(readme: &str) -> String {
+    // The upstream badge row is a paragraph of linked badge references after the title.
+    let mut paragraphs = readme.splitn(3, "\n\n");
+    let title = paragraphs.next().unwrap_or_default();
+    let badges = paragraphs.next().unwrap_or_default();
+    let body = if !badges.is_empty()
+        && badges
+            .lines()
+            .all(|line| line.starts_with("[![") && line.contains("][badge-") && line.ends_with(']'))
+    {
+        format!("{title}\n\n{}", paragraphs.next().unwrap_or_default())
+    } else {
+        readme.to_owned()
+    };
+    let events = Parser::new(&body).map(|mut event| {
+        if let Event::Start(Tag::Image { dest_url, .. }) = &mut event
+            && dest_url.starts_with("screenshots/")
+        {
+            *dest_url = crate::static_assets::static_url(&format!("dotfiles/{dest_url}")).into();
+        }
+        event
+    });
+    let mut output = String::new();
+    html::push_html(&mut output, events);
+    ammonia::Builder::default()
+        .add_tags(["details", "summary"])
+        .clean(&output)
+        .to_string()
 }
 
 /// Renders the code page.
@@ -186,3 +215,37 @@ pub async fn code_randstring(
 /* ********************************************************************************************** *
  *                                       Private functions                                        *
  * ********************************************************************************************** */
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dotfiles_page_preserves_readme_and_serves_local_screenshots() -> Result<(), askama::Error> {
+        let page = CodeProjectPage {
+            title: DOTFILES.name,
+            show_admin_link: false,
+            project: DOTFILES.into(),
+        }
+        .render()?;
+        assert_eq!(page.matches("<h1>Dotfiles</h1>").count(), 1);
+        assert!(page.contains("<details>") && page.contains("<summary>Screenshots</summary>"));
+        let description = render_dotfiles_readme(DOTFILES.description);
+        assert!(!description.contains("discord.gg") && !description.contains("shields.io"));
+        let sources: Vec<_> = description
+            .split("<img src=\"")
+            .skip(1)
+            .filter_map(|image| image.split('"').next())
+            .collect();
+        assert_eq!(
+            sources.len(),
+            DOTFILES.description.matches("](screenshots/").count()
+        );
+        assert_ne!(sources.len(), 0);
+        assert!(sources.iter().all(|src| {
+            crate::static_assets::source_path_for_request(src)
+                .is_some_and(|path| path.starts_with("dotfiles/screenshots/"))
+        }));
+        Ok(())
+    }
+}

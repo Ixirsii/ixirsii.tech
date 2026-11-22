@@ -97,7 +97,7 @@ Public routes include Home, About, Blog, Code projects, Hall of Fame, Tags, logi
 - Admin slugs use lowercase ASCII letters/numbers separated by single hyphens. Post titles and slugs allow 255 characters, previews 512, and tag names and slugs 127. Bodies are limited to 65,535 UTF-8 bytes. Unique constraint races return field-level 409 responses.
 - Markdown uses default `pulldown-cmark` parsing followed by `ammonia` sanitization.
 - The tag index uses HTMX search at `/tags/search`; tag sizes and colors are recalculated from the filtered result.
-- Code project data is hard-coded in `src/page/code.rs`, not stored in PostgreSQL.
+- Code project data lives in `src/page/code.rs`. The dotfiles page embeds the snapshot in `content/dotfiles/`; refresh it and its screenshot catalog together using the command in the README.
 - HTMX is used only for tag filtering and admin Markdown previews.
 - HTMX keeps the last queued request for each search/preview control. Its global `noSwap` configuration leaves fragment targets unchanged on 4xx and 5xx responses, except for explicit 403 overrides on admin Markdown previews so CSRF error messages remain visible.
 
