@@ -44,5 +44,5 @@
 }
 
 .tags a {
-  @apply hover:underline;
+  @apply decoration-dashed hover:underline;
 }

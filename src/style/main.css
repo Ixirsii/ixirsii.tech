@@ -174,7 +174,7 @@
 
   footer a,
   a.button {
-    @apply underline decoration-ui-accent underline-offset-4;
+    @apply underline decoration-dashed decoration-ui-accent underline-offset-4;
   }
 
   main a:where(:not(.tags a, .button)) {
@@ -216,7 +216,7 @@
   }
 
   header a {
-    @apply text-center;
+    @apply border-b-0 text-center no-underline;
   }
 
   header h1 {
