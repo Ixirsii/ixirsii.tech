@@ -1,4 +1,5 @@
 {% extends "base.html" %} {% block content %}
+<script defer src="{{ crate::static_assets::static_url("post-dates.js") }}"></script>
 <h1>Tag: {{ tag_name }}</h1>
 
 <p class="metadata"><a href="/tags">All tags</a></p>
@@ -11,9 +12,9 @@
     <div class="prose-content mb-4">{{ post.preview|safe }}</div>
 
     <div class="metadata mt-auto">
-      {% if post.published_at.len() != 0 %}
+      {% if let Some(date) = post.published_at %}
         <div>Published:</div>
-        <div>{{ post.published_at }}</div>
+        <div>{% include "post_date.html" %}</div>
       {% endif %}
       {% if post.tags.len() != 0 %}
         <div>Tags:</div>

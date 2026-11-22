@@ -8,6 +8,7 @@
   <a class="mt-4 inline-block" href="/blog">Browse all posts</a>
 {% endmacro %}
 {% block content %}
+<script defer src="{{ crate::static_assets::static_url("post-dates.js") }}"></script>
 <div{% if posts.len() > 1 %} class="article-layout"{% endif %}>
 {% if posts.len() > 1 %}
   <nav class="card article-contents" aria-label="On this page">
@@ -29,11 +30,13 @@
     <div class="prose-content mb-4">{{ post.body|safe }}</div>
 
     <div class="metadata">
-      <div>Published:</div>
-      <div>{{ post.published_at }}</div>
-      {% if post.updated_at.len() != 0 %}
+      {% if let Some(date) = post.published_at %}
+        <div>Published:</div>
+        <div>{% include "post_date.html" %}</div>
+      {% endif %}
+      {% if let Some(date) = post.updated_at %}
         <div>Updated:</div>
-        <div>{{ post.updated_at }}</div>
+        <div>{% include "post_date.html" %}</div>
       {% endif %}
       {% if post.tags.len() != 0 %}
         <div>Tags:</div>

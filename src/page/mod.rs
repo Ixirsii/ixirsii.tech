@@ -2,6 +2,7 @@
 
 use ammonia::clean;
 use axum::http::Uri;
+use chrono::{DateTime, SecondsFormat, Utc};
 use pulldown_cmark::{Parser, html};
 
 use crate::{
@@ -203,9 +204,23 @@ pub struct PostView {
     title: String,
     body: String,
     preview: String,
-    published_at: String,
-    updated_at: String,
+    published_at: Option<PostDate>,
+    updated_at: Option<PostDate>,
     tags: Vec<TagView>,
+}
+
+struct PostDate {
+    timestamp: String,
+    utc_datetime: String,
+}
+
+impl From<DateTime<Utc>> for PostDate {
+    fn from(date: DateTime<Utc>) -> Self {
+        Self {
+            timestamp: date.to_rfc3339_opts(SecondsFormat::Millis, true),
+            utc_datetime: date.format("%B %-d, %Y at %H:%M UTC").to_string(),
+        }
+    }
 }
 
 impl From<Post> for PostView {
@@ -215,12 +230,8 @@ impl From<Post> for PostView {
             title: post.title,
             body: render_markdown(&post.body),
             preview: post.preview.map_or_default(|p| render_markdown(&p)),
-            published_at: post
-                .published_at
-                .map_or_default(|d| d.format("%B %e, %Y").to_string()),
-            updated_at: post
-                .updated_at
-                .map_or_default(|d| d.format("%B %e, %Y").to_string()),
+            published_at: post.published_at.map(PostDate::from),
+            updated_at: post.updated_at.map(PostDate::from),
             tags: post.tags.into_iter().map(TagView::from).collect(),
         }
     }

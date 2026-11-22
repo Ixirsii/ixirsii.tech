@@ -54,6 +54,7 @@ const STATIC_ASSETS: Catalog = Catalog(&[
     asset!("fonts/sourcecodepro-normal.woff2"),
     asset!("images/Ixirsii.webp"),
     asset!("main.css"),
+    asset!("post-dates.js"),
 ]);
 
 // Keep the stable discovery URLs alongside the immutable versions.

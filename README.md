@@ -22,6 +22,9 @@
 
 ## Writing blog posts
 
+Enter publication times in UTC. Public pages show published and updated dates and times
+in the reader’s local timezone, or in UTC when JavaScript is disabled.
+
 Use `##` for sections and `###` for subsections. Individual posts link to these
 headings in an **On this page** sidebar, shown above the article on small screens.
 

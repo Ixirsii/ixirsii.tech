@@ -1,4 +1,5 @@
 {% extends "base.html" %} {% block content %}
+<script defer src="{{ crate::static_assets::static_url("post-dates.js") }}"></script>
 <div class="article-layout">
   {% if !contents.is_empty() %}
   <nav class="card article-contents" aria-labelledby="post-contents-title">
@@ -25,13 +26,13 @@
     <section class="card">
       <h2>About this post</h2>
   <div class="metadata mb-6">
-    {% if post.published_at.len() != 0 %}
+    {% if let Some(date) = post.published_at %}
       <div>Published:</div>
-      <div>{{ post.published_at }}</div>
+      <div>{% include "post_date.html" %}</div>
     {% endif %}
-    {% if post.updated_at.len() != 0 %}
+    {% if let Some(date) = post.updated_at %}
       <div>Updated:</div>
-      <div>{{ post.updated_at }}</div>
+      <div>{% include "post_date.html" %}</div>
     {% endif %}
     {% if post.tags.len() != 0 %}
       <div>Tags:</div>
