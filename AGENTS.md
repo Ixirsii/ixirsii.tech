@@ -4,7 +4,7 @@
 
 - Rust 1.100.0, pinned by `rust-toolchain.toml`.
 - PostgreSQL reachable through `DATABASE_URL` for running the app and database tests. Local development uses PostgreSQL 18 through Docker Compose/OrbStack.
-- Tailwind CSS CLI 4.3.3 on `PATH` as `tailwindcss`. The release runner provides it; ordinary Forgejo builds install it in the workflow.
+- Tailwind CSS CLI 4.3.5 on `PATH` as `tailwindcss`. The release runner provides it; ordinary Forgejo builds install it in the workflow.
 - SQLx CLI 0.9.0 for applying migrations and refreshing query metadata. Install with `cargo install sqlx-cli --version 0.9.0 --locked`.
 
 There is no Node.js project or JavaScript package-manager setup.
@@ -146,7 +146,7 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 
 `Cargo.toml` denies unsafe code and enables Clippy `cargo`, `nursery`, and `pedantic` warnings. It denies `expect_used`, `unwrap_used`, `missing_errors_doc`, and `missing_panics_doc`.
 
-Forgejo `checks.yml` runs on pull requests and before staging on pushes to `main`. It checks formatting, tests the deployment script, migrates disposable PostgreSQL 18, and runs Clippy and locked tests on `ci-rust`. Check committed SQLx metadata locally after query changes. Staging requires both checks and security scans. Production requires a successful staging run for the exact tagged commit on `main` and a fresh security scan.
+Forgejo `checks.yml` runs on pull requests and before staging on pushes to `main`. It checks formatting, tests the deployment script, migrates disposable PostgreSQL 18, and runs Clippy and locked tests on `ci-rust`. The OTLP smoke step builds the real `ixirsii-tech` binary and checks request logs, counters, and latency for blog and static routes with a local receiver. Check committed SQLx metadata locally after query changes. Staging requires both checks and security scans. Production requires a successful staging run for the exact tagged commit on `main` and a fresh security scan.
 
 `railway.yml` serializes releases per environment on `ci-railway`. The job opens a private Railway SSH tunnel, migrates the target database, and uses a fresh Cargo target directory for online SQLx query validation. Staging builds a Linux/amd64 release image; production checks the release queries and deploys the exact image digest recorded after the staging health check. Railway pulls the image rather than building from source. See [release runner setup and first-run checks](docs/image-releases.md).
 

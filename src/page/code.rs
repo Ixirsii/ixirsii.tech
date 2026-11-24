@@ -31,14 +31,14 @@ const IXIRSII_TECH: Project = Project {
         "My personal website built with [Rust](https://rust-lang.org/) and [Axum](https://github.com/tokio-rs/axum).\n\n",
         "Features:\n\n",
         "- Server-side rendered HTML with [Askama](https://github.com/askama-rs/askama) templates\n",
-        "- Blog with Markdown content stored in MySQL\n",
+        "- Markdown posts stored in [PostgreSQL](https://www.postgresql.org/) using [SQLx](https://docs.rs/sqlx)\n",
         "- [HTMX](https://htmx.org/) for dynamic interactions without JavaScript frameworks\n",
         "- [Tailwind CSS](https://tailwindcss.com/) v4 with Catppuccin Mocha theme\n",
         "- Dark/light theme switcher with multiple Catppuccin flavors\n",
     ),
     repo_url: "https://github.com/Ixirsii/ixirsii.tech",
     website_url: Some("https://ixirsii.tech"),
-    tech_tags: &["Rust", "Axum", "HTMX", "Tailwind CSS", "MySQL"],
+    tech_tags: &["Rust", "Axum", "HTMX", "Tailwind CSS", "PostgreSQL"],
 };
 
 const RANDSTRING: Project = Project {

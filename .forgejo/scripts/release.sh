@@ -13,6 +13,10 @@ if ! rustc -vV | grep -Fx 'host: x86_64-unknown-linux-gnu' >/dev/null; then
 	echo "Release jobs need a Linux amd64 GNU toolchain" >&2
 	exit 1
 fi
+if ! NO_COLOR=1 tailwindcss --help | grep -Fx '≈ tailwindcss v4.3.5' >/dev/null; then
+	echo "The release runner needs Tailwind CSS CLI 4.3.5" >&2
+	exit 1
+fi
 registry=${FORGEJO_API_URL#https://}
 registry=${registry%%/*}
 repo="$registry/${FORGEJO_REPOSITORY,,}"

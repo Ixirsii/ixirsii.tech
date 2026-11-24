@@ -28,9 +28,10 @@ jobs:
           persist-credentials: false
           ref: ${{ forgejo.sha }}
 
-      - name: Install Tailwind CSS
+      - name: Install build and telemetry test tools
         run: |
-          npm install --no-save --no-package-lock @tailwindcss/cli@4.3.3 tailwindcss@4.3.3
+          pkg install -y python3 devel/py-opentelemetry-proto
+          npm install --no-save --no-package-lock @tailwindcss/cli@4.3.5 tailwindcss@4.3.5
           echo "$PWD/node_modules/.bin" >> "$FORGEJO_PATH"
 
       - name: Test deployment script
@@ -62,5 +63,21 @@ jobs:
       - name: Clippy
         run: cargo clippy --locked --all-targets -- -D warnings
 
+      - name: Check generated CSS
+        run: git diff --exit-code --stat -- public/main.css
+
       - name: Test
         run: cargo test --locked --all-targets
+
+      - name: Check local OTLP export
+        env:
+          # Git blob of scripts/check_otlp.py in 9dev-site-lib.
+          OTLP_CHECK_BLOB: 616b15cd571f9a155b4299cce14483f8da15275f
+        run: |
+          git fetch --no-tags --no-write-fetch-head --depth=1 https://git.9dev.tech/9-Developers/9dev-site-lib.git "$OTLP_CHECK_BLOB"
+          git cat-file blob "$OTLP_CHECK_BLOB" > "$RUNNER_TEMP/check_otlp.py"
+          cargo build --locked --bin ixirsii-tech
+          python3 "$RUNNER_TEMP/check_otlp.py" --server target/debug/ixirsii-tech --service ixirsii.tech \
+            --get /blog /blog 200 \
+            --get '/blog/private-input?private-input=value' '/blog/{slug}' 404 \
+            --get /site.webmanifest static 200

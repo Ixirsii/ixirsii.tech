@@ -13,12 +13,34 @@
 
 ## Tech stack
 
-| Requirement    | Dependency                        |
-| -------------- | --------------------------------- |
-| Database       | [SQLx](https://docs.rs/sqlx)      |
-| HTTP handler   | [Axum](https://docs.rs/axum)      |
-| HTML templates | [Askama](https://docs.rs/askama/) |
-| Javascript     | [HTMX](https://htmx.org)          |
+| Requirement    | Dependency                                |
+| -------------- | ----------------------------------------- |
+| Database       | [PostgreSQL](https://www.postgresql.org/) |
+| SQL client     | [SQLx](https://docs.rs/sqlx)              |
+| HTTP handler   | [Axum](https://docs.rs/axum)              |
+| HTML templates | [Askama](https://docs.rs/askama/)         |
+| Javascript     | [HTMX](https://htmx.org)                  |
+
+To build from source, install [Tailwind CSS CLI 4.3.5](https://github.com/tailwindlabs/tailwindcss/releases/tag/v4.3.5)
+as `tailwindcss` on your `PATH`. `cargo build --locked` regenerates `public/main.css`.
+
+## Run locally with PostgreSQL
+
+The [Compose service](compose.yaml) runs PostgreSQL 18 on `127.0.0.1:55432`.
+With Rust and Docker Compose installed, run these commands from the repository root:
+
+```sh
+cargo install sqlx-cli --version 0.9.0 --locked --no-default-features --features postgres
+docker compose up -d --wait postgres
+export DATABASE_URL='postgres://ixirsii:ixirsii_dev_only@127.0.0.1:55432/ixirsii_dev'
+cargo sqlx migrate run
+cargo run --locked
+```
+
+Open [localhost:3000](http://localhost:3000). Apply migrations before building
+against a fresh database: SQLx checks queries during compilation when `DATABASE_URL`
+is set. For sample posts, tags, and a local admin, run `docker compose run --rm seed`
+after migrating. [`.env.example`](.env.example) lists the local connection settings.
 
 ## Writing blog posts
 

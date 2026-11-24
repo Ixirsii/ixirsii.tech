@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+git diff --exit-code --stat -- public/main.css
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 # Debian Bookworm slim, linux/amd64 manifest.
