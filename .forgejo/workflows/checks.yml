@@ -80,4 +80,5 @@ jobs:
           python3 "$RUNNER_TEMP/check_otlp.py" --server target/debug/ixirsii-tech --service ixirsii.tech \
             --get /blog /blog 200 \
             --get '/blog/private-input?private-input=value' '/blog/{slug}' 404 \
-            --get /site.webmanifest static 200
+            --get /site.webmanifest static 200 \
+            --get /android-chrome-192x192.png static 200

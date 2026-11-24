@@ -133,7 +133,7 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 ## Static assets and CSS
 
 - `public/` is embedded into the executable with `include_dir`; it is not served from the filesystem with `ServeDir`.
-- `/site.webmanifest` is generated from the asset table at runtime with `no-cache`; its icon URLs are fingerprinted. `/feed.xml` provides the newest 20 published posts as RSS with a five-minute cache lifetime.
+- `public/site.webmanifest` and its two PNG icons have stable root URLs with ETag revalidation. Keep the existing fingerprinted icon URLs available too. `/feed.xml` provides the newest 20 published posts as RSS with a five-minute cache lifetime.
 - Every page links to the RSS feed. Feed item IDs survive slug changes, links use the canonical `https://ixirsii.tech` origin, and descriptions use previews when available or sanitized Markdown bodies otherwise.
 - Both shared and site-owned assets are served at fingerprinted `/static/*` paths with one-year immutable caching. The handler checks the library first, then the site's catalog.
 - When adding or renaming an asset, update the table in `src/static_assets.rs`. Its unit tests check coverage of all embedded files, URL hashes, and reverse lookups.

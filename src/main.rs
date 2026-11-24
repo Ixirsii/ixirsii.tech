@@ -17,7 +17,6 @@ use tokio::net::TcpListener;
 use tower_sessions::{SessionManagerLayer, cookie::SameSite};
 use tracing::{error, info, warn};
 
-use static_assets::{static_asset, well_known_asset};
 pub use types::*;
 
 mod admin_cli;
@@ -316,10 +315,7 @@ fn get_routes(
         .layer(auth_layer)
         .layer(middleware::from_fn(session::private_no_store));
 
-    Router::new()
-        .route("/site.webmanifest", get(browser::manifest))
-        .route("/.well-known/{*path}", get(well_known_asset))
-        .route("/static/{*path}", get(static_asset))
+    static_assets::routes()
         .merge(app_routes)
         .layer(middleware::from_fn(browser::security_headers))
 }

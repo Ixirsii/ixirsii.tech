@@ -323,26 +323,58 @@ async fn shared_browser_assets_are_reachable_from_rendered_pages(pool: PgPool) -
     Ok(())
 }
 
+async fn revalidated_bytes(
+    app: &Router,
+    url: &str,
+    mime: &str,
+) -> Result<axum::body::Bytes, Box<dyn std::error::Error + Send + Sync>> {
+    let first = app.clone().oneshot(request(url)?).await?;
+    assert_eq!(first.status(), StatusCode::OK);
+    assert_security_headers(&first);
+    let cache = "public, max-age=0, must-revalidate";
+    assert_eq!(first.headers()[header::CACHE_CONTROL], cache);
+    assert_eq!(first.headers()[header::CONTENT_TYPE], mime);
+    let etag = &first.headers()[header::ETAG];
+    let cached = app
+        .clone()
+        .oneshot(
+            Request::get(url)
+                .header(header::IF_NONE_MATCH, etag)
+                .body(Body::empty())?,
+        )
+        .await?;
+    assert_eq!(cached.status(), StatusCode::NOT_MODIFIED);
+    assert_eq!(&cached.headers()[header::ETAG], etag);
+    assert_eq!(cached.headers()[header::CACHE_CONTROL], cache);
+    assert!(to_bytes(cached.into_body(), 0).await?.is_empty());
+    Ok(to_bytes(first.into_body(), 2_000_000).await?)
+}
+
 #[sqlx::test]
-async fn manifest_links_to_served_immutable_icons(pool: PgPool) -> TestResult {
+async fn manifest_and_install_icons_revalidate_at_stable_urls(pool: PgPool) -> TestResult {
     let app = app(&pool).await?;
-    let response = app.clone().oneshot(request("/site.webmanifest")?).await?;
-    assert_eq!(
-        response.headers()[header::CONTENT_TYPE],
-        "application/manifest+json"
-    );
-    assert_eq!(response.headers()[header::CACHE_CONTROL], "no-cache");
-    let manifest: serde_json::Value = serde_json::from_str(&html(response).await?)?;
+    let bytes = revalidated_bytes(&app, "/site.webmanifest", "application/manifest+json").await?;
+    assert_eq!(bytes.as_ref(), include_bytes!("../public/site.webmanifest"));
+    let manifest: serde_json::Value = serde_json::from_slice(&bytes)?;
     assert_eq!(manifest["short_name"], "Ixirsii");
-    for icon in manifest["icons"].as_array().ok_or("no icons")? {
-        let path = icon["src"].as_str().ok_or("no icon URL")?;
-        let response = app.clone().oneshot(request(path)?).await?;
+    let icons = manifest["icons"].as_array().ok_or("no icons")?;
+    assert_eq!(icons.len(), 2);
+    for size in ["192x192", "512x512"] {
+        let source = format!("android-chrome-{size}.png");
+        let icon = icons
+            .iter()
+            .find(|icon| icon["sizes"] == size)
+            .ok_or("missing icon size")?;
+        let url = icon["src"].as_str().ok_or("no icon URL")?;
+        assert_eq!(url, format!("/{source}"));
+        let stable = revalidated_bytes(&app, url, "image/png").await?;
+        let response = app.clone().oneshot(request(static_url(&source))?).await?;
         assert_eq!(response.status(), StatusCode::OK);
-        assert_eq!(response.headers()[header::CONTENT_TYPE], "image/png");
         assert_eq!(
             response.headers()[header::CACHE_CONTROL],
-            "public, max-age=31536000, immutable"
+            nine_dev_site_lib::serving::IMMUTABLE
         );
+        assert_eq!(to_bytes(response.into_body(), 2_000_000).await?, stable);
     }
     let page = html(app.oneshot(request("/about")?).await?).await?;
     assert!(page.contains("rel=\"manifest\" href=\"/site.webmanifest\""));

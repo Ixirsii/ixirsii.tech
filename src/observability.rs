@@ -21,7 +21,9 @@ pub fn init() -> Result<Telemetry> {
 pub fn with_requests(router: Router, requests: RequestMetrics) -> Router {
     router.layer(middleware::from_fn_with_state(
         requests.with_route_override(|matched, _| {
-            (matched == Some("/site.webmanifest")).then_some("static")
+            matched
+                .and_then(|url| crate::static_assets::STABLE.by_url(url))
+                .map(|_| "static")
         }),
         observe,
     ))

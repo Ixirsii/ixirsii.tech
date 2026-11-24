@@ -1,9 +1,11 @@
 //! Catalog and routes for embedded site and shared assets.
 
 use axum::{
+    Router,
     extract::Path,
-    http::{StatusCode, Uri},
+    http::{HeaderMap, StatusCode, Uri},
     response::{IntoResponse, Response},
+    routing::get,
 };
 use include_dir::{Dir, include_dir};
 use nine_dev_site_lib::{
@@ -63,11 +65,41 @@ const WELL_KNOWN_ALIASES: Catalog = Catalog(&[
     asset!(".well-known/security.txt", "/.well-known/security.txt"),
 ]);
 
-/// Returns a site-owned fingerprinted URL, or `/static/missing` for an unknown asset.
+pub(crate) const STABLE: Catalog = Catalog(&[
+    asset!("site.webmanifest", "/site.webmanifest"),
+    asset!("android-chrome-192x192.png", "/android-chrome-192x192.png"),
+    asset!("android-chrome-512x512.png", "/android-chrome-512x512.png"),
+]);
+
+pub(crate) fn routes() -> Router {
+    let mut router = Router::new()
+        .route("/.well-known/{*path}", get(well_known_asset))
+        .route("/static/{*path}", get(static_asset));
+    for entry in STABLE.0 {
+        router = router.route(
+            entry.url,
+            get(move |headers: HeaderMap| async move {
+                let Some(file) = STATIC_DIR.get_file(entry.source) else {
+                    return StatusCode::NOT_FOUND.into_response();
+                };
+                serving::revalidate(
+                    file.contents(),
+                    content_type(entry.source),
+                    entry.hash,
+                    &headers,
+                )
+            }),
+        );
+    }
+    router
+}
+
+/// Return a site's canonical URL, preferring the fingerprinted URL when both exist.
 #[must_use]
 pub fn static_url(source_path: &str) -> &'static str {
     STATIC_ASSETS
         .by_source(source_path)
+        .or_else(|| STABLE.by_source(source_path))
         .map_or("/static/missing", |entry| entry.url)
 }
 
@@ -108,7 +140,7 @@ mod tests {
     use sha2::{Digest, Sha256};
 
     use super::{
-        Dir, IMMUTABLE, Path, STATIC_ASSETS, STATIC_DIR, StatusCode, WELL_KNOWN_ALIASES,
+        Dir, IMMUTABLE, Path, STABLE, STATIC_ASSETS, STATIC_DIR, StatusCode, WELL_KNOWN_ALIASES,
         WELL_KNOWN_CACHE, assets, source_path_for_request, static_asset, static_url,
         well_known_asset,
     };
@@ -123,17 +155,19 @@ mod tests {
     }
 
     #[test]
-    fn table_covers_every_embedded_asset_once() {
+    fn catalogs_cover_every_embedded_asset_without_url_collisions() {
         let mut embedded = BTreeSet::new();
         embedded_paths(&STATIC_DIR, &mut embedded);
         let registered: BTreeSet<_> = STATIC_ASSETS
             .0
             .iter()
+            .chain(STABLE.0)
             .map(|entry| entry.source.to_owned())
             .collect();
         let urls: BTreeSet<_> = STATIC_ASSETS
             .0
             .iter()
+            .chain(STABLE.0)
             .chain(WELL_KNOWN_ALIASES.0)
             .map(|entry| entry.url)
             .collect();
@@ -143,13 +177,8 @@ mod tests {
             "update the asset table when files change"
         );
         assert_eq!(
-            registered.len(),
-            STATIC_ASSETS.0.len(),
-            "duplicate source paths"
-        );
-        assert_eq!(
             urls.len(),
-            STATIC_ASSETS.0.len() + WELL_KNOWN_ALIASES.0.len(),
+            STATIC_ASSETS.0.len() + STABLE.0.len() + WELL_KNOWN_ALIASES.0.len(),
             "duplicate public URLs"
         );
         assert!(
