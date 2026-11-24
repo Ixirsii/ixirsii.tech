@@ -136,9 +136,9 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 - `public/site.webmanifest` and its two PNG icons have stable root URLs with ETag revalidation. Keep the existing fingerprinted icon URLs available too. `/feed.xml` provides the newest 20 published posts as RSS with a five-minute cache lifetime.
 - Every page links to the RSS feed. Feed item IDs survive slug changes, links use the canonical `https://ixirsii.tech` origin, and descriptions use previews when available or sanitized Markdown bodies otherwise.
 - Both shared and site-owned assets are served at fingerprinted `/static/*` paths with one-year immutable caching. The handler checks the library first, then the site's catalog.
-- When adding or renaming an asset, update the table in `src/static_assets.rs`. Its unit tests check coverage of all embedded files, URL hashes, and reverse lookups.
+- Declare assets in `build.rs`. Fonts, images, and dotfiles screenshots are indexed by directory. `src/static_assets.rs` mounts the shared asset router; its tests check coverage, URL hashes, and discovery routes.
 - Templates use library URL constants for shared assets and `crate::static_assets::static_url()` for local assets.
-- Embedded `/.well-known/*` files use non-fingerprinted paths and a one-hour cache header.
+- Discovery URLs revalidate with ETags after one hour. Serve `security.txt` only at `/.well-known/security.txt`; the BIMI logo also has an immutable URL.
 - Source CSS is split across `src/style/main.css`, `about.css`, `admin.css`, `auth.css`, `blog.css`, `code.css`, and `tag.css`. Tailwind v4 configuration lives in CSS through `@theme`; there is no JavaScript config.
 - The shared palette defines mocha, latte, frappe, and macchiato; site CSS owns semantic contrast colors. Explicit choices persist in `localStorage`. System follows live OS preference changes.
 
@@ -166,7 +166,7 @@ There are no pre-commit hooks.
 ## If stuck
 
 - If any Cargo command fails while running `build.rs`, verify that a compatible `tailwindcss` executable is on `PATH`, then inspect `src/style/main.css` and its imports.
-- If CSS or an asset URL is stale, inspect `build.rs`, the generated `public/main.css`, and the table in `src/static_assets.rs`.
+- If CSS or an asset URL is stale, inspect the declarations in `build.rs` and the generated `public/main.css`.
 - If startup fails before listening, verify `DATABASE_URL`, PostgreSQL connectivity, and the migrations in `migrations/`.
 - If SQLx macros report missing or stale offline metadata, migrate the local development database and run `cargo sqlx prepare -- --all-targets`; commit the resulting `.sqlx/` files.
 - If admin state-changing requests return `403`, verify the session token and `CSRF_ALLOWED_ORIGINS` values, including scheme and port.

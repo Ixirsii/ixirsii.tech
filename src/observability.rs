@@ -22,7 +22,7 @@ pub fn with_requests(router: Router, requests: RequestMetrics) -> Router {
     router.layer(middleware::from_fn_with_state(
         requests.with_route_override(|matched, _| {
             matched
-                .and_then(|url| crate::static_assets::STABLE.by_url(url))
+                .and_then(|url| crate::static_assets::CATALOG.alias_by_url(url))
                 .map(|_| "static")
         }),
         observe,

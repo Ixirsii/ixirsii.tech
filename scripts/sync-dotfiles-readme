@@ -20,21 +20,19 @@ def git(*args):
 commit = git("rev-parse", "--verify", "--end-of-options",
              options.revision + "^{commit}").decode().strip()
 readme = git("show", f"{commit}:README.md")
-images = {}
-for path in re.findall(r"!\[[^\]\n]*\]\(([^)\n]+)\)", readme.decode()):
-    if not re.fullmatch(r"screenshots/(?:[\w-]+/)*[\w-]+\.(?:png|jpe?g|webp)", path):
-        raise SystemExit(f"Unsupported README image: {path}")
-    if path not in images:
-        images[path] = git("show", f"{commit}:{path}")
+def screenshot_paths(markdown):
+    paths = set(re.findall(r"!\[[^\]\n]*\]\(([^)\n]+)\)", markdown))
+    for path in paths:
+        if not re.fullmatch(r"screenshots/(?:[\w-]+/)*[\w-]+\.(?:png|jpe?g|webp)", path):
+            raise SystemExit(f"Unsupported README image: {path}")
+    return paths
+
+
+images = {path: git("show", f"{commit}:{path}") for path in screenshot_paths(readme.decode())}
 
 # Resolve all inputs before updating the previous snapshot.
-catalog = root / "src/static_assets.rs"
-before, section = catalog.read_text().split("    // BEGIN dotfiles screenshots\n")
-old, after = section.split("    // END dotfiles screenshots\n")
-previous = set(re.findall(r'asset!\("dotfiles/(screenshots/[^"]+)"\)', old))
-entries = "".join(f'    asset!("dotfiles/{p}"),\n' for p in sorted(images))
-
 snapshot = root / "content/dotfiles"
+previous = screenshot_paths((snapshot / "README.md").read_text())
 snapshot.mkdir(parents=True, exist_ok=True)
 (snapshot / "README.md").write_bytes(readme)
 (snapshot / "revision").write_text(commit + "\n")
@@ -45,6 +43,4 @@ for path, data in images.items():
     target.write_bytes(data)
 for path in previous - images.keys():
     (assets / path).unlink(missing_ok=True)
-catalog.write_text(before + "    // BEGIN dotfiles screenshots\n" + entries
-                   + "    // END dotfiles screenshots\n" + after)
 print(f"Synced README and {len(images)} screenshots from {commit}")
