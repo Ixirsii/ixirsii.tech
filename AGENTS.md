@@ -72,13 +72,13 @@ The application loads a local `.env` when present and reports a startup error if
 | `AUTH_CLIENT_WINDOW_SECONDS`     |       No | `300`                                                 | Per-client rate-limit window                                                                                   |
 | `AUTH_RATE_LIMIT_MAX_IDENTITIES` |       No | `10000`                                               | Maximum account and client keys retained by each limiter                                                       |
 
-Startup connects to PostgreSQL and runs embedded schema-only SQLx migrations, including the `tower_sessions` table, before binding the listener. The `/health` endpoint acquires a pool connection and runs `SELECT 1`; failures or timeouts return `503 Service Unavailable`.
+Startup connects to PostgreSQL and verifies that the applied migration history exactly matches the executable before binding the listener. Apply migrations separately with `cargo sqlx migrate run`. The `/health` endpoint acquires a pool connection and runs `SELECT 1`; failures or timeouts return `503 Service Unavailable`.
 
 ## Architecture
 
 - **Backend**: Rust 2024, Axum 0.8, Askama, SQLx, and PostgreSQL.
 - **Frontend**: Askama templates and Tailwind CSS v4, with HTMX 4.0.0, Catppuccin, theme switcher, and SVG symbols served by `nine_dev_site_lib`. `/licenses` includes the shared browser asset notices.
-- **Entrypoint and routing**: `src/main.rs` initializes tracing and the database, runs migrations, builds public and protected routers, configures sessions, and serves embedded assets.
+- **Entrypoint and routing**: `src/main.rs` initializes tracing and the database, validates migration history, builds public and protected routers, configures sessions, and serves embedded assets.
 - **Application state**: `AppState` in `src/types.rs` contains `Arc<PgPool>` and configured CSRF origins. It also implements the `axum-login` authentication backend.
 - **Page handlers**: `src/page/` contains `about.rs`, `admin.rs`, `admin_posts.rs`, `admin_tags.rs`, `blog.rs`, `code.rs`, `error.rs`, `hall_of_fame.rs`, `home.rs`, and `tag.rs`. They are re-exported by `src/page/mod.rs`.
 - **Templates**: Askama templates live in `templates/`. Full pages extend `base.html`; `tags_cloud.html` and `admin_markdown_preview.html` are HTMX fragments.

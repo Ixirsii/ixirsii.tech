@@ -38,12 +38,13 @@ jobs:
 
   health:
     needs: package
-    runs-on: node-24
+    runs-on: ci-railway
     services:
       postgres:
         image: postgres:18
         env:
           POSTGRES_PASSWORD: smoke
+        options: --health-cmd pg_isready --health-interval 2s --health-retries 30
       web:
         image: ${{ needs.package.outputs.image }}
         credentials:
@@ -53,4 +54,11 @@ jobs:
           DATABASE_URL: postgres://postgres:smoke@postgres:5432/postgres
         options: --restart on-failure
     steps:
+      - uses: https://data.forgejo.org/actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Migrate the disposable health-test database
+        env:
+          DATABASE_URL: postgres://postgres:smoke@postgres:5432/postgres
+        run: cargo sqlx migrate run
       - run: curl --fail --retry 30 --retry-all-errors --retry-delay 2 http://web:3000/health

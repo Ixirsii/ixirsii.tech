@@ -5,7 +5,7 @@ use std::{
 };
 
 use axum_login::{AuthSession, AuthnBackend};
-use sqlx::{Error as SqlxError, PgPool, migrate::MigrateError};
+use sqlx::{Error as SqlxError, PgPool};
 
 use crate::{
     auth::{AuthSecurity, ClientIdentity},
@@ -105,8 +105,6 @@ pub enum Error {
     Configuration(String),
     /// A database query or connection error.
     Database(SqlxError),
-    /// An error running database migrations.
-    DatabaseMigration(MigrateError),
     /// An error listening on the specified TCP port.
     Network(std::io::Error),
 }
@@ -117,7 +115,6 @@ impl Display for Error {
             Self::System(error) => write!(f, "system error: {error}"),
             Self::Configuration(error) => write!(f, "configuration error: {error}"),
             Self::Database(error) => write!(f, "database error: {error}"),
-            Self::DatabaseMigration(error) => write!(f, "database migration error: {error}"),
             Self::Network(error) => write!(f, "network error: {error}"),
         }
     }
@@ -128,7 +125,6 @@ impl std::error::Error for Error {
         match self {
             Self::System(_) | Self::Configuration(_) => None,
             Self::Database(error) => Some(error),
-            Self::DatabaseMigration(error) => Some(error),
             Self::Network(error) => Some(error),
         }
     }
@@ -157,12 +153,6 @@ impl From<std::io::Error> for Error {
 impl From<SqlxError> for Error {
     fn from(error: SqlxError) -> Self {
         Self::Database(error)
-    }
-}
-
-impl From<MigrateError> for Error {
-    fn from(error: MigrateError) -> Self {
-        Self::DatabaseMigration(error)
     }
 }
 

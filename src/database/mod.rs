@@ -2,6 +2,7 @@
 
 mod post_tags;
 mod posts;
+mod schema;
 mod tags;
 mod transactions;
 mod types;
@@ -9,6 +10,7 @@ mod users;
 
 pub use post_tags::*;
 pub use posts::*;
+pub use schema::check_schema;
 pub use tags::*;
 pub use transactions::*;
 pub use types::*;

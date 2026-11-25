@@ -1,0 +1,21 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT to_regclass('_sqlx_migrations') IS NULL AS \"absent!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "absent!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "31cd2cf1a9734cf8ad52ac02145b79f8ce712cd228e00c14d00ec9a6c1c04ec8"
+}

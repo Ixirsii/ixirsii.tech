@@ -42,6 +42,11 @@ against a fresh database: SQLx checks queries during compilation when `DATABASE_
 is set. For sample posts, tags, and a local admin, run `docker compose run --rm seed`
 after migrating. [`.env.example`](.env.example) lists the local connection settings.
 
+After an update, run `cargo sqlx migrate run` from the new release before
+starting the server. Startup checks the applied migration versions, checksums,
+and success flags; it never applies migrations. If the database has newer
+migrations, start the matching release instead of retrying the older binary.
+
 To customize the installed site's name, colors, or icons, edit
 [`public/site.webmanifest`](public/site.webmanifest) and its two PNGs, then
 rebuild. Browsers revalidate the manifest and icons at their stable URLs.

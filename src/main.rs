@@ -12,7 +12,7 @@ use axum::{
 };
 use axum_login::{AuthManagerLayerBuilder, login_required};
 use nine_dev_site_lib::{startup, telemetry::RequestMetrics};
-use sqlx::{PgPool, migrate, postgres::PgPoolOptions};
+use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::net::TcpListener;
 use tower_sessions::{SessionManagerLayer, cookie::SameSite};
 use tracing::{error, info, warn};
@@ -95,7 +95,7 @@ async fn run_http(
     auth_security: Arc<auth::AuthSecurity>,
     requests: RequestMetrics,
 ) -> Result<()> {
-    migrate!().run(db_pool).await?;
+    database::check_schema(db_pool).await?;
     let login_csrf_key = login_csrf::load_key(db_pool).await?;
     let session_store = session::PostgresSessionStore::new(db_pool.clone());
 
