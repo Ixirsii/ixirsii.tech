@@ -145,7 +145,7 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 
 ## Linting and CI
 
-`Cargo.toml` denies unsafe code and enables Clippy `cargo`, `nursery`, and `pedantic` warnings. It denies `expect_used`, `unwrap_used`, `missing_errors_doc`, and `missing_panics_doc`.
+`Cargo.toml` forbids unsafe code and enables Clippy `cargo`, `nursery`, and `pedantic` warnings. It denies `expect_used`, `unwrap_used`, `missing_errors_doc`, and `missing_panics_doc`.
 
 Forgejo `checks.yml` runs on pull requests and before staging on pushes to `main`. It checks formatting, tests the deployment script, migrates disposable PostgreSQL 18, and runs Clippy and locked tests on `ci-rust`. The OTLP smoke step builds the real `ixirsii-tech` binary and checks request logs, counters, and latency for blog and static routes with a local receiver. Check committed SQLx metadata locally after query changes. Staging requires both checks and security scans. Production requires a successful staging run for the exact tagged commit on `main` and a fresh security scan.
 
