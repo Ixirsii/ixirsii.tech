@@ -31,7 +31,7 @@ inquire = { version = "0.9.5", default-features = false, features = [
   "crossterm",
 ] }
 ipnet = "2.11"
-nine_dev_site_lib = { version = "0.12.0", features = [
+nine_dev_site_lib = { version = "0.12.1", features = [
   "axum",
   "htmx",
   "server",
