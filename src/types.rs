@@ -49,7 +49,11 @@ impl AuthnBackend for AppState {
             username,
         } = credentials;
 
-        if !self.auth_security.allow_client(client).await {
+        if !self
+            .auth_security
+            .allow_client(&self.db_pool, client)
+            .await?
+        {
             return Ok(None);
         }
         let Some(verification_permit) = self.auth_security.verification_permit() else {
@@ -59,8 +63,13 @@ impl AuthnBackend for AppState {
         let user = get_admin_user_by_username(&(*self.db_pool), &username).await?;
         if !self
             .auth_security
-            .allow_account(user.as_ref().map(|user| user.id), &username, client)
-            .await
+            .allow_account(
+                &self.db_pool,
+                user.as_ref().map(|user| user.id),
+                &username,
+                client,
+            )
+            .await?
         {
             return Ok(None);
         }

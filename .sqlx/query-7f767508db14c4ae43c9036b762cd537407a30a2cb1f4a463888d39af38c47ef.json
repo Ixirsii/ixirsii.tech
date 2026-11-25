@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH expired AS (\n                SELECT identity_hash FROM login_rate_limits\n                WHERE scope = $1 AND last_attempt_at <= login_window_start(statement_timestamp(), $2)\n                FOR UPDATE SKIP LOCKED\n             )\n             DELETE FROM login_rate_limits r USING expired\n             WHERE r.scope = $1 AND r.identity_hash = expired.identity_hash",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Int8"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7f767508db14c4ae43c9036b762cd537407a30a2cb1f4a463888d39af38c47ef"
+}

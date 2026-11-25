@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE login_rate_limits SET attempts[1] = now() - interval '5 minutes'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "be6103ae9d2ad91e2155e0a743cce37ccc31699c78499da3cd3c5b0d768f9f8b"
+}

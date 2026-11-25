@@ -121,21 +121,28 @@ async fn check_preview(app: &Router, cookie: &str, token: &str) -> TestResult {
 }
 
 #[sqlx::test]
-async fn account_attack_does_not_lock_out_another_client(pool: PgPool) -> TestResult {
-    let app = app(&pool).await?;
+async fn account_limit_survives_restart_without_locking_out_another_client(
+    pool: PgPool,
+) -> TestResult {
+    let initial = app(&pool).await?;
     sqlx::query!("INSERT INTO admin_users (username, password_hash) VALUES ($1, $2)", "developer", "$argon2id$v=19$m=19456,t=2,p=1$aXhpcnNpaS1kZXYtb25seQ$8k8VcWHiaaBqwzl4afJ3L7QMp6nhuG4FxUX4O5Qu964").execute(&pool).await?;
-    let challenge = app.clone().oneshot(request("/login")?).await?;
+    let challenge = initial.clone().oneshot(request("/login")?).await?;
     let cookie = cookies(&challenge)?;
     let body = html(challenge).await?;
     let csrf = token(&body)?;
-    for _ in 0..5 {
-        let response = app
+    for _ in 0..4 {
+        let response = initial
             .clone()
             .oneshot(login_request(&cookie, csrf, "wrong")?)
             .await?;
         assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
     }
-    let blocked = app
+    let last_slot = initial
+        .oneshot(login_request(&cookie, csrf, "local-development-only")?)
+        .await?;
+    assert_eq!(last_slot.status(), StatusCode::SEE_OTHER);
+    let restarted = app(&pool).await?;
+    let blocked = restarted
         .clone()
         .oneshot(login_request(&cookie, csrf, "local-development-only")?)
         .await?;
@@ -144,16 +151,14 @@ async fn account_attack_does_not_lock_out_another_client(pool: PgPool) -> TestRe
     legitimate
         .extensions_mut()
         .insert(ConnectInfo("127.0.0.2:4321".parse::<SocketAddr>()?));
-    let response = app.oneshot(legitimate).await?;
+    let response = restarted.oneshot(legitimate).await?;
     assert_eq!(response.status(), StatusCode::SEE_OTHER);
     assert!(response.headers().contains_key(header::SET_COOKIE));
     Ok(())
 }
 
 #[sqlx::test]
-async fn anonymous_login_does_not_create_sessions_and_login_still_works(
-    pool: PgPool,
-) -> TestResult {
+async fn anonymous_login_does_not_create_sessions(pool: PgPool) -> TestResult {
     let app = app(&pool).await?;
     for _ in 0..100 {
         let response = app.clone().oneshot(request("/login")?).await?;
@@ -189,12 +194,22 @@ async fn anonymous_login_does_not_create_sessions_and_login_still_works(
             .await?,
         0
     );
+    Ok(())
+}
 
+#[sqlx::test]
+async fn login_session_and_logout_work_across_replicas(pool: PgPool) -> TestResult {
+    let first = app(&pool).await?;
+    let second = app(&pool).await?;
+    let challenge = first.clone().oneshot(request("/login")?).await?;
+    let cookie = cookies(&challenge)?;
+    let body = html(challenge).await?;
+    let csrf = token(&body)?;
     let hash = crate::admin_cli::hash_password("local-development-only")?;
     assert!(database::insert_admin_user(&pool, "developer", &hash).await?);
     let other_hash = crate::admin_cli::hash_password("different-password")?;
     assert!(!database::insert_admin_user(&pool, "developer", &other_hash).await?);
-    let response = app
+    let response = second
         .clone()
         .oneshot(login_request(&cookie, csrf, "local-development-only")?)
         .await?;
@@ -211,15 +226,13 @@ async fn anonymous_login_does_not_create_sessions_and_login_still_works(
             .await?,
         1
     );
-    let admin = app
-        .clone()
-        .oneshot(
-            Request::builder()
-                .uri("/admin")
-                .header(header::COOKIE, &session_cookie)
-                .body(Body::empty())?,
-        )
-        .await?;
+    let admin_request = || {
+        Request::builder()
+            .uri("/admin")
+            .header(header::COOKIE, &session_cookie)
+            .body(Body::empty())
+    };
+    let admin = first.clone().oneshot(admin_request()?).await?;
     assert_eq!(admin.status(), StatusCode::OK);
     assert_security_headers(&admin);
     let body = html(admin).await?;
@@ -228,19 +241,55 @@ async fn anonymous_login_does_not_create_sessions_and_login_still_works(
         csrf,
         "authenticated session gets a fresh CSRF token"
     );
-    check_preview(&app, &session_cookie, token(&body)?).await?;
-    let response = app
+    check_preview(&second, &session_cookie, token(&body)?).await?;
+    let response = second
         .oneshot(
             Request::builder()
                 .method("POST")
                 .uri("/admin/logout")
                 .header(header::ORIGIN, "http://localhost")
-                .header(header::COOKIE, session_cookie)
+                .header(header::COOKIE, &session_cookie)
                 .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
                 .body(Body::from(format!("csrf_token={}", token(&body)?)))?,
         )
         .await?;
     assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    let stale_session = first.oneshot(admin_request()?).await?;
+    assert_eq!(stale_session.status(), StatusCode::TEMPORARY_REDIRECT);
+    assert!(
+        stale_session.headers()[header::LOCATION]
+            .to_str()?
+            .starts_with("/login")
+    );
+    assert_eq!(
+        sqlx::query_scalar!(r#"SELECT COUNT(*) AS "count!" FROM tower_sessions"#)
+            .fetch_one(&pool)
+            .await?,
+        0
+    );
+    Ok(())
+}
+
+#[sqlx::test]
+async fn limiter_store_failure_stops_login(pool: PgPool) -> TestResult {
+    let app = app(&pool).await?;
+    let hash = crate::admin_cli::hash_password("local-development-only")?;
+    assert!(database::insert_admin_user(&pool, "developer", &hash).await?);
+    let challenge = app.clone().oneshot(request("/login")?).await?;
+    let cookie = cookies(&challenge)?;
+    let body = html(challenge).await?;
+    // Only the limiter is unavailable; the password and session stores still work.
+    sqlx::raw_sql("ALTER TABLE login_rate_limits RENAME TO unavailable_limits")
+        .execute(&pool)
+        .await?;
+    let response = app
+        .oneshot(login_request(
+            &cookie,
+            token(&body)?,
+            "local-development-only",
+        )?)
+        .await?;
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
     assert_eq!(
         sqlx::query_scalar!(r#"SELECT COUNT(*) AS "count!" FROM tower_sessions"#)
             .fetch_one(&pool)

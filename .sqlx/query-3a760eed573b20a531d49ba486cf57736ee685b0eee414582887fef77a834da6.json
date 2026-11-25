@@ -1,0 +1,12 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE login_rate_limits SET attempts = ARRAY[now() - interval '5 minutes'],\n             last_attempt_at = now() - interval '5 minutes' WHERE scope = 'client'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": []
+  },
+  "hash": "3a760eed573b20a531d49ba486cf57736ee685b0eee414582887fef77a834da6"
+}

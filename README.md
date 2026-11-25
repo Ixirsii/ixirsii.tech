@@ -86,6 +86,13 @@ existing username is an error; its password is never changed. Sign in at `/login
 From a checkout, use `cargo run -- admin create <username>`. Plain `cargo run`
 starts the local server.
 
+Admin login limits are shared by all replicas using the same database and survive
+restarts. By default, each client has 20 attempts per rolling five minutes, and
+each account/client pair has 5. Successful logins count. Use the same `AUTH_*`
+limit and client-identity settings on every replica. When upgrading from
+process-local limits, the shared budgets start empty; drain the old replicas
+to finish the switch.
+
 ## Server logging
 
 The server writes structured JSON logs to stdout. Set `RUST_LOG` to adjust

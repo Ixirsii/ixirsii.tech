@@ -65,12 +65,12 @@ The application loads a local `.env` when present and reports a startup error if
 | `CSRF_ALLOWED_ORIGINS`           |       No | Origin check disabled                                 | Comma-separated allowed origins for admin state-changing requests                                              |
 | `AUTH_CLIENT_IP_MODE`            |       No | `trusted-proxy` if CIDRs supplied, otherwise `direct` | `direct`, `trusted-proxy`, or `railway`; release builds warn when unset                                        |
 | `AUTH_TRUSTED_PROXY_CIDRS`       |       No | Forwarded headers ignored                             | Required in trusted-proxy mode; comma-separated proxy CIDRs allowed to supply `X-Forwarded-For`; `/0` rejected |
-| `AUTH_ARGON2_MAX_CONCURRENT`     |       No | `2`                                                   | Maximum concurrent Argon2 password checks                                                                      |
+| `AUTH_ARGON2_MAX_CONCURRENT`     |       No | `2`                                                   | Maximum concurrent Argon2 password checks per replica                                                          |
 | `AUTH_ACCOUNT_ATTEMPTS`          |       No | `5`                                                   | Login attempts allowed per account/client pair                                                                 |
 | `AUTH_ACCOUNT_WINDOW_SECONDS`    |       No | `300`                                                 | Per-account/client rate-limit window                                                                           |
 | `AUTH_CLIENT_ATTEMPTS`           |       No | `20`                                                  | Login attempts allowed per trusted client window                                                               |
 | `AUTH_CLIENT_WINDOW_SECONDS`     |       No | `300`                                                 | Per-client rate-limit window                                                                                   |
-| `AUTH_RATE_LIMIT_MAX_IDENTITIES` |       No | `10000`                                               | Maximum account and client keys retained by each limiter                                                       |
+| `AUTH_RATE_LIMIT_MAX_IDENTITIES` |       No | `10000`                                               | Maximum identities across replicas, separately for client and account/client limits                            |
 
 Startup connects to PostgreSQL and verifies that the applied migration history exactly matches the executable before binding the listener. Apply migrations separately with `cargo sqlx migrate run`. The `/health` endpoint acquires a pool connection and runs `SELECT 1`; failures or timeouts return `503 Service Unavailable`.
 
@@ -83,7 +83,7 @@ Startup connects to PostgreSQL and verifies that the applied migration history e
 - **Page handlers**: `src/page/` contains `about.rs`, `admin.rs`, `admin_posts.rs`, `admin_tags.rs`, `blog.rs`, `code.rs`, `error.rs`, `hall_of_fame.rs`, `home.rs`, and `tag.rs`. They are re-exported by `src/page/mod.rs`.
 - **Templates**: Askama templates live in `templates/`. Full pages extend `base.html`; `tags_cloud.html` and `admin_markdown_preview.html` are HTMX fragments.
 - **Database**: `src/database/` is split into posts, tags, post-tag joins, transactions, users, and shared types. Public database operations use tracing instrumentation and SQLx checked query macros. IDs use `i64`; timestamps use PostgreSQL `TIMESTAMPTZ` and Rust `DateTime<Utc>`. Usernames, tag names, and slugs use case-sensitive PostgreSQL comparisons and uniqueness.
-- **Migrations**: Four embedded PostgreSQL migrations create content tables and indexes, admin users, the session store, and the singleton login challenge signing-key table. They do not seed any content or users. The old MySQL migrations and `seed_initial_content` have been removed.
+- **Migrations**: Embedded PostgreSQL migrations create content tables and indexes, admin users, the session store, the singleton login challenge signing key, and shared login rate limits. They do not seed any content or users. The old MySQL migrations and `seed_initial_content` have been removed.
 - **Errors**: `src/types.rs` defines the internal `Error` and `Result<T>` types. `src/page/error.rs` renders styled public 404 and 500 responses.
 - **Telemetry**: Server mode initializes shared telemetry before starting Tokio. It logs JSON to stdout and can export OTLP logs and metrics (see README). Request dimensions use route patterns rather than raw paths.
 
@@ -107,15 +107,15 @@ The protected `/admin` router provides post and tag CRUD, Markdown previews, and
 
 - Login is at `/login`; logout is a POST to `/admin/logout`. Anonymous login challenges use signed 30-minute HttpOnly cookies, Secure and host-prefixed in release builds, without creating database sessions. A singleton signing key is initialized once in PostgreSQL at startup and shared across replicas. Login verifies the cookie signature, expiry, and form challenge before authenticating.
 - Password verification uses Argon2 hashes stored in `admin_users`.
-- Login limits are process-local and reset on restart; each application replica maintains independent account and client limits.
+- Login limits use PostgreSQL sliding windows and survive restarts. Each client or account/client reservation is atomic and uses the database clock. The keys are digests of the normalized client address, plus a tagged user ID or case-sensitive submitted name for account limits. Use the same limit and client-identity settings across replicas.
 - Direct identity mode ignores forwarding headers. Trusted-proxy mode walks `X-Forwarded-For` only when the TCP peer matches `AUTH_TRUSTED_PROXY_CIDRS`; missing, malformed, or entirely trusted chains are rejected.
 - Railway startup explicitly selects `AUTH_CLIENT_IP_MODE=railway`, requiring a single valid edge-generated `X-Real-IP`. All untrusted login traffic must traverse the public HTTP edge; private/TCP bypasses cannot be trusted. The application does not read `CF-Connecting-IP` directly. See [Railway's networking specifications](https://docs.railway.com/networking/public-networking/specs-and-limits) and [forwarding-header clarification](https://station.railway.com/questions/need-authoritative-client-ip-proxy-tru-090eac86).
 - Account limits are scoped to account/client pairs, preventing another IP from exhausting an administrator's account budget. Distributed guessing gets independent budgets; actual shared public IPs still share client limits. Recovery is window expiry or another network; rejected attempts do not extend the window.
 - Unknown usernames are checked against a fixed Argon2id dummy hash, and concurrent password checks are bounded.
-- Known and unknown accounts reserve rate-limit capacity before password verification, including attempts that succeed. A full identity map rejects new identities until entries expire.
+- The client reservation precedes the local Argon2 permit and user lookup; the account/client reservation precedes password verification. Successful attempts count. If a scope is at capacity, new keys are refused after expired keys are reclaimed. Store errors stop authentication.
 - Sessions use a shared PostgreSQL store, `SameSite=Lax`, and secure cookies outside debug builds. They survive application restarts and work across replicas connected to the same database.
 - Login and admin activity refreshes a 30-minute idle lifetime capped at a hard 12-hour maximum from successful login. Public-page activity does not extend an admin session.
-- Each replica deletes expired session rows every five minutes. Cleanup is idempotent across replicas and retries after database errors.
+- Each replica cleans up expired sessions and idle login-limit keys every five minutes. Cleanup is idempotent across replicas and retries after database errors.
 - Login and admin responses use `Cache-Control: no-store, private`.
 - Admin POST handlers verify a token stored in the session. Tokens rotate after successful login and successful post/tag mutations.
 - Admin session token verification uses ordinary string equality and does not use per-form tokens. Login cookie/form challenge comparison uses constant-time equality.

@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT attempts FROM login_rate_limits",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "attempts",
+        "type_info": "TimestamptzArray",
+        "origin": {
+          "Table": {
+            "table": "login_rate_limits",
+            "name": "attempts"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "ed1bd1fbf1630f4755a9ac025353fcd11e5cdb99ef30f9189bfe9d7985b7494c"
+}

@@ -102,7 +102,7 @@ async fn run_http(
     let address = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = TcpListener::bind(address).await?;
     let shutdown = shutdown_signal()?;
-    let cleanup_task = session::spawn_cleanup(session_store.clone());
+    let cleanup_task = session::spawn_cleanup(session_store.clone(), Arc::clone(&auth_security));
     info!(target: observability::LIFECYCLE_TARGET, %address, "listening");
 
     let routes = observability::with_requests(

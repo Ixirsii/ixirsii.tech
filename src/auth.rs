@@ -1,25 +1,22 @@
 //! Login rate limiting, trusted client resolution, and password verification.
 
-use std::{
-    collections::{HashMap, VecDeque},
-    fmt::Display,
-    hash::Hash,
-    net::IpAddr,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{fmt::Display, net::IpAddr, sync::Arc, time::Duration};
 
 use argon2::{Argon2, PasswordHash, PasswordVerifier, password_hash};
 use axum::http::HeaderMap;
 use ipnet::IpNet;
 use sha2::{Digest, Sha256};
+use sqlx::PgPool;
 use tokio::{
-    sync::{Mutex, OwnedSemaphorePermit, Semaphore},
+    sync::{OwnedSemaphorePermit, Semaphore},
     task::spawn_blocking,
 };
 use tracing::{error, info, warn};
 
 use crate::{Error, Result, optional_config};
+use rate_limit::RateLimiter;
+
+mod rate_limit;
 
 const DEFAULT_ACCOUNT_ATTEMPTS: usize = 5;
 const DEFAULT_ACCOUNT_WINDOW_SECONDS: u64 = 300;
@@ -152,10 +149,10 @@ impl AuthConfig {
 
 /// Shared authentication security state.
 pub struct AuthSecurity {
-    account_limiter: RateLimiter<(AccountIdentity, IpAddr)>,
+    account_limiter: RateLimiter,
     client_ip_mode: ClientIpMode,
     argon2_slots: Arc<Semaphore>,
-    client_limiter: RateLimiter<IpAddr>,
+    client_limiter: RateLimiter,
     trusted_proxies: Vec<IpNet>,
 }
 
@@ -171,12 +168,14 @@ impl AuthSecurity {
         Self {
             client_ip_mode: config.client_ip_mode,
             account_limiter: RateLimiter::new(
+                "account_client",
                 config.account_attempts,
                 config.account_window,
                 config.max_identities,
             ),
             argon2_slots: Arc::new(Semaphore::new(config.argon2_max_concurrent)),
             client_limiter: RateLimiter::new(
+                "client",
                 config.client_attempts,
                 config.client_window,
                 config.max_identities,
@@ -229,59 +228,53 @@ impl AuthSecurity {
     }
 
     /// Reserves one attempt for a client identity.
-    pub async fn allow_client(&self, client: ClientIdentity) -> bool {
+    ///
+    /// # Errors
+    /// Returns an error if the shared reservation cannot be made.
+    pub async fn allow_client(&self, pool: &PgPool, client: ClientIdentity) -> Result<bool> {
         let ClientIdentity::Address(address) = client else {
             warn!(
                 event = "authentication_rejected",
                 reason = "invalid_forwarding_chain",
                 "authentication rejected"
             );
-            return false;
+            return Ok(false);
         };
 
-        if self.client_limiter.allow(address).await {
-            true
-        } else {
-            warn!(
-                event = "authentication_rejected",
-                reason = "rate_limited",
-                dimension = "client",
-                "authentication rejected"
-            );
-            false
-        }
+        self.client_limiter
+            .allow(pool, client_hash(address).finalize().into())
+            .await
     }
 
     /// Reserves one attempt for an account and client pair.
+    ///
+    /// # Errors
+    /// Returns an error if the shared reservation cannot be made.
     pub async fn allow_account(
         &self,
+        pool: &PgPool,
         user_id: Option<i64>,
         username: &str,
         client: ClientIdentity,
-    ) -> bool {
+    ) -> Result<bool> {
         let ClientIdentity::Address(address) = client else {
-            return false;
+            return Ok(false);
         };
-        let identity = user_id.map_or_else(
-            || AccountIdentity::Unknown(Sha256::digest(username.as_bytes()).into()),
-            AccountIdentity::Known,
-        );
-
-        if self
-            .account_limiter
-            .allow((identity, normalize_ip(address)))
+        let hash = client_hash(address);
+        let hash = match user_id {
+            Some(id) => hash.chain_update(b"id:").chain_update(id.to_be_bytes()),
+            None => hash
+                .chain_update(b"name:")
+                .chain_update(username.as_bytes()),
+        };
+        self.account_limiter
+            .allow(pool, hash.finalize().into())
             .await
-        {
-            true
-        } else {
-            warn!(
-                event = "authentication_rejected",
-                reason = "rate_limited",
-                dimension = "account_client",
-                "authentication rejected"
-            );
-            false
-        }
+    }
+
+    pub(crate) async fn delete_expired_attempts(&self, pool: &PgPool) -> sqlx::Result<()> {
+        self.client_limiter.delete_expired(pool).await?;
+        self.account_limiter.delete_expired(pool).await
     }
 
     /// Reserves capacity for one password verification.
@@ -384,60 +377,12 @@ fn railway_client(headers: &HeaderMap) -> ClientIdentity {
         .map_or(ClientIdentity::Invalid, ClientIdentity::Address)
 }
 
-#[derive(Eq, Hash, PartialEq)]
-enum AccountIdentity {
-    Known(i64),
-    Unknown([u8; 32]),
-}
-
-struct RateLimiter<K> {
-    attempts: Mutex<HashMap<K, VecDeque<Instant>>>,
-    limit: usize,
-    max_identities: usize,
-    window: Duration,
-}
-
-impl<K> RateLimiter<K>
-where
-    K: Eq + Hash,
-{
-    fn new(limit: usize, window: Duration, max_identities: usize) -> Self {
-        Self {
-            attempts: Mutex::new(HashMap::new()),
-            limit,
-            max_identities,
-            window,
-        }
-    }
-
-    async fn allow(&self, identity: K) -> bool {
-        self.allow_at(identity, Instant::now()).await
-    }
-
-    async fn allow_at(&self, identity: K, now: Instant) -> bool {
-        let mut attempts = self.attempts.lock().await;
-
-        if let Some(identity_attempts) = attempts.get_mut(&identity) {
-            discard_expired(identity_attempts, now, self.window);
-            if identity_attempts.len() >= self.limit {
-                return false;
-            }
-            identity_attempts.push_back(now);
-            return true;
-        }
-
-        if attempts.len() >= self.max_identities {
-            attempts.retain(|_, identity_attempts| {
-                discard_expired(identity_attempts, now, self.window);
-                !identity_attempts.is_empty()
-            });
-            if attempts.len() >= self.max_identities {
-                return false;
-            }
-        }
-
-        attempts.insert(identity, VecDeque::from([now]));
-        true
+// The address family fixes the length of the IP prefix in account/client keys.
+// Only the final digest is sent to the database.
+fn client_hash(address: IpAddr) -> Sha256 {
+    match normalize_ip(address) {
+        IpAddr::V4(ip) => Sha256::new().chain_update([4]).chain_update(ip.octets()),
+        IpAddr::V6(ip) => Sha256::new().chain_update([6]).chain_update(ip.octets()),
     }
 }
 
@@ -471,15 +416,6 @@ fn check_password(password: &[u8], password_hash: Option<&str>) -> PasswordCheck
 fn run_dummy_verification(password: &[u8]) {
     if let Ok(dummy_hash) = PasswordHash::new(DUMMY_PASSWORD_HASH) {
         let _ = Argon2::default().verify_password(password, &dummy_hash);
-    }
-}
-
-fn discard_expired(attempts: &mut VecDeque<Instant>, now: Instant, window: Duration) {
-    while attempts
-        .front()
-        .is_some_and(|attempt| now.duration_since(*attempt) >= window)
-    {
-        attempts.pop_front();
     }
 }
 
@@ -550,10 +486,11 @@ mod tests {
     };
 
     use axum::http::{HeaderMap, HeaderValue};
+    use sqlx::PgPool;
 
     use super::{
         AuthConfig, AuthSecurity, ClientIdentity, ClientIpMode, DUMMY_PASSWORD_HASH, PasswordCheck,
-        RateLimiter, check_password,
+        check_password,
     };
 
     #[test]
@@ -654,8 +591,8 @@ mod tests {
         ));
     }
 
-    #[tokio::test]
-    async fn railway_shared_proxy_does_not_share_client_budget() {
+    #[sqlx::test]
+    async fn railway_shared_proxy_does_not_share_client_budget(pool: PgPool) -> crate::Result<()> {
         let mut security = security(&[], 2);
         security.client_ip_mode = ClientIpMode::Railway;
         let peer = IpAddr::V4(Ipv4Addr::LOCALHOST);
@@ -663,57 +600,38 @@ mod tests {
         headers.insert("x-real-ip", HeaderValue::from_static("203.0.113.1"));
         let first = security.resolve_client(peer, &headers);
         for _ in 0..20 {
-            assert!(security.allow_client(first).await);
+            assert!(security.allow_client(&pool, first).await?);
         }
-        assert!(!security.allow_client(first).await);
+        assert!(!security.allow_client(&pool, first).await?);
         headers.insert("x-real-ip", HeaderValue::from_static("203.0.113.2"));
         assert!(
             security
-                .allow_client(security.resolve_client(peer, &headers))
-                .await
+                .allow_client(&pool, security.resolve_client(peer, &headers))
+                .await?
         );
+        Ok(())
     }
 
-    #[tokio::test]
-    async fn account_budget_is_scoped_to_client_for_known_and_unknown_users() {
+    #[sqlx::test]
+    async fn account_budget_is_scoped_to_client_for_known_and_unknown_users(
+        pool: PgPool,
+    ) -> crate::Result<()> {
         let security = security(&[], 2);
         let first = ClientIdentity::Address(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 1)));
         let second = ClientIdentity::Address(IpAddr::V4(Ipv4Addr::new(203, 0, 113, 2)));
         for user in [Some(1), None] {
             for _ in 0..5 {
-                assert!(security.allow_account(user, "admin", first).await);
+                assert!(security.allow_account(&pool, user, "admin", first).await?);
             }
-            assert!(!security.allow_account(user, "admin", first).await);
-            assert!(security.allow_account(user, "admin", second).await);
+            assert!(!security.allow_account(&pool, user, "admin", first).await?);
+            assert!(security.allow_account(&pool, user, "admin", second).await?);
         }
         assert!(
             !security
-                .allow_account(Some(1), "admin", ClientIdentity::Invalid)
-                .await
+                .allow_account(&pool, Some(1), "admin", ClientIdentity::Invalid)
+                .await?
         );
-    }
-
-    #[tokio::test]
-    async fn rejected_attempts_do_not_extend_account_recovery_window() {
-        let limiter = RateLimiter::new(1, Duration::from_secs(300), 10);
-        let start = std::time::Instant::now();
-        let identity = || {
-            (
-                super::AccountIdentity::Known(1),
-                IpAddr::V4(Ipv4Addr::LOCALHOST),
-            )
-        };
-        assert!(limiter.allow_at(identity(), start).await);
-        assert!(
-            !limiter
-                .allow_at(identity(), start + Duration::from_secs(299))
-                .await
-        );
-        assert!(
-            limiter
-                .allow_at(identity(), start + Duration::from_secs(300))
-                .await
-        );
+        Ok(())
     }
 
     #[test]
@@ -789,45 +707,6 @@ mod tests {
             ClientIdentity::Address(IpAddr::V4(address))
                 if address == Ipv4Addr::new(203, 0, 113, 10)
         ));
-    }
-
-    #[tokio::test]
-    async fn limiter_enforces_independent_sliding_windows() {
-        let limiter = RateLimiter::new(2, Duration::from_mins(1), 10);
-        let start = std::time::Instant::now();
-
-        assert!(limiter.allow_at("first", start).await);
-        assert!(limiter.allow_at("first", start).await);
-        assert!(!limiter.allow_at("first", start).await);
-        assert!(limiter.allow_at("second", start).await);
-        assert!(
-            limiter
-                .allow_at("first", start + Duration::from_secs(61))
-                .await
-        );
-    }
-
-    #[tokio::test]
-    async fn limiter_fails_closed_at_capacity_and_reclaims_expired_keys() {
-        let limiter = RateLimiter::new(2, Duration::from_mins(1), 1);
-        let start = std::time::Instant::now();
-
-        assert!(limiter.allow_at("first", start).await);
-        assert!(!limiter.allow_at("second", start).await);
-        assert!(
-            limiter
-                .allow_at("second", start + Duration::from_secs(61))
-                .await
-        );
-    }
-
-    #[tokio::test]
-    async fn limiter_retains_attempts_when_window_exceeds_process_uptime() {
-        let limiter = RateLimiter::new(1, Duration::MAX, 10);
-        let start = std::time::Instant::now();
-
-        assert!(limiter.allow_at("identity", start).await);
-        assert!(!limiter.allow_at("identity", start).await);
     }
 
     #[test]

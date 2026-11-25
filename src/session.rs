@@ -1,6 +1,6 @@
 //! Persistent admin session management.
 
-use std::time::Duration as StdDuration;
+use std::{sync::Arc, time::Duration as StdDuration};
 
 use async_trait::async_trait;
 use axum::{
@@ -156,7 +156,10 @@ pub async fn mark_admin_login(session: &Session) -> Result<(), session::Error> {
         .await
 }
 
-pub fn spawn_cleanup(store: PostgresSessionStore) -> JoinHandle<()> {
+pub fn spawn_cleanup(
+    store: PostgresSessionStore,
+    security: Arc<crate::auth::AuthSecurity>,
+) -> JoinHandle<()> {
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(CLEANUP_INTERVAL);
         interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -165,6 +168,9 @@ pub fn spawn_cleanup(store: PostgresSessionStore) -> JoinHandle<()> {
             interval.tick().await;
             if let Err(error) = store.delete_expired().await {
                 warn!(%error, "Failed to delete expired sessions");
+            }
+            if security.delete_expired_attempts(&store.pool).await.is_err() {
+                warn!("Failed to delete expired login attempts");
             }
         }
     })
