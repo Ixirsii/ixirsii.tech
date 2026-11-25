@@ -31,11 +31,10 @@ inquire = { version = "0.9.5", default-features = false, features = [
   "crossterm",
 ] }
 ipnet = "2.11"
-nine_dev_site_lib = { version = "0.10.1", features = [
+nine_dev_site_lib = { version = "0.12.0", features = [
   "axum",
   "htmx",
-  "startup",
-  "telemetry",
+  "server",
 ] }
 pulldown-cmark = "0.13.4"
 rand = "0.10.3"
@@ -60,8 +59,8 @@ subtle = "2.6"
 time = "0.3.55"
 tokio = { version = "1.53.1", features = [
   "macros",
-  "rt-multi-thread",
-  "signal",
+  "net",
+  "rt",
   "sync",
   "time",
 ] }

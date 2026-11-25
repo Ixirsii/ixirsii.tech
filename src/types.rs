@@ -155,7 +155,13 @@ impl Error {
 
 impl From<std::io::Error> for Error {
     fn from(error: std::io::Error) -> Self {
-        Self::Network(error)
+        // The server runner reports invalid HOST and PORT as I/O input errors.
+        match error.kind() {
+            std::io::ErrorKind::InvalidData | std::io::ErrorKind::InvalidInput => {
+                Self::Configuration(error.to_string())
+            }
+            _ => Self::Network(error),
+        }
     }
 }
 

@@ -37,10 +37,15 @@ cargo sqlx migrate run
 cargo run --locked
 ```
 
-Open [localhost:3000](http://localhost:3000). Apply migrations before building
-against a fresh database: SQLx checks queries during compilation when `DATABASE_URL`
-is set. For sample posts, tags, and a local admin, run `docker compose run --rm seed`
-after migrating. [`.env.example`](.env.example) lists the local connection settings.
+Open [localhost:8080](http://localhost:8080). The server listens on `0.0.0.0:8080`
+by default. Override the address with `HOST` (an IPv4 or unbracketed IPv6 literal)
+or the port with `PORT`. If you change the browser origin, update
+`CSRF_ALLOWED_ORIGINS` to match.
+
+Apply migrations before building against a fresh database: SQLx checks queries
+during compilation when `DATABASE_URL` is set. For sample posts, tags, and a
+local admin, run `docker compose run --rm seed` after migrating.
+[`.env.example`](.env.example) lists the local connection settings.
 
 After an update, run `cargo sqlx migrate run` from the new release before
 starting the server. Startup checks the applied migration versions, checksums,

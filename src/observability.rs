@@ -1,7 +1,6 @@
-//! Server telemetry and request labels.
+//! Server telemetry identity and exported application log targets.
 
-use axum::{Router, middleware};
-use nine_dev_site_lib::telemetry::{RequestMetrics, Telemetry, observe};
+use nine_dev_site_lib::telemetry::Telemetry;
 
 use crate::{Error, Result};
 
@@ -16,15 +15,4 @@ pub fn init() -> Result<Telemetry> {
         &[LIFECYCLE_TARGET, "ixirsii_tech::auth"],
     )
     .map_err(|error| Error::Configuration(error.to_string()))
-}
-
-pub fn with_requests(router: Router, requests: RequestMetrics) -> Router {
-    router.layer(middleware::from_fn_with_state(
-        requests.with_route_override(|matched, _| {
-            matched
-                .and_then(|url| crate::static_assets::CATALOG.alias_by_url(url))
-                .map(|_| "static")
-        }),
-        observe,
-    ))
 }

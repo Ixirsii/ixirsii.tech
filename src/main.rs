@@ -11,7 +11,10 @@ use axum::{
     serve,
 };
 use axum_login::{AuthManagerLayerBuilder, login_required};
-use nine_dev_site_lib::{startup, telemetry::RequestMetrics};
+use nine_dev_site_lib::{
+    server::{self, Server},
+    startup,
+};
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::net::TcpListener;
 use tower_sessions::{SessionManagerLayer, cookie::SameSite};
@@ -65,10 +68,7 @@ fn main() -> Result<()> {
         }
     }
 
-    let telemetry = observability::init()?;
-    let server_result = run(telemetry.requests());
-    telemetry.shutdown();
-    server_result
+    server::run(observability::init()?, run)
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -76,78 +76,52 @@ async fn create_admin(username: &str) -> Result<()> {
     admin_cli::create(username).await
 }
 
-#[tokio::main]
-async fn run(requests: RequestMetrics) -> Result<()> {
-    let port = configured_port()?;
+async fn run(server: Server) -> Result<()> {
     let allowed_origins = configured_allowed_origins()?;
     let auth_security = Arc::new(auth::AuthSecurity::new(auth::AuthConfig::from_env()?));
     let db_pool: PgPool = get_db_pool().await?;
 
-    let server_result = run_http(&db_pool, port, allowed_origins, auth_security, requests).await;
+    let server_result = run_http(server, &db_pool, allowed_origins, auth_security).await;
     db_pool.close().await;
     server_result
 }
 
 async fn run_http(
+    server: Server,
     db_pool: &PgPool,
-    port: u16,
     allowed_origins: Vec<String>,
     auth_security: Arc<auth::AuthSecurity>,
-    requests: RequestMetrics,
 ) -> Result<()> {
     database::check_schema(db_pool).await?;
     let login_csrf_key = login_csrf::load_key(db_pool).await?;
     let session_store = session::PostgresSessionStore::new(db_pool.clone());
 
-    let address = SocketAddr::from(([0, 0, 0, 0], port));
-    let listener = TcpListener::bind(address).await?;
-    let shutdown = shutdown_signal()?;
+    let listener = TcpListener::bind(server.address)
+        .await
+        .map_err(Error::Network)?;
     let cleanup_task = session::spawn_cleanup(session_store.clone(), Arc::clone(&auth_security));
-    info!(target: observability::LIFECYCLE_TARGET, %address, "listening");
+    info!(target: observability::LIFECYCLE_TARGET, address = %server.address, "listening");
 
-    let routes = observability::with_requests(
-        get_routes(
-            db_pool.clone(),
-            auth_security,
-            session_store,
-            login_csrf_key,
-            allowed_origins,
-        ),
-        requests,
+    let routes = get_routes(
+        db_pool.clone(),
+        auth_security,
+        session_store,
+        login_csrf_key,
+        allowed_origins,
+    );
+    let routes = server.requests.instrument(routes, &static_assets::CATALOG);
+    let serve_result = serve(
+        listener,
+        routes.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .into_make_service_with_connect_info::<SocketAddr>();
-    let serve_result = serve(listener, routes)
-        .with_graceful_shutdown(shutdown)
-        .await;
-    cleanup_task.abort();
-    let _ = cleanup_task.await;
-    serve_result.map_err(Error::from)
-}
-
-fn shutdown_signal() -> std::io::Result<impl Future<Output = ()>> {
-    #[cfg(unix)]
-    let (mut interrupt, mut terminate) = {
-        use tokio::signal::unix::{SignalKind, signal};
-
-        (
-            signal(SignalKind::interrupt())?,
-            signal(SignalKind::terminate())?,
-        )
-    };
-
-    Ok(async move {
-        #[cfg(unix)]
-        tokio::select! {
-            _ = interrupt.recv() => {}
-            _ = terminate.recv() => {}
-        }
-        #[cfg(not(unix))]
-        if let Err(error) = tokio::signal::ctrl_c().await {
-            error!(target: observability::LIFECYCLE_TARGET, %error, "could not listen for interrupt");
-        }
-
+    .with_graceful_shutdown(async move {
+        server.shutdown.await;
         info!(target: observability::LIFECYCLE_TARGET, "shutting down HTTP server");
     })
+    .await;
+    cleanup_task.abort();
+    let _ = cleanup_task.await;
+    serve_result.map_err(Error::Network)
 }
 
 /* ********************************************************************************************** *
@@ -196,10 +170,6 @@ fn validate_database_url(database_url: &str) -> Result<()> {
 
 fn optional_config(name: &str) -> Result<Option<String>> {
     startup::optional_env(name).map_err(|error| Error::Configuration(error.to_string()))
-}
-
-fn configured_port() -> Result<u16> {
-    startup::port().map_err(|error| Error::Configuration(error.to_string()))
 }
 
 fn configured_max_connections() -> Result<u32> {
@@ -356,7 +326,7 @@ mod tests {
     use axum::http::StatusCode;
 
     use super::{
-        configured_allowed_origins, configured_database_url, configured_port, health_check_status,
+        configured_allowed_origins, configured_database_url, health_check_status,
         load_local_dotenv, validate_database_url,
     };
 
@@ -396,7 +366,7 @@ mod tests {
             if local {
                 fs::write(
                     child.join(".env"),
-                    "DATABASE_URL=postgres://localhost/local\nPORT=4567\nCSRF_ALLOWED_ORIGINS=http://local\n",
+                    "DATABASE_URL=postgres://localhost/local\nHOST=::1\nPORT=4567\nCSRF_ALLOWED_ORIGINS=http://local\n",
                 )?;
             }
             let output = Command::new(std::env::current_exe()?)
@@ -407,6 +377,7 @@ mod tests {
                     if local { "local" } else { "missing" },
                 )
                 .env_remove("DATABASE_URL")
+                .env_remove("HOST")
                 .env_remove("PORT")
                 .env_remove("CSRF_ALLOWED_ORIGINS")
                 .output()?;
@@ -426,21 +397,20 @@ mod tests {
             return Ok(());
         };
         load_local_dotenv()?;
-        let port = configured_port()?;
+        let address = nine_dev_site_lib::startup::listen_addr()?;
         let origins = configured_allowed_origins()?;
         // Exercise the same later read used by get_db_pool, without connecting.
         let database_url = configured_database_url();
         if mode == "local" {
-            assert_eq!(port, 4567);
+            assert_eq!(address.to_string(), "[::1]:4567");
             assert_eq!(origins, ["http://local"]);
             assert_eq!(database_url?, "postgres://localhost/local");
         } else {
-            assert_eq!(port, 3000);
+            assert_eq!(address.to_string(), "0.0.0.0:8080");
             assert_eq!(origins, Vec::<String>::new());
             assert!(database_url.is_err());
             assert!(std::env::var_os("DATABASE_URL").is_none());
         }
-        assert_eq!(configured_port()?, port);
         assert_eq!(configured_allowed_origins()?, origins);
         Ok(())
     }
@@ -534,38 +504,6 @@ mod tests {
         };
         fs::set_permissions(&path, fs::Permissions::from_mode(0o600))?;
         result
-    }
-
-    #[test]
-    fn startup_configuration_checks_ports() -> std::io::Result<()> {
-        let executable = std::env::current_exe()?;
-        for port in ["", "0", "abc", "65536"] {
-            let output = Command::new(&executable)
-                .args(["--exact", "tests::invalid_port_child"])
-                .env("IXIRSII_INVALID_PORT_FIXTURE", "1")
-                .env("PORT", port)
-                .output()?;
-            assert!(
-                output.status.success(),
-                "isolated port configuration test failed: {}{}",
-                String::from_utf8_lossy(&output.stdout),
-                String::from_utf8_lossy(&output.stderr),
-            );
-        }
-        Ok(())
-    }
-
-    #[test]
-    fn invalid_port_child() {
-        if std::env::var_os("IXIRSII_INVALID_PORT_FIXTURE").is_some() {
-            assert_eq!(
-                configured_port()
-                    .err()
-                    .map(|error| error.to_string())
-                    .as_deref(),
-                Some("configuration error: PORT must be an integer from 1 to 65535"),
-            );
-        }
     }
 
     #[test]

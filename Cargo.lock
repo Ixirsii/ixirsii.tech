@@ -1685,9 +1685,9 @@ dependencies = [
 
 [[package]]
 name = "nine_dev_site_lib"
-version = "0.10.1"
+version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5aa4f0e770c94556944fdcfa3c16c9a80f8022d2bc19e8341cc29d352acf91dc"
+checksum = "daefaf89d7889a938b7f4ad7f4ff3f674016fd94f7127e8cac7dcbeae10275c1"
 dependencies = [
  "askama",
  "axum",
@@ -1701,6 +1701,7 @@ dependencies = [
  "percent-encoding",
  "rand 0.10.3",
  "reqwest",
+ "tokio",
  "tracing",
  "tracing-subscriber",
 ]

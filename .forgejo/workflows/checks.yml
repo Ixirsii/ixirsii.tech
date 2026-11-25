@@ -71,8 +71,8 @@ jobs:
 
       - name: Check local OTLP export
         env:
-          # Git blob of scripts/check_otlp.py in 9dev-site-lib.
-          OTLP_CHECK_BLOB: 616b15cd571f9a155b4299cce14483f8da15275f
+          # scripts/check_otlp.py from nine_dev_site_lib-v0.12.0.
+          OTLP_CHECK_BLOB: da577f8b48f426a5c1d45854448b0afa058e3f2d
         run: |
           git fetch --no-tags --no-write-fetch-head --depth=1 https://git.9dev.tech/9-Developers/9dev-site-lib.git "$OTLP_CHECK_BLOB"
           git cat-file blob "$OTLP_CHECK_BLOB" > "$RUNNER_TEMP/check_otlp.py"
@@ -81,4 +81,7 @@ jobs:
             --get /blog /blog 200 \
             --get '/blog/private-input?private-input=value' '/blog/{slug}' 404 \
             --get /site.webmanifest static 200 \
-            --get /android-chrome-192x192.png static 200
+            --get /android-chrome-192x192.png static 200 \
+            --get /static/private-input static 404 \
+            --get /private-input unmatched 404 \
+            --request PUT /blog '' /blog 405

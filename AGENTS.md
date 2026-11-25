@@ -13,7 +13,7 @@ There is no Node.js project or JavaScript package-manager setup.
 
 | Command                             | Purpose                                                                          |
 | ----------------------------------- | -------------------------------------------------------------------------------- |
-| `cargo run`                         | Build and run on `0.0.0.0:${PORT:-3000}`                                         |
+| `cargo run`                         | Build and run the HTTP server (default `0.0.0.0:8080`)                           |
 | `cargo build`                       | Compile the application                                                          |
 | `cargo check`                       | Type-check the application                                                       |
 | `cargo clippy`                      | Lint with the strict configuration in `Cargo.toml`                               |
@@ -24,7 +24,7 @@ Cargo build, check, run, and Clippy commands execute `build.rs`, which produces 
 
 `nine_dev_site_build` generates the Catppuccin Tailwind aliases, compiles CSS through an `OUT_DIR` scratch file, and fingerprints the final bytes under `public/`. The Tailwind sources include templates and the Rust tag-cloud classes. A missing `tailwindcss` executable causes the build script to fail.
 
-Tests are colocated with the Rust modules they exercise; there is no separate `tests/` directory. Database and session `#[sqlx::test]` cases create isolated databases, apply migrations, and exercise real PostgreSQL. Their runtime `DATABASE_URL` role needs permission to create databases; the Compose development role has it. Fixtures are not required for automated tests.
+Tests are colocated with the Rust modules they exercise, except `tests/startup.rs`, which exercises the built executable. Database and session `#[sqlx::test]` cases create isolated databases, apply migrations, and exercise real PostgreSQL. Their runtime `DATABASE_URL` role needs permission to create databases; the Compose development role has it. Fixtures are not required for automated tests.
 
 Use `ixirsii-tech admin create <username>` from an interactive terminal to provision an administrator in an already migrated database. The command needs only `DATABASE_URL`, prompts twice for a hidden password, and rejects duplicate usernames. The separate development fixture command creates a local test admin only.
 
@@ -61,7 +61,8 @@ The application loads a local `.env` when present and reports a startup error if
 | -------------------------------- | -------: | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`                   |      Yes | None                                                  | PostgreSQL connection URL                                                                                      |
 | `DATABASE_MAX_CONNECTIONS`       |       No | `5`                                                   | Positive SQLx pool size                                                                                        |
-| `PORT`                           |       No | `3000`                                                | Listen port; the host is fixed to `0.0.0.0`                                                                    |
+| `HOST`                           |       No | `0.0.0.0`                                             | HTTP listen address (IPv4 or unbracketed IPv6 literal)                                                         |
+| `PORT`                           |       No | `8080`                                                | HTTP listen port (1–65535)                                                                                     |
 | `CSRF_ALLOWED_ORIGINS`           |       No | Origin check disabled                                 | Comma-separated allowed origins for admin state-changing requests                                              |
 | `AUTH_CLIENT_IP_MODE`            |       No | `trusted-proxy` if CIDRs supplied, otherwise `direct` | `direct`, `trusted-proxy`, or `railway`; release builds warn when unset                                        |
 | `AUTH_TRUSTED_PROXY_CIDRS`       |       No | Forwarded headers ignored                             | Required in trusted-proxy mode; comma-separated proxy CIDRs allowed to supply `X-Forwarded-For`; `/0` rejected |
